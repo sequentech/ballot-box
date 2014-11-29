@@ -11,5 +11,6 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "com.typesafe.play" %% "play-slick" % "0.8.0",
-  "org.postgresql" % "postgresql" % "9.3-1100-jdbc4"
+  "org.postgresql" % "postgresql" % "9.3-1100-jdbc4",
+  "org.bouncycastle" % "bcprov-jdk16" % "1.45"
 )
