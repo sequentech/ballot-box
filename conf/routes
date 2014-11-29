@@ -1,0 +1,14 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+POST    /api/election                                   controllers.ElectionsApi.create
+POST    /api/election/:id                               controllers.ElectionsApi.update(id: Long)
+POST    /api/election/id/start                            controllers.ElectionsApi.start(id: Long)
+POST    /api/election/id/stop                             controllers.ElectionsApi.stop(id: Long)
+POST    /api/election/id/tally                            controllers.ElectionsApi.tally(id: Long)
+POST    /api/election/id/calculate-results              controllers.ElectionsApi.calculateResults(id: Long)
+POST    /api/election/id/publish-results                controllers.ElectionsApi.publishResults(id: Long)
+
+# file
+# GET /api/election/:id/private/:file                     controllers.Files.get(file: String)
