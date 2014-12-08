@@ -2,13 +2,29 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-POST    /api/election                                   controllers.ElectionsApi.create
-POST    /api/election/:id                               controllers.ElectionsApi.update(id: Long)
-POST    /api/election/id/start                            controllers.ElectionsApi.start(id: Long)
-POST    /api/election/id/stop                             controllers.ElectionsApi.stop(id: Long)
-POST    /api/election/id/tally                            controllers.ElectionsApi.tally(id: Long)
-POST    /api/election/id/calculate-results              controllers.ElectionsApi.calculateResults(id: Long)
-POST    /api/election/id/publish-results                controllers.ElectionsApi.publishResults(id: Long)
+# election manager
+POST    /api/election                                         controllers.ElectionsApi.register
+POST    /api/election/:id                                     controllers.ElectionsApi.update(id: Long)
+GET     /api/election/:id                                     controllers.ElectionsApi.get(id: Long)
+POST    /api/election/:id/create                              controllers.ElectionsApi.create(id: Long)
+POST    /api/election/:id/start                               controllers.ElectionsApi.start(id: Long)
+POST    /api/election/:id/stop                                controllers.ElectionsApi.stop(id: Long)
+POST    /api/election/:id/tally                               controllers.ElectionsApi.tally(id: Long)
+POST    /api/election/:id/tally-no-dump                       controllers.ElectionsApi.tallyNoDump(id: Long)
+POST    /api/election/:id/calculate-results                   controllers.ElectionsApi.calculateResults(id: Long)
+POST    /api/election/:id/publish-results                     controllers.ElectionsApi.publishResults(id: Long)
+
+# ballotbox
+POST    /api/election/:id/voter/:voterId                      controllers.BallotboxApi.vote(id: Long, voterId: String)
+GET     /api/election/:id/hash/:hash                          controllers.BallotboxApi.checkHash(id: Long, hash: String)
+
+# eo callbacks
+POST    /api/election/:id/keydone                             controllers.ElectionsApi.keydone(id: Long)
+POST    /api/election/:id/tallydone                           controllers.ElectionsApi.tallydone(id: Long)
+
+# admin
+POST    /api/election/:id/dumpPks                             controllers.ElectionsApi.dumpPks(id: Long)
+POST    /api/election/:id/dumpVotes                           controllers.BallotboxApi.dumpVotes(id: Long)
 
 # file
-# GET /api/election/:id/private/:file                     controllers.Files.get(file: String)
+# GET /api/election/:id/private/:file                         controllers.Files.get(file: String)

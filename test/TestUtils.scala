@@ -10,6 +10,9 @@ import controllers.routes
 import play.api.Play.current
 import com.typesafe.config.ConfigFactory
 import play.Configuration
+import play.api._
+
+import utils.Crypto
 
 object TestSettings {
   def getTestApp = FakeApplication(additionalConfiguration = testSettings)
@@ -26,6 +29,12 @@ object TestSettings {
 
 trait TestContexts {
 
+  def getAuth(permission: String) = {
+    val authSecret = Play.current.configuration.getString("booth.auth.secret").get
+    val head = permission + ":" + (new java.util.Date().getTime)
+    head + ":" + Crypto.hmac(authSecret, head)
+  }
+
   abstract class AppWithDbData(app: FakeApplication = TestSettings.getTestApp) extends WithApplication(app) {
     override def around[T: org.specs2.execute.AsResult](t: => T) = super.around {
       prepareDbWithData()
@@ -33,6 +42,13 @@ trait TestContexts {
     }
 
     def prepareDbWithData() = {
+      import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+
+      DB.withSession { implicit session =>
+
+        /* Q.updateNA("TRUNCATE ELECTION").list
+        Q.updateNA("TRUNCATE VOTE").list */
+      }
     }
   }
 }
