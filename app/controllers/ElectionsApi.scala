@@ -99,11 +99,13 @@ object ElectionsApi extends Controller with Response {
   }
 
   def start(id: Long) = LHAction("hoho") { request =>
-    Ok(response(0))
+    DAL.elections.updateState(id, Elections.STARTED)
+    Ok(response("ok"))
   }
 
   def stop(id: Long) = LHAction("hoho") { request =>
-    Ok(response(0))
+    DAL.elections.updateState(id, Elections.STOPPED)
+    Ok(response("ok"))
   }
 
   /** request a tally, dumps votes to the private ds */
@@ -124,7 +126,7 @@ object ElectionsApi extends Controller with Response {
     Ok(Json.toJson(0))
   }
 
-  def publishResults(id: Long) = LHAction("hoho") { request =>
+  def getResults(id: Long) = LHAction("hoho") { request =>
     Ok(Json.toJson(0))
   }
 

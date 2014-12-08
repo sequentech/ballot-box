@@ -83,6 +83,8 @@ object Elections {
   val CREATE_ERROR = "create_error"
   val TALLY_ERROR = "tally_error"
   val TALLY_OK = "tally_ok"
+  val STARTED = "started"
+  val STOPPED = "stopped"
 
   val elections = TableQuery[Elections]
 
