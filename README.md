@@ -93,7 +93,7 @@ test.local.conf
 
 Installing java 7 in debian
 
-  http://www.webupd8.org/2012/06/how-to-install-oracle-java-7-in-debian.html
+    http://www.webupd8.org/2012/06/how-to-install-oracle-java-7-in-debian.html
 
 Key store set up
 
