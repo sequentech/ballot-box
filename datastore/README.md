@@ -18,3 +18,12 @@ Holds private information such as:
 ciphertexts
 results (not yet published)
 tallies (not yet published)
+
+Example nginx configuration blocks
+
+    location /public {
+        root /tmp/agora_elections/datastore;
+    }
+    location /private {
+        root /tmp/agora_elections/datastore;
+    }
