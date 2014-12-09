@@ -122,3 +122,65 @@ Tests
 
     activator
     test
+
+Manual testing an election cycle
+==============
+
+An election cycle can be run with the admin tool in the admin directory
+
+You must first create an election config json file. Here's an example
+
+    {
+      "election_id": 50,
+      "director": "wadobo-auth1",
+      "authorities": ["wadobo-auth3"],
+      "title": "Test election",
+      "url": "https://example.com/election/url",
+      "description": "election description",
+      "questions_data": [{
+          "question": "Who Should be President?",
+          "tally_type": "ONE_CHOICE",
+          "answers": [
+              {"a": "ballot/answer",
+              "details": "",
+              "value": "Alice"},
+              {"a": "ballot/answer",
+              "details": "",
+              "value": "Bob"}
+          ],
+          "max": 1, "min": 0
+      }],
+      "voting_start_date": "2015-12-06T18:17:14.457",
+      "voting_end_date": "2015-12-09T18:17:14.457",
+      "is_recurring": false,
+      "extra": []
+    }
+
+Register the election (config must be named 50.json here)
+
+     ./admin register 50
+
+create the election
+
+    ./admin create 50
+
+dump the pks
+
+    ./admin dump_pks 50
+
+encrypt votes (you need an votes.json file to do this)
+
+    ./admin encrypt 50
+
+copy the ciphertexts file to the private datastore
+
+    mkdir ../datastore/private/50
+    cp ciphertexts_50 ../datastore/private/50/ciphertexts
+
+tally the election
+
+    ./admin tally_no_dump 50
+
+check the tally was downloaded correctly
+
+    ls ../datastore/private/50/tally.tar.gz

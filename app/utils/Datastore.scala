@@ -30,7 +30,7 @@ object Datastore {
 
   /** writes a file to an election's datastore */
   def writeFile(electionId: Long, file: String, content: String, public: Boolean = false, append: Boolean = false) = {
-    val path = getStorePath(electionId, file, public)
+    val path = getPath(electionId, file, public)
     val mode = if(append) {
        Files.write(path, content.getBytes(StandardCharsets.UTF_8), APPEND)
     } else {
@@ -45,13 +45,13 @@ object Datastore {
 
   /** opens stream to write the votes file */
   def getVotesStream(electionId: Long) = {
-    val path = getStorePath(electionId, CIPHERTEXTS)
+    val path = getPath(electionId, CIPHERTEXTS)
     Files.newOutputStream(path)
   }
 
   /** opens stream to write the tally file */
   def getTallyStream(electionId: Long) = {
-    val path = getStorePath(electionId, TALLY)
+    val path = getPath(electionId, TALLY)
     Files.newOutputStream(path)
   }
 
@@ -98,7 +98,7 @@ object Datastore {
   }
 
   /** returns the complete path for some file in the datastore */
-  def getStorePath(electionId: Long, file: String, public: Boolean = false) = {
+  def getPath(electionId: Long, file: String, public: Boolean = false) = {
     val directory = Paths.get(getStore(public), electionId.toString)
     ensureDirectory(directory)
     directory.resolve(file)
@@ -106,7 +106,7 @@ object Datastore {
 
   /** returns the path to the tally */
   def getTallyPath(electionId: Long) = {
-    getStorePath(electionId, TALLY, false)
+    getPath(electionId, TALLY, false)
   }
 
   /** reads a file from an election's datastore */

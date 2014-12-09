@@ -39,7 +39,6 @@ object BallotboxApi extends Controller with Response {
       vote => Future {
         try {
           DB.withSession { implicit session =>
-            // val _pks = Datastore.readPublicKey(electionId)
             val election = Elections.findById(electionId).get
             val _pks = Json.parse(election.pks.get)
             val pksParse = _pks.validate[Array[PublicKey]]
