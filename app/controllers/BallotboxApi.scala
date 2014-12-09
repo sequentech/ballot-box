@@ -27,25 +27,25 @@ import scala.concurrent._
 object BallotboxApi extends Controller with Response {
 
   /** cast a vote, performs several validations, see vote.validate */
-  def vote(electionId: Long, voterId: String) = LHAction("vote-$0-$1", List(electionId, voterId)).async(BodyParsers.parse.json) { request =>
-    val _vote = request.body.validate[Vote]
+  def vote(electionId: Long, voterId: String) =
+    LHAction("vote-$0-$1", List(electionId, voterId)).async(BodyParsers.parse.json) { request => Future {
 
-    _vote.fold (
+    val voteValue = request.body.validate[Vote]
 
-      errors => Future {
-        BadRequest(Json.toJson(Response(s"Invalid vote json $errors")))
-      },
+      voteValue.fold (
 
-      vote => Future {
+      errors => BadRequest(response(s"Invalid vote json $errors")),
+
+      vote => {
         try {
           DB.withSession { implicit session =>
             // val election = Elections.findById(electionId).get
             val election = DAL.elections.findByIdWithSession(electionId).get
             if(election.state == Elections.STARTED) {
-              val _pks = Json.parse(election.pks.get)
-              val pksParse = _pks.validate[Array[PublicKey]]
+              val pksJson = Json.parse(election.pks.get)
+              val pksValue = pksJson.validate[Array[PublicKey]]
 
-              pksParse.fold (
+              pksValue.fold (
 
                 errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
 
@@ -65,25 +65,24 @@ object BallotboxApi extends Controller with Response {
         }
         catch {
           case v:ValidationException => BadRequest(response(s"Failed validating vote, $v"))
-          case n:NoSuchElementException => BadRequest(response(s"Failed validating vote, no election found $electionId"))
+          case n:NoSuchElementException => BadRequest(response(s"No election found with id $electionId"))
         }
       }
     )
-  }
+  }}
 
   /** check that a given hash is present in the ballotbox */
-  def checkHash(electionId: Long, hash: String) = LHAction("vote-$0-$1", List(electionId, hash)).async(BodyParsers.parse.json) { request =>
-    Future {
-      DB.withSession { implicit session =>
-        val result = Votes.checkHash(electionId, hash)
-        result match {
-          case Some(vote) => Ok(response(vote))
-          case _ => NotFound(response("Hash not found"))
-        }
+  def checkHash(electionId: Long, hash: String) =
+    LHAction("vote-$0-$1", List(electionId, hash)).async(BodyParsers.parse.json) { request => Future {
 
+    DB.withSession { implicit session =>
+      val result = Votes.checkHash(electionId, hash)
+      result match {
+        case Some(vote) => Ok(response(vote))
+        case _ => NotFound(response("Hash not found"))
       }
     }
-  }
+  }}
 
   /** dump ciphertexts, goes to the private datastore of the election, this is an admin only command */
   def dumpVotes(electionId: Long) = LHAction("admin-$0", List(electionId)).async { request =>
@@ -93,26 +92,24 @@ object BallotboxApi extends Controller with Response {
   }
 
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
-  def dumpTheVotes(electionId: Long) = DB.withSession { implicit session =>
-    Future {
-      val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
-      val count = Votes.countForElection(electionId)
-      val batches = (count / batchSize) + 1
+  def dumpTheVotes(electionId: Long) = DB.withSession { implicit session => Future {
+    val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
+    val count = Votes.countForElection(electionId)
+    val batches = (count / batchSize) + 1
 
-      val out = Datastore.getVotesStream(electionId)
+    val out = Datastore.getVotesStream(electionId)
 
-      for(i <- 1 to batches) {
-        val drop = (i - 1) * batchSize
-        val take = i * batchSize
-        val next = Votes.findByElectionIdRange(electionId, drop, take)
-        // eo format is new line separated list of votes
-        val content = next.map(_.vote).mkString("\n")
-        out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-      }
-
-      out.close()
+    for(i <- 1 to batches) {
+      val drop = (i - 1) * batchSize
+      val take = i * batchSize
+      val next = Votes.findByElectionIdRange(electionId, drop, take)
+      // eo format is new line separated list of votes
+      val content = next.map(_.vote).mkString("\n")
+      out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
     }
-  }
+
+    out.close()
+  }}
 
   /*-------------------------------- privates  --------------------------------*/
 }

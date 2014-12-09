@@ -29,7 +29,7 @@ class MiscSpec extends Specification {
       Crypto.hmac("pajarraco", "forrarme:1417267291") must beEqualTo("d5c4e961a496559b0a19039bc9cb62a3d9b63b38c54eb14286ca54364d21841e")
     }
 
-    /** this does not work as the dumped votes vary each test, you can test sha256 using http://www.xorbin.com/tools/sha256-hash-calculator */
+    /** this does not work as the dumped votes vary each test, you can test sha256 using echo "blabla" | sha512sum to verify */
     /* "allow correct hashing of file" in new WithApplication() {
       Datastore.hashVotes(1) must beEqualTo("cf53a19dc191e3af395e463b8664578d4daa8770c4e98d0ab863ffdd47784f18")
     } */

@@ -37,26 +37,23 @@ object ElectionsApi extends Controller with Response {
   val peers = getPeers
 
   /** registers an election, inserts it into the db in the registered state */
-  def register = LHAction("register").async(BodyParsers.parse.json) { request =>
+  def register = LHAction("register").async(BodyParsers.parse.json) { request => Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
 
     electionConfig.fold(
-      errors => {
-        Future {
-          BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors), ErrorCodes.EO_ERROR))
-        }
-      },
+      errors => BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors), ErrorCodes.EO_ERROR)),
+
       config => {
-        Future {
-          DB.withSession { implicit session =>
-            val result = Elections.insert(Election(config.election_id, request.body.toString, Elections.REGISTERED, config.voting_start_date, config.voting_end_date, None))
-            Ok(response(result))
-          }
+        DB.withSession { implicit session =>
+          val result = Elections.insert(Election(config.election_id, request.body.toString,
+            Elections.REGISTERED, config.voting_start_date, config.voting_end_date, None))
+
+          Ok(response(result))
         }
       }
     )
-  }
+  }}
 
   /** gets an election */
   def get(id: Long) = LoggingAction.async { request =>
@@ -69,23 +66,23 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** Updates an election's config */
-  def update(id: Long) = LHAction("update-$0", List(id)).async(BodyParsers.parse.json) { request =>
-    Future {
-      val electionConfig = request.body.validate[ElectionConfig]
+  def update(id: Long) =
+    LHAction("update-$0", List(id)).async(BodyParsers.parse.json) { request => Future {
 
-      electionConfig.fold(
-        errors => {
-          BadRequest(response(JsError.toFlatJson(errors)))
-        },
-        config => {
-          DB.withSession { implicit session =>
-            val result = Elections.updateConfig(id, request.body.toString)
-            Ok(response(result))
-          }
+    val electionConfig = request.body.validate[ElectionConfig]
+
+    electionConfig.fold(
+      errors => {
+        BadRequest(response(JsError.toFlatJson(errors)))
+      },
+      config => {
+        DB.withSession { implicit session =>
+          val result = Elections.updateConfig(id, request.body.toString)
+          Ok(response(result))
         }
-      )
-    }
-  }
+      }
+    )
+  }}
 
   /** Creates an election in eo */
   def create(id: Long) = LHAction("create-$0", List(id)).async { request =>
@@ -210,10 +207,10 @@ object ElectionsApi extends Controller with Response {
   private def downloadTally(url: String, electionId: Long) = {
     import play.api.libs.iteratee._
     import java.nio.file._
-    import java.io.File
+
+    Logger.info(s"downloading tally from $url")
 
     // taken from https://www.playframework.com/documentation/2.3.x/ScalaWS
-    Logger.info(s"downloading tally from $url")
 
     // make the request
     val futureResponse: Future[(WSResponseHeaders, Enumerator[Array[Byte]])] =

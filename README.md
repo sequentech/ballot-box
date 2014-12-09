@@ -107,7 +107,7 @@ add the director ca to the keystore
 
     keytool -import -file auth1.pem -keystore keystore.jks
 
-Sublime sync settings
+winscp sync settings
 
     |.git/;conf;/logs/;target/;activator;activator.bat;*.jar
 

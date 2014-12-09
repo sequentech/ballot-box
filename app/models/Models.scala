@@ -14,9 +14,9 @@ import utils.JsonFormatters._
 case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp) {
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
     val json = Json.parse(vote)
-    val _encrypted = json.validate[EncryptedVote]
+    val encryptedValue = json.validate[EncryptedVote]
 
-    _encrypted.fold (
+    encryptedValue.fold (
       errors => throw new ValidationException(s"Error parsing vote json: $errors"),
       encrypted => {
 
