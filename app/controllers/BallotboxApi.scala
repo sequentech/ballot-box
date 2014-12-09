@@ -39,21 +39,28 @@ object BallotboxApi extends Controller with Response {
       vote => Future {
         try {
           DB.withSession { implicit session =>
-            val election = Elections.findById(electionId).get
-            val _pks = Json.parse(election.pks.get)
-            val pksParse = _pks.validate[Array[PublicKey]]
+            // val election = Elections.findById(electionId).get
+            val election = DAL.elections.findByIdWithSession(electionId).get
+            if(election.state == Elections.STARTED) {
+              val _pks = Json.parse(election.pks.get)
+              val pksParse = _pks.validate[Array[PublicKey]]
 
-            pksParse.fold (
+              pksParse.fold (
 
-              errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
+                errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
 
-              pks => {
-                val validated = vote.validate(pks, true)
+                pks => {
+                  val validated = vote.validate(pks, true)
 
-                val result = Votes.insert(validated)
-                Ok(response(result))
-              }
-            )
+                  // val result = Votes.insert(validated)
+                  val result = DAL.votes.insertWithSession(validated)
+                  Ok(response(result))
+                }
+              )
+            }
+            else {
+              BadRequest(response(s"Election is not open"))
+            }
           }
         }
         catch {

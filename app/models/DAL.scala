@@ -10,9 +10,9 @@ object DAL {
   object votes {
 
     def insert(vote: Vote) = DB.withSession { implicit session =>
-      insertS(vote)
+      insertWithSession(vote)
     }
-    def insertS(vote: Vote)(implicit s: Session) = {
+    def insertWithSession(vote: Vote)(implicit s: Session) = {
       Votes.insert(vote)
     }
 
@@ -46,9 +46,9 @@ object DAL {
   /** adds a caching layer */
   object elections {
     def findById(id: Long): Option[Election] = DB.withSession { implicit session =>
-      findByIdS(id)
+      findByIdWithSession(id)
     }
-    def findByIdS(id: Long)(implicit s: Session): Option[Election] = Cache.getAs[Election](key(id)) match {
+    def findByIdWithSession(id: Long)(implicit s: Session): Option[Election] = Cache.getAs[Election](key(id)) match {
       case Some(e) => Some(e)
       case None => Elections.findById(id)
     }
