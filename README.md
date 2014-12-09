@@ -4,6 +4,10 @@ Agora Elections
 Installation
 =========
 
+Installing java 7 in debian
+
+    http://www.webupd8.org/2012/06/how-to-install-oracle-java-7-in-debian.html
+
 Download the play activator from
 
     https://www.playframework.com/download
@@ -90,10 +94,6 @@ test.local.conf
         ]
       }
     }
-
-Installing java 7 in debian
-
-    http://www.webupd8.org/2012/06/how-to-install-oracle-java-7-in-debian.html
 
 Key store set up
 

@@ -54,6 +54,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
       // for validation to work we need to set the pk for the election manually (for election 1020)
       DB.withSession { implicit session =>
         Elections.setPublicKeys(1, pks1020)
+        Elections.updateState(1, Elections.STARTED)
       }
 
       val voteJson = getVote(1, "1")
@@ -63,7 +64,6 @@ class BallotboxSpec extends Specification with TestContexts with Response {
         .withHeaders(("Authorization", getAuth("vote-1-1")))
       ).get
 
-      println(">>> vote cast returns " + contentAsString(response))
       status(response) must equalTo(OK)
     }
 
