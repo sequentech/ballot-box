@@ -36,7 +36,7 @@ object ElectionsApi extends Controller with Response {
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val peers = getPeers
 
-  /** registers an election, inserts it into the db in the registered state */
+  /** inserts election into the db in the registered state */
   def register = LHAction("register").async(BodyParsers.parse.json) { request => Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
@@ -77,7 +77,8 @@ object ElectionsApi extends Controller with Response {
       },
       config => {
         DB.withSession { implicit session =>
-          val result = Elections.updateConfig(id, request.body.toString)
+          // val result = Elections.updateConfig(id, request.body.toString, config.voting_start_date, config.voting_end_date)
+          val result = DAL.elections.updateConfig(id, request.body.toString, config.voting_start_date, config.voting_end_date)
           Ok(response(result))
         }
       }
@@ -95,12 +96,14 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def start(id: Long) = LHAction("hoho") { request =>
-    DAL.elections.updateState(id, Elections.STARTED)
-    Ok(response("ok"))
+  /** sets election in started state, votes will be accepted */
+  def start(id: Long) = LHAction("start-$0", List(id)) { request =>
+    val ret = DAL.elections.updateState(id, Elections.STARTED)
+    Ok(response(ret))
   }
 
-  def stop(id: Long) = LHAction("hoho") { request =>
+  /** sets election in stopped state, votes will not be accepted */
+  def stop(id: Long) = LHAction("stop-$0", List(id)) { request =>
     DAL.elections.updateState(id, Elections.STOPPED)
     Ok(response("ok"))
   }
@@ -159,6 +162,7 @@ object ElectionsApi extends Controller with Response {
           DB.withSession { implicit session =>
             val pks = response.session_data.map(_.pubkey)
             // Datastore.writeFile(id, "pks", Json.toJson(pks).toString)
+            // automatically sets status to CREATED
             Elections.setPublicKeys(id, Json.toJson(pks).toString)
           }
         }
@@ -293,7 +297,8 @@ object ElectionsApi extends Controller with Response {
         Ok(response(0))
       }
       else {
-        BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+        Logger.error(s"EO returned status ${resp.status} with body ${resp.body}")
+        BadRequest(error(s"EO returned status ${resp.status}", ErrorCodes.EO_ERROR))
       }
     }
   }

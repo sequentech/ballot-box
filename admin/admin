@@ -24,13 +24,18 @@ from prettytable import PrettyTable
 from sqlalchemy import create_engine, select, func, text
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
 
-node = '/usr/local/bin/node'
-# CONF
+# set configuration parameters
 datastore = '/tmp/agora_elections/datastore'
+shared_secret = 'hohoho'
+db_user = 'agora_elections'
+db_password = 'agora_elections'
+db_name = 'agora_elections'
+app_host = 'localhost'
+app_port = 9000
+node = '/usr/local/bin/node'
 
-# CONF grab from app config
 def get_local_hostport():
-    return 'localhost', 9000
+    return app_host, app_port
 
 def votes_table():
     metadata = MetaData()
@@ -65,17 +70,17 @@ def show_votes(result):
     v.padding_width = 1
     for row in result:
         v.add_row(map(truncate, row))
-    print v
+    print(v)
 
 def show_elections(result):
     v = PrettyTable(['id', 'configuration', 'state', 'start_date', 'end_date', 'pks'])
     v.padding_width = 1
     for row in result:
         v.add_row(map(truncate, row))
-    print v
+    print(v)
 
 def get_db_connection(cfg):
-    engine = create_engine('postgresql+psycopg2://%s:%s@localhost/%s' % (cfg['dbuser'], cfg['dbpassword'], cfg['dbname']))
+    engine = create_engine('postgresql+psycopg2://%s:%s@localhost/%s' % (cfg['db_user'], cfg['db_password'], cfg['db_name']))
     conn = engine.connect()
 
     return conn
@@ -176,6 +181,24 @@ def tally_no_dump(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def start(cfg, args):
+
+    auth = get_hmac(cfg, 'start-%d' % cfg['election_id'])
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/start' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def stop(cfg, args):
+
+    auth = get_hmac(cfg, 'stop-%d' % cfg['election_id'])
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/stop' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
 def list_votes(cfg, args):
     conn = get_db_connection(cfg)
     votes = votes_table()
@@ -243,7 +266,7 @@ def encrypt(cfg, args):
 def get_hmac(cfg, permission):
     import hmac
 
-    secret = cfg['SharedSecret']
+    secret = cfg['shared_secret']
     message = '%s:%d' % (permission, 1000*long(time.time()))
     _hmac = hmac.new(str(secret), str(message), hashlib.sha256).hexdigest()
     auth = '%s:%s' % (message,_hmac)
@@ -298,10 +321,10 @@ encrypt <election_id>: encrypts votes, places ciphertexts in datastore
         config['filters'] = args.filters
 
         # CONF should read these from the app configuration
-        config['SharedSecret'] = 'hohoho'
-        config['dbuser'] = 'agora_elections'
-        config['dbpassword'] = 'agora_elections'
-        config['dbname'] = 'agora_elections'
+        config['shared_secret'] = shared_secret
+        config['db_user'] = db_user
+        config['db_password'] = db_password
+        config['db_name'] = db_name
 
         eval(command + "(config, args)")
 

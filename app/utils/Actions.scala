@@ -50,6 +50,7 @@ case class HmacAuthAction(allowed: String, data: List[Any] = List()) extends Act
         return true
       }
 
+      Logger.warn(s"Failed to authorize request with perm $value and allowed $allowed")
       return false
     }
     catch {

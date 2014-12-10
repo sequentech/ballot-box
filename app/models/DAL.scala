@@ -5,6 +5,8 @@ import play.api.cache.Cache
 import play.api.db.slick.Config.driver.simple._
 import play.api.Play.current
 
+import java.sql.Timestamp
+
 object DAL {
   /** straight mapping to models */
   object votes {
@@ -58,33 +60,28 @@ object DAL {
     }
 
     def insert(election: Election) = DB.withSession { implicit session =>
-      Elections.insert(election)
       Cache.remove(key(election.id))
-    }
-
-    def update(theId: Long, election: Election) = DB.withSession { implicit session =>
-      Elections.update(theId, election)
-      Cache.remove(key(theId))
+      Elections.insert(election)
     }
 
     def updateState(id: Long, state: String) = DB.withSession { implicit session =>
-      Elections.updateState(id, state)
       Cache.remove(key(id))
+      Elections.updateState(id, state)
     }
 
-    def updateConfig(id: Long, config: String) = DB.withSession { implicit session =>
-      Elections.updateConfig(id, config)
+    def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp) = DB.withSession { implicit session =>
       Cache.remove(key(id))
+      Elections.updateConfig(id, config, start, end)
     }
 
     def setPublicKeys(id: Long, pks: String) = DB.withSession { implicit session =>
-      Elections.setPublicKeys(id, pks)
       Cache.remove(key(id))
+      Elections.setPublicKeys(id, pks)
     }
 
     def delete(id: Long) = DB.withSession { implicit session =>
-      Elections.delete(id)
       Cache.remove(key(id))
+      Elections.delete(id)
     }
 
     private def key(id: Long) = s"election.$id"

@@ -107,7 +107,25 @@ add the director ca to the keystore
 
     keytool -import -file auth1.pem -keystore keystore.jks
 
-winscp sync settings
+Admin tool set up
+
+specify the follwing configuration parameters in the admin tool, at <app_root>/admin/admin
+
+    # set configuration parameters
+    datastore = '/tmp/agora_elections/datastore'
+    shared_secret = 'hohoho'
+    db_user = 'agora_elections'
+    db_password = 'agora_elections'
+    db_name = 'agora_elections'
+    app_host = 'localhost'
+    app_port = 9000
+    node = '/usr/local/bin/node'
+
+set the executable permissions if not already set
+
+    chmod u+x admin
+
+Winscp sync settings
 
     |.git/;conf;/logs/;target/;activator;activator.bat;*.jar
 

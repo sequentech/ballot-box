@@ -1,14 +1,14 @@
 package models
 
-import java.sql.Timestamp
+import utils.Crypto
+import utils.JsonFormatters._
 
 import play.api.Play.current
 import play.api.db.slick.Config.driver.simple._
-
 import scala.slick.lifted.Tag
-import utils.Crypto
 import play.api.libs.json._
-import utils.JsonFormatters._
+
+import java.sql.Timestamp
 
 
 case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp) {
@@ -105,8 +105,8 @@ object Elections {
     elections.filter(_.id === id).map(e => e.state).update(state)
   }
 
-  def updateConfig(id: Long, config: String)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => e.configuration).update(config)
+  def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start, end)
   }
 
   def setPublicKeys(id: Long, pks: String)(implicit s: Session) = {
