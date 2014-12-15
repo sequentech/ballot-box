@@ -34,29 +34,53 @@ trait TestContexts {
 
     val config = Json.parse("""
 {
-"election_id": 1,
-"director": "wadobo-auth1",
-"authorities": ["wadobo-auth3"],
-"title": "Test election",
-"url": "https://example.com/election/url",
-"description": "election description",
-"questions_data": [{
-    "question": "Who Should be President?",
-    "tally_type": "ONE_CHOICE",
-    "answers": [
-        {"a": "ballot/answer",
-        "details": "",
-        "value": "Alice"},
-        {"a": "ballot/answer",
-        "details": "",
-        "value": "Bob"}
+  "id": 1,
+  "title": "Votación de candidatos",
+  "description": "Selecciona los documentos polí­tico, ético y organizativo con los que Podemos",
+  "director": "wadobo-auth1",
+  "authorities": ["openkratio-authority"],
+  "layout": "pcandidates-election",
+  "presentation": {
+    "share_text": "lo que sea",
+    "theme": "foo",
+    "urls": [
+      {
+        "title": "",
+        "url": ""
+      }
     ],
-    "max": 1, "min": 0
-}],
-"voting_start_date": "2015-12-06T18:17:14.457",
-"voting_end_date": "2015-12-09T18:17:14.457",
-"is_recurring": false,
-"extra": []
+    "theme_css": "whatever"
+  },
+  "end_date": "2013-12-09T18:17:14.457000",
+  "start_date": "2013-12-06T18:17:14.457000",
+  "questions": [
+      {
+          "description": "",
+          "layout": "pcandidates-election",
+          "max": 1,
+          "min": 0,
+          "num_winners": 1,
+          "title": "Secretarí­a General",
+          "randomize_answer_order": true,
+          "tally_type": "plurality-at-large",
+          "answer_total_votes_percentage": "over-total-valid-votes",
+          "answers": [
+              {
+                  "id": 0,
+                  "category": "Equipo de Enfermeras",
+                  "details": "",
+                  "sort_order": 1,
+                  "urls": [
+                    {
+                      "title": "",
+                      "url": ""
+                    }
+                  ],
+                  "text": "Fulanita de tal"
+              }
+          ]
+      }
+  ]
 }
 """)
   }

@@ -19,6 +19,7 @@ import play.api.libs.ws.ning.NingAsyncHttpClientConfigBuilder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent._
+import java.sql.Timestamp
 
 /**
   * Ballotbox api
@@ -75,12 +76,10 @@ object BallotboxApi extends Controller with Response {
   def checkHash(electionId: Long, hash: String) =
     LHAction("vote-$0-$1", List(electionId, hash)).async(BodyParsers.parse.json) { request => Future {
 
-    DB.withSession { implicit session =>
-      val result = Votes.checkHash(electionId, hash)
-      result match {
-        case Some(vote) => Ok(response(vote))
-        case _ => NotFound(response("Hash not found"))
-      }
+    val result = DAL.votes.checkHash(electionId, hash)
+    result match {
+      case Some(vote) => Ok(response(vote))
+      case _ => NotFound(response("Hash not found"))
     }
   }}
 
@@ -96,6 +95,8 @@ object BallotboxApi extends Controller with Response {
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
     val count = Votes.countForElection(electionId)
     val batches = (count / batchSize) + 1
+    // in the current implementation we may hold a large number of timestamps
+    val timeStamps = scala.collection.mutable.Map[String, Timestamp]()
 
     val out = Datastore.getVotesStream(electionId)
 
@@ -103,8 +104,28 @@ object BallotboxApi extends Controller with Response {
       val drop = (i - 1) * batchSize
       val take = i * batchSize
       val next = Votes.findByElectionIdRange(electionId, drop, take)
+      // filter duplicates
+      val noDuplicates = next.filter { vote =>
+        if(timeStamps.contains(vote.voter_id)) {
+          val previous = timeStamps(vote.voter_id)
+          // compareTo returns a value greater than 0 if this Timestamp object is _after_ the given argument.
+          if(vote.created.compareTo(previous) > 0) {
+            timeStamps -= vote.voter_id
+            timeStamps += (vote.voter_id -> vote.created)
+            true
+          }
+          else {
+            false
+          }
+        } else {
+          timeStamps += (vote.voter_id -> vote.created)
+          true
+        }
+      }
+      // TODO filter by voter id's
+
       // eo format is new line separated list of votes
-      val content = next.map(_.vote).mkString("\n")
+      val content = noDuplicates.map(_.vote).mkString("\n")
       out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
     }
 
@@ -112,4 +133,5 @@ object BallotboxApi extends Controller with Response {
   }}
 
   /*-------------------------------- privates  --------------------------------*/
+
 }

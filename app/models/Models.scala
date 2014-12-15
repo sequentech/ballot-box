@@ -31,7 +31,6 @@ case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: Str
     )
   }
 }
-case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp, pks: Option[String])
 
 class Votes(tag: Tag) extends Table[Vote](tag, "vote") {
   def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -67,6 +66,8 @@ object Votes {
   def countForElection(electionId: Long)(implicit s: Session): Int = votes.filter(_.electionId === electionId).length.run
 }
 
+case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp, pks: Option[String], resultsUpdated: Option[Timestamp])
+
 class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
@@ -74,7 +75,8 @@ class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def startDate = column[Timestamp]("start_date", O.NotNull)
   def endDate = column[Timestamp]("end_date", O.NotNull)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
-  def * = (id, configuration, state, startDate, endDate, pks.?) <> (Election.tupled, Election.unapply _)
+  def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
+  def * = (id, configuration, state, startDate, endDate, pks.?, resultsUpdated.?) <> (Election.tupled, Election.unapply _)
 }
 
 object Elections {
@@ -118,14 +120,20 @@ object Elections {
   }
 }
 
-case class ElectionConfig(
-  election_id: Long, director: String, authorities: Array[String], title: String,
-  url: String, description: String, questions_data: Array[Question], voting_start_date: Timestamp,
-  voting_end_date: Timestamp,
-  is_recurring: Boolean, extra: Array[String])
+/*-------------------------------- transients  --------------------------------*/
 
-case class Question(question: String, tally_type: String, answers: Array[Answer], max: Int, min: Int)
-case class Answer(a: String, details: String, value: String)
+case class ElectionConfig(
+  id: Long, director: String, authorities: Array[String], title: String, description: String,
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation)
+
+case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String)
+
+case class Question(
+  description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String, randomize_answer_order: Boolean,
+  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer])
+
+case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String)
+case class Url(title: String, url: String)
 
 case class CreateResponse(status: String, session_data: Array[PublicKeySession])
 // {"status":"error","data":{"message":"election tally failed for some reason"},"reference":{"action":"POST /tally","election_id":"49"}}
@@ -134,6 +142,7 @@ case class TallyResponse(status: String, data: TallyData)
 
 case class PublicKeySession(pubkey: PublicKey, session_id: String)
 case class PublicKey(q: BigInt, p: BigInt, y:BigInt, g: BigInt)
+case class RawVote(alpha: BigInt, beta: BigInt, commitment: String, challenge: BigInt, response: BigInt)
 
 case class EncryptedVote(a: String, choices: Array[Choice], election_hash: ElectionHash, issue_date: String, proofs: Array[Popk]) {
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {

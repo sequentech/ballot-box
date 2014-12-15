@@ -90,7 +90,7 @@ test.local.conf
       }
       trustManager = {
         stores = [
-          { type = "JKS", path = "/tmp/agora_elections/truststore.jks", password = "password" }
+          { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
         ]
       }
     }

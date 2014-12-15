@@ -42,12 +42,15 @@ object ElectionsApi extends Controller with Response {
     val electionConfig = request.body.validate[ElectionConfig]
 
     electionConfig.fold(
-      errors => BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors), ErrorCodes.EO_ERROR)),
+      errors => {
+        Logger.warn(s"Invalid config json, $errors")
+        BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+      },
 
       config => {
         DB.withSession { implicit session =>
-          val result = Elections.insert(Election(config.election_id, request.body.toString,
-            Elections.REGISTERED, config.voting_start_date, config.voting_end_date, None))
+          val result = Elections.insert(Election(config.id, request.body.toString,
+            Elections.REGISTERED, config.start_date, config.end_date, None, None))
 
           Ok(response(result))
         }
@@ -77,8 +80,7 @@ object ElectionsApi extends Controller with Response {
       },
       config => {
         DB.withSession { implicit session =>
-          // val result = Elections.updateConfig(id, request.body.toString, config.voting_start_date, config.voting_end_date)
-          val result = DAL.elections.updateConfig(id, request.body.toString, config.voting_start_date, config.voting_end_date)
+          val result = DAL.elections.updateConfig(id, request.body.toString, config.start_date, config.end_date)
           Ok(response(result))
         }
       }
@@ -286,12 +288,15 @@ object ElectionsApi extends Controller with Response {
     val withCallback = (jsObject + callback)
     val withAuthorities = withCallback - "authorities" + ("authorities" -> authData)
     // FIXME once EO accepts an integer id remove this part
-    val data = withAuthorities - "election_id" + ("election_id" -> JsString(election.id.toString))
+    val data = withAuthorities - "id" + ("id" -> JsString(election.id.toString))
+    // val data = withAuthorities + ("id" -> JsNumber(BigDecimal(election.id)))
+    // val data = withAuthorities
 
     Logger.info("creating election with\n" + data)
 
     // create election in eo
     val url = eoUrl(config.director, "public_api/election")
+    Logger.info(s"requesting at $url")
     WS.url(url).post(data).map { resp =>
       if(resp.status == HTTP.ACCEPTED) {
         Ok(response(0))
@@ -305,9 +310,7 @@ object ElectionsApi extends Controller with Response {
 
   /** Future: returns an election given its id, may throw nosuchelement exception */
   private def getElection(id: Long): Future[Election] = Future {
-    DB.withSession { implicit session =>
-      Elections.findById(id).get
-    }
+    DAL.elections.findById(id).get
   }
 
   /** creates a Map[peer name => peer json] based on eopeer installed packages */

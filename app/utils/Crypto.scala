@@ -1,8 +1,11 @@
 package utils
 
+import models._
+
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 import javax.xml.bind.DatatypeConverter
+import java.math.BigInteger
 
  /**
   * Crypto utilities
@@ -85,14 +88,48 @@ import javax.xml.bind.DatatypeConverter
     }
   }
 
-  /** main hook to generate hmacs
-    *
-    * use runMain utils.Crypto <secret> <message> from console
-    * or
-    * activator "run-main utils.Crypto sdfasdfasdf asdfadfadsf"
-    * from CLI
-    */
-  def main(args: Array[String]) : Unit = {
-    println(Crypto.hmac(args(0), args(1)))
+  def encrypt(pk: PublicKey, value: Long) = {
+    val encoded = encode(pk, value)
+    encryptEncoded(pk, encoded)
+  }
+
+  def randomBigInt(max: BigInt) = {
+    val rnd = new java.util.Random()
+    var r = new BigInteger(max.underlying.bitLength, rnd)
+
+    while (r.compareTo(max.underlying) >= 0) {
+      r = new BigInteger(max.underlying.bitLength, rnd)
+    }
+    BigInt(r)
+  }
+
+  def encode(pk: PublicKey, value: Long) = {
+    val one = BigInt(1)
+    val m = BigInt(value + 1)
+    val test = m.modPow(pk.q, pk.p)
+    if (test.equals(one)) {
+      m
+    } else {
+      -m.mod(pk.p)
+    }
+  }
+
+  def encryptEncoded(pk: PublicKey, value: BigInt) = {
+    val r = randomBigInt(pk.q)
+    val alpha = pk.g.modPow(r, pk.p)
+    val beta = value * (pk.y.modPow(r, pk.p))
+
+    // prove knowledge
+    val w = randomBigInt(pk.q)
+
+    val a = pk.g.modPow(w, pk.p)
+
+    val commitment = s"${alpha.toString}/${a.toString}"
+    val challenge = BigInt(sha256(commitment), 16)
+
+    // compute response = w +  randomness * challenge
+    val response = (w + (r * challenge)).mod(pk.q)
+
+    RawVote(alpha, beta, commitment, challenge, response)
   }
 }

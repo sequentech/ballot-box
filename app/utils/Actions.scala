@@ -40,6 +40,11 @@ case class HmacAuthAction(allowed: String, data: List[Any] = List()) extends Act
       }
 
       val split = value.split(':')
+      if(split.length != 3) {
+        Logger.warn(s"Malformed authorization header")
+        return false
+      }
+
       val permission = split(0)
       val time = split(1).toLong
       val hash = split(2)
