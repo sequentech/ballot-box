@@ -54,7 +54,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
 
       DB.withSession { implicit session =>
         val cfg = TestData.config.validate[ElectionConfig].get
-        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None))
+        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None))
       }
 
       val response = route(FakeRequest(POST, routes.ElectionsApi.update(1).url)

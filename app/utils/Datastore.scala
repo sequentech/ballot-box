@@ -27,6 +27,7 @@ object Datastore {
   val CIPHERTEXTS = "ciphertexts"
   val PKS = "pks"
   val TALLY = "tally.tar.gz"
+  val CONFIG = "config.json"
 
   /** writes a file to an election's datastore */
   def writeFile(electionId: Long, file: String, content: String, public: Boolean = false, append: Boolean = false) = {
@@ -36,11 +37,17 @@ object Datastore {
     } else {
       Files.write(path, content.getBytes(StandardCharsets.UTF_8), CREATE, TRUNCATE_EXISTING)
     }
+
+    path
   }
 
   /** dumps the pks from db into the datastore */
   def dumpPks(electionId: Long, pks: String) = {
     writeFile(electionId, PKS, pks, true)
+  }
+
+  def writeResultsConfig(electionId: Long, config: String) = {
+    writeFile(electionId, CONFIG, config, false)
   }
 
   /** opens stream to write the votes file */
@@ -57,18 +64,17 @@ object Datastore {
 
   /** gets the ciphertext url that eo will use. requires proper configuration of nginx to match */
   def getCiphertextsUrl(electionId: Long) = {
-     println(s"$urlRoot" + s"/private/$electionId/ciphertexts")
      s"$urlRoot" + s"/private/$electionId/ciphertexts"
   }
 
-  /** incrementally calculates sha512 hash of votes using java nio apis */
+  /** incrementally calculates sha256 hash of votes using java nio apis */
   def hashVotes(electionId: Long) = {
     import java.security.MessageDigest
 
     val path = Paths.get(getStore(false), electionId.toString, CIPHERTEXTS)
     val inChannel = new RandomAccessFile(path.toString, "r").getChannel()
     val buffer = ByteBuffer.allocateDirect(10 * 1024)
-    val digest = MessageDigest.getInstance("SHA-512")
+    val digest = MessageDigest.getInstance("SHA-256")
 
     while(inChannel.read(buffer) > 0) {
       buffer.flip()
@@ -78,7 +84,7 @@ object Datastore {
     inChannel.close()
 
     val bytes = digest.digest()
-    DatatypeConverter.printHexBinary(bytes).toLowerCase
+    DatatypeConverter.printBase64Binary(bytes).replace("+", "-").replace("/", "_")
   }
 
   /** ensures that a given directory exists */

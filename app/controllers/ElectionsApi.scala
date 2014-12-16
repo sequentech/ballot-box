@@ -34,6 +34,7 @@ object ElectionsApi extends Controller with Response {
 
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
+  val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
   val peers = getPeers
 
   /** inserts election into the db in the registered state */
@@ -50,7 +51,7 @@ object ElectionsApi extends Controller with Response {
       config => {
 
         val result = DAL.elections.insert(Election(config.id, request.body.toString,
-            Elections.REGISTERED, config.start_date, config.end_date, None, None))
+            Elections.REGISTERED, config.start_date, config.end_date, None, None, None))
 
         Ok(response(result))
       }
@@ -96,16 +97,16 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** sets election in started state, votes will be accepted */
-  def start(id: Long) = LHAction("start-$0", List(id)) { request =>
+  def start(id: Long) = LHAction("start-$0", List(id)).async { request => Future {
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Ok(response(ret))
-  }
+  }}
 
   /** sets election in stopped state, votes will not be accepted */
-  def stop(id: Long) = LHAction("stop-$0", List(id)) { request =>
-    DAL.elections.updateState(id, Elections.STOPPED)
-    Ok(response("ok"))
-  }
+  def stop(id: Long) = LHAction("stop-$0", List(id)).async { request => Future {
+    val ret = DAL.elections.updateState(id, Elections.STOPPED)
+    Ok(response(ret))
+  }}
 
   /** request a tally, dumps votes to the private ds */
   def tally(id: Long) = LHAction("tally-$0", List(id)).async { request =>
@@ -121,12 +122,29 @@ object ElectionsApi extends Controller with Response {
     tally.recover(tallyErrorHandler)
   }
 
-  def calculateResults(id: Long) = LHAction("hoho") { request =>
-    Ok(Json.toJson(0))
+  def calculateResults(id: Long) = LHAction("results-$0", List(id)).async(BodyParsers.parse.json) { request =>
+    val config = request.body.toString
+    Logger.info(s"received config $config")
+
+    val future = getElection(id).flatMap { e =>
+      if(e.state == Elections.TALLY_OK) {
+        calcResults(id, config).flatMap( r => updateResults(e, r) )
+      } else {
+        Future { BadRequest(error(s"Cannot calculate results in wrong state")) }
+      }
+    }
+    future.recover {
+      case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+    }
   }
 
-  def getResults(id: Long) = LHAction("hoho") { request =>
-    Ok(Json.toJson(0))
+  def getResults(id: Long) = LHAction("results-$0", List(id)).async { request =>
+    val future = getElection(id).map { election =>
+      Ok(response(election.results))
+    }
+    future.recover {
+      case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+    }
   }
 
   /** dump pks to the public datastore, this is an admin only command */
@@ -180,7 +198,8 @@ object ElectionsApi extends Controller with Response {
       },
       resp => {
         if(resp.status == "finished") {
-          downloadTally(resp.data.tally_url, id).map { _ =>
+          // FIXME hardcoded port
+          downloadTally(resp.data.tally_url.replace("5000", "11000"), id).map { _ =>
 
             DAL.elections.updateState(id, Elections.TALLY_OK)
             Ok(response(0))
@@ -198,6 +217,27 @@ object ElectionsApi extends Controller with Response {
   }
 
   /*-------------------------------- privates  --------------------------------*/
+
+  /** Future: calculates an election's results using agora-results */
+  private def calcResults(id: Long, config: String) = Future {
+    import scala.sys.process._
+
+    val configPath = Datastore.writeResultsConfig(id, config)
+    val tallyPath = Datastore.getTallyPath(id)
+    val cmd = s"$agoraResults -t $tallyPath -c $configPath -s"
+
+    Logger.info(s"executing '$cmd'")
+    val output = cmd.!!
+    Logger.info(s"command returns\n$output")
+
+    output
+  }
+
+  /** Future: updates an election's results */
+  private def updateResults(election: Election, results: String) = Future {
+    DAL.elections.updateResults(election.id, results)
+    Ok(Json.toJson(0))
+  }
 
   /** Future: downloads a tally from eo */
   private def downloadTally(url: String, electionId: Long) = {
@@ -243,7 +283,8 @@ object ElectionsApi extends Controller with Response {
     val data = getTallyData(election.id)
     Logger.info("requesting tally with\n" + data)
 
-    val url = eoUrl(config.director, "public_api/tally")
+    // FIXME remove hardcoded port replace
+    val url = eoUrl(config.director, "public_api/tally").replace("5000", "11000")
     WS.url(url).post(data).map { resp =>
       if(resp.status == HTTP.ACCEPTED) {
         Ok(response(0))
@@ -285,7 +326,8 @@ object ElectionsApi extends Controller with Response {
     Logger.info("creating election with\n" + data)
 
     // create election in eo
-    val url = eoUrl(config.director, "public_api/election")
+    // FIXME remove hardcoded port replace
+    val url = eoUrl(config.director, "public_api/election").replace("5000", "11000")
     Logger.info(s"requesting at $url")
     WS.url(url).post(data).map { resp =>
       if(resp.status == HTTP.ACCEPTED) {
@@ -352,7 +394,7 @@ object ElectionsApi extends Controller with Response {
       "callback_url" -> apiUrl(routes.ElectionsApi.tallydone(electionId).url),
       "extra" -> List[String](),
       "votes_url" -> Datastore.getCiphertextsUrl(electionId),
-      "votes_hash" -> s"sha512://$votesHash"
+      "votes_hash" -> s"ni:///sha-256;$votesHash"
     )
   }
 

@@ -35,8 +35,8 @@ trait TestContexts {
     val config = Json.parse("""
 {
   "id": 1,
-  "title": "Votación de candidatos",
-  "description": "Selecciona los documentos polí­tico, ético y organizativo con los que Podemos",
+  "title": "Votacion de candidatos",
+  "description": "Selecciona los documentos polí­tico, etico y organizativo con los que Podemos",
   "director": "wadobo-auth1",
   "authorities": ["openkratio-authority"],
   "layout": "pcandidates-election",

@@ -93,11 +93,12 @@ object BallotboxApi extends Controller with Response {
   // FIXME dont need to do timestamp comparison as the order is guaranteed by the DB
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long) = DB.withSession { implicit session => Future {
+    Logger.info(s"dumping votes for election $electionId")
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
     val count = DAL.votes.countForElectionWithSession(electionId)
     val batches = (count / batchSize) + 1
     // in the current implementation we may hold a large number of timestamps
-    val timeStamps = scala.collection.mutable.Map[String, Timestamp]()
+    val timeStamps = scala.collection.mutable.Set[String]()
 
     val out = Datastore.getVotesStream(electionId)
 
@@ -108,7 +109,7 @@ object BallotboxApi extends Controller with Response {
       // filter duplicates
       val noDuplicates = next.filter { vote =>
         if(timeStamps.contains(vote.voter_id)) {
-          val previous = timeStamps(vote.voter_id)
+          /*val previous = timeStamps(vote.voter_id)
           // compareTo returns a value greater than 0 if this Timestamp object is _after_ the given argument.
           if(vote.created.compareTo(previous) > 0) {
             timeStamps -= vote.voter_id
@@ -117,9 +118,11 @@ object BallotboxApi extends Controller with Response {
           }
           else {
             false
-          }
+          }*/
+          false
         } else {
-          timeStamps += (vote.voter_id -> vote.created)
+          // timeStamps += (vote.voter_id -> vote.created)
+          timeStamps += vote.voter_id
           true
         }
       }

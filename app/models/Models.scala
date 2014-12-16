@@ -9,6 +9,7 @@ import scala.slick.lifted.Tag
 import play.api.libs.json._
 
 import java.sql.Timestamp
+import java.util.Date
 
 
 case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp)
@@ -47,7 +48,7 @@ object Votes {
   def countForElection(electionId: Long)(implicit s: Session): Int = votes.filter(_.electionId === electionId).length.run
 }
 
-case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp, pks: Option[String], resultsUpdated: Option[Timestamp])
+case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp])
 
 class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def id = column[Long]("id", O.PrimaryKey)
@@ -56,8 +57,9 @@ class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def startDate = column[Timestamp]("start_date", O.NotNull)
   def endDate = column[Timestamp]("end_date", O.NotNull)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
+  def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
-  def * = (id, configuration, state, startDate, endDate, pks.?, resultsUpdated.?) <> (Election.tupled, Election.unapply _)
+  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?) <> (Election.tupled, Election.unapply _)
 }
 
 object Elections {
@@ -68,6 +70,7 @@ object Elections {
   val TALLY_OK = "tally_ok"
   val STARTED = "started"
   val STOPPED = "stopped"
+  val RESULTS_DONE = "results_done"
 
   val elections = TableQuery[Elections]
 
@@ -86,6 +89,10 @@ object Elections {
 
   def updateState(id: Long, state: String)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => e.state).update(state)
+  }
+
+  def updateResults(id: Long, results: String)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated)).update(Elections.RESULTS_DONE, results, new Timestamp(new Date().getTime))
   }
 
   def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp)(implicit s: Session) = {
@@ -140,18 +147,14 @@ case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: Stri
         if(hashed != hash) throw new ValidationException("Hash mismatch")
 
         // copy(vote = json.toString)
-        Vote(None, election_id, voter_id, vote, hash, new java.sql.Timestamp(new java.util.Date().getTime))
+        Vote(None, election_id, voter_id, vote, hash, new Timestamp(new Date().getTime))
       }
     )
   }
 }
 
-case class EncryptedVote(a: String, choices: Array[Choice], election_hash: ElectionHash, issue_date: String, proofs: Array[Popk]) {
+case class EncryptedVote(choices: Array[Choice], issue_date: String, proofs: Array[Popk]) {
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
-
-    if(a != "encrypted-vote-v1") throw new ValidationException("Unexpected a value")
-
-    if(election_hash.a != "hash/sha256/value") throw new ValidationException ("Unexpected a value on election hash")
 
     if(checkResidues) {
       choices.zipWithIndex.foreach { case (choice, index) =>
@@ -188,6 +191,7 @@ case class EncryptedVote(a: String, choices: Array[Choice], election_hash: Elect
 
 case class Choice(alpha: BigInt, beta: BigInt) {
   def validate(pk: PublicKey) = {
+
     if(!Crypto.quadraticResidue(alpha, pk.p)) throw new ValidationException("Alpha quadratic non-residue")
     if(!Crypto.quadraticResidue(beta, pk.p)) throw new ValidationException("Beta quadratic non-residue")
   }

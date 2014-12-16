@@ -43,6 +43,8 @@ import java.math.BigInteger
     *
     * and http://programmingpraxis.com/2012/05/01/legendres-symbol/
     *
+    *
+    * online calculator here http://maxima-online.org/?inc=r1919443628
     */
   def legendre(value: BigInt, mod: BigInt): Long = {
     val zero = BigInt(0)
@@ -117,19 +119,22 @@ import java.math.BigInteger
   def encryptEncoded(pk: PublicKey, value: BigInt) = {
     val r = randomBigInt(pk.q)
     val alpha = pk.g.modPow(r, pk.p)
-    val beta = value * (pk.y.modPow(r, pk.p))
+    val beta = (value * (pk.y.modPow(r, pk.p))).mod(pk.p)
 
     // prove knowledge
     val w = randomBigInt(pk.q)
 
-    val a = pk.g.modPow(w, pk.p)
+    val commitment = pk.g.modPow(w, pk.p)
 
-    val commitment = s"${alpha.toString}/${a.toString}"
-    val challenge = BigInt(sha256(commitment), 16)
+    val toHash = s"${alpha.toString}/${commitment.toString}"
+    val challenge = BigInt(sha256(toHash), 16)
 
     // compute response = w +  randomness * challenge
     val response = (w + (r * challenge)).mod(pk.q)
 
-    RawVote(alpha, beta, commitment, challenge, response)
+    // RawVote(alpha, beta, commitment, challenge, response)
+    // case class EncryptedVote(a: String, choices: Array[Choice], election_hash: ElectionHash, issue_date: String, proofs: Array[Popk]) {
+
+    EncryptedVote(Array(Choice(alpha, beta)), "now", Array(Popk(challenge, commitment, response)))
   }
 }

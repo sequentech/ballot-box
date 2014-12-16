@@ -58,6 +58,8 @@ def elections_table():
         Column('start_date', TIMESTAMP),
         Column('end_date', TIMESTAMP),
         Column('pks', String),
+        Column('results', String),
+        Column('results_updated', String)
     )
     return elections
 
@@ -73,7 +75,7 @@ def show_votes(result):
     print(v)
 
 def show_elections(result):
-    v = PrettyTable(['id', 'configuration', 'state', 'start_date', 'end_date', 'pks'])
+    v = PrettyTable(['id', 'configuration', 'state', 'start_date', 'end_date', 'pks', 'results', 'results_updated'])
     v.padding_width = 1
     for row in result:
         v.add_row(map(truncate, row))
@@ -161,7 +163,7 @@ def cast_votes(cfg, args):
                 vote_hash = hashlib.sha256(vote_string).hexdigest()
                 vote = {
                     "election_id": cfg['election_id'],
-                    "voter_id": voter_id,
+                    "voter_id": str(voter_id),
                     "vote": json.dumps(vote),
                     "hash": vote_hash,
                     "created": datetime.now().isoformat()
@@ -169,13 +171,13 @@ def cast_votes(cfg, args):
 
                 auth = get_hmac(cfg, 'vote-%d-%d' % (cfg['election_id'], voter_id))
                 host,port = get_local_hostport()
-                headers = {'Authorization': auth}
+                headers = {'Authorization': auth, 'content-type': 'application/json'}
                 url = 'http://%s:%d/api/election/%d/voter/%d' % (host, port, cfg['election_id'], voter_id)
                 data = json.dumps(vote)
                 print("casting vote for voter %d, %s" % (voter_id, data))
                 voter_id += 1
-                # r = requests.post(url, data=data, headers=headers)
-                # print(r.status_code, r.text)
+                r = requests.post(url, data=data, headers=headers)
+                print(r.status_code, r.text)
     else:
         print("No public key or votes file, exiting..")
         exit(1)
@@ -240,6 +242,21 @@ def stop(cfg, args):
     url = 'http://%s:%d/api/election/%d/stop' % (host, port, cfg['election_id'])
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
+
+def results(cfg, args):
+    path = args.results_config
+    if path != None and os.path.isfile(path):
+        with open(path) as config_file:
+            config = json.load(config_file)
+
+            auth = get_hmac(cfg, 'results-%d' % cfg['election_id'])
+            host,port = get_local_hostport()
+            headers = {'Authorization': auth, 'content-type': 'application/json'}
+            url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
+            r = requests.post(url, headers=headers, data=json.dumps(config))
+            print(r.status_code, r.text)
+    else:
+        print("no config file %s" % path)
 
 def list_votes(cfg, args):
     conn = get_db_connection(cfg)
@@ -320,7 +337,7 @@ def encrypt(cfg, args):
     ctextsPath = ctexts
 
     if(os.path.isfile(pkPath)) and (os.path.isfile(votesPath)):
-        print("> Encrypting with %s %s %s %s %s" % (node, "js/encrypt.js", pkPath, votesPath, str(votesCount)))
+        print("> Encrypting with %s %s %s %s %s" % ("bash", "encrypt.sh", pkPath, votesPath, str(votesCount)))
         output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath], stdout = subprocess.PIPE).communicate()
 
         print("> Received encrypt output (" + str(len(output)) + " chars)")
@@ -362,6 +379,7 @@ encrypt <election_id>: encrypts votes, places ciphertexts in datastore
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
+    parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('-f', '--filters', nargs='+', default=[], help="key==value(s) filters for queries (use ~ for like)")
     args = parser.parse_args()
     command = args.command[0]
