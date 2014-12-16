@@ -94,7 +94,7 @@ object BallotboxApi extends Controller with Response {
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long) = DB.withSession { implicit session => Future {
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
-    val count = Votes.countForElection(electionId)
+    val count = DAL.votes.countForElectionWithSession(electionId)
     val batches = (count / batchSize) + 1
     // in the current implementation we may hold a large number of timestamps
     val timeStamps = scala.collection.mutable.Map[String, Timestamp]()
@@ -104,7 +104,7 @@ object BallotboxApi extends Controller with Response {
     for(i <- 1 to batches) {
       val drop = (i - 1) * batchSize
       val take = i * batchSize
-      val next = Votes.findByElectionIdRange(electionId, drop, take)
+      val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, take)
       // filter duplicates
       val noDuplicates = next.filter { vote =>
         if(timeStamps.contains(vote.voter_id)) {

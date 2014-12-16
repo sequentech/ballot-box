@@ -48,12 +48,11 @@ object ElectionsApi extends Controller with Response {
       },
 
       config => {
-        DB.withSession { implicit session =>
-          val result = Elections.insert(Election(config.id, request.body.toString,
+
+        val result = DAL.elections.insert(Election(config.id, request.body.toString,
             Elections.REGISTERED, config.start_date, config.end_date, None, None))
 
-          Ok(response(result))
-        }
+        Ok(response(result))
       }
     )
   }}
@@ -79,10 +78,8 @@ object ElectionsApi extends Controller with Response {
         BadRequest(response(JsError.toFlatJson(errors)))
       },
       config => {
-        DB.withSession { implicit session =>
-          val result = DAL.elections.updateConfig(id, request.body.toString, config.start_date, config.end_date)
-          Ok(response(result))
-        }
+        val result = DAL.elections.updateConfig(id, request.body.toString, config.start_date, config.end_date)
+        Ok(response(result))
       }
     )
   }}
@@ -156,17 +153,13 @@ object ElectionsApi extends Controller with Response {
     cr.fold(
         errors => {
           Logger.error(s"Error parsing create response " + JsError.toFlatJson(errors))
-          DB.withSession { implicit session =>
-            Elections.updateState(id, Elections.CREATE_ERROR)
-          }
+          DAL.elections.updateState(id, Elections.CREATE_ERROR)
         },
         response => {
-          DB.withSession { implicit session =>
-            val pks = response.session_data.map(_.pubkey)
-            // Datastore.writeFile(id, "pks", Json.toJson(pks).toString)
-            // automatically sets status to CREATED
-            Elections.setPublicKeys(id, Json.toJson(pks).toString)
-          }
+          val pks = response.session_data.map(_.pubkey)
+          // Datastore.writeFile(id, "pks", Json.toJson(pks).toString)
+          // automatically sets status to CREATED
+          DAL.elections.setPublicKeys(id, Json.toJson(pks).toString)
         }
       )
     // we always return the same response to EO
@@ -181,25 +174,22 @@ object ElectionsApi extends Controller with Response {
     tr.fold(
       errors => Future {
         Logger.error(s"Error parsing tally response " + JsError.toFlatJson(errors))
-        DB.withSession { implicit session =>
-          Elections.updateState(id, Elections.TALLY_ERROR)
-        }
+
+        DAL.elections.updateState(id, Elections.TALLY_ERROR)
         Ok(response(0))
       },
       resp => {
         if(resp.status == "finished") {
           downloadTally(resp.data.tally_url, id).map { _ =>
-            DB.withSession { implicit session =>
-              Elections.updateState(id, Elections.TALLY_OK)
-            }
+
+            DAL.elections.updateState(id, Elections.TALLY_OK)
             Ok(response(0))
           }
         } else {
           Future {
             Logger.error(s"EO returned error on tally, ${resp.toString}")
-            DB.withSession { implicit session =>
-              Elections.updateState(id, Elections.TALLY_ERROR)
-            }
+
+            DAL.elections.updateState(id, Elections.TALLY_ERROR)
             Ok(response(0))
           }
         }

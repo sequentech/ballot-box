@@ -27,7 +27,11 @@ object DAL {
     }
 
     def findByElectionIdRange(electionId: Long, drop: Long, take: Long): List[Vote] = DB.withSession { implicit session =>
-      votes.findByElectionIdRange(electionId, drop, take)
+      findByElectionIdRangeWithSession(electionId, drop, take)
+    }
+
+    def findByElectionIdRangeWithSession(electionId: Long, drop: Long, take: Long)(implicit s: Session): List[Vote] = {
+      Votes.findByElectionIdRange(electionId, drop, take)
     }
 
     def checkHash(id: Long, hash: String) = DB.withSession { implicit session =>
@@ -39,6 +43,10 @@ object DAL {
     }
 
     def countForElection(electionId: Long): Int = DB.withSession { implicit session =>
+      countForElectionWithSession(electionId)
+    }
+
+    def countForElectionWithSession(electionId: Long)(implicit s: Session): Int = {
       Votes.countForElection(electionId)
     }
 
