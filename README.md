@@ -56,7 +56,7 @@ application.local.conf
       }
       trustManager = {
         stores = [
-          { type = "JKS", path = "/tmp/agora_elections/truststore.jks", password = "password" }
+          { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
         ]
       }
     }
@@ -94,6 +94,8 @@ test.local.conf
         ]
       }
     }
+
+    logger.scala.slick.jdbc.JdbcBackend.statement=DEBUG
 
 Key store set up
 

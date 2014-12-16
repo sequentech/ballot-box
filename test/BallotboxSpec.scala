@@ -50,9 +50,8 @@ class BallotboxSpec extends Specification with TestContexts with Response {
       DB.withSession { implicit session =>
         val cfg = TestData.config.validate[ElectionConfig].get
         Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None))
-      }
-      // for validation to work we need to set the pk for the election manually (for election 1020)
-      DB.withSession { implicit session =>
+
+        // for validation to work we need to set the pk for the election manually (for election 1020)
         Elections.setPublicKeys(1, pks1020)
         Elections.updateState(1, Elections.STARTED)
       }
@@ -70,10 +69,39 @@ class BallotboxSpec extends Specification with TestContexts with Response {
     "allow dumping votes" in new AppWithDbData() {
       val duration = (100, SECONDS)
 
+      DB.withSession { implicit session =>
+        val cfg = TestData.config.validate[ElectionConfig].get
+        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None))
+
+        // for validation to work we need to set the pk for the election manually (for election 1020)
+        Elections.setPublicKeys(1, pks1020)
+        Elections.updateState(1, Elections.STARTED)
+      }
+
+      val voteJson = getVote(1, "1")
+
+      val response = route(FakeRequest(POST, routes.BallotboxApi.vote(1, "1").url)
+        .withJsonBody(voteJson)
+        .withHeaders(("Authorization", getAuth("vote-1-1")))
+      ).get
+
+      status(response) must equalTo(OK)
+
+      val voteJson2 = getVote(1, "1")
+
+      val response2 = route(FakeRequest(POST, routes.BallotboxApi.vote(1, "1").url)
+        .withJsonBody(voteJson)
+        .withHeaders(("Authorization", getAuth("vote-1-1")))
+      ).get
+
+      status(response2) must equalTo(OK)
+
       Await.result(BallotboxApi.dumpTheVotes(1), duration)
 
       val path = Datastore.getPath(1, Datastore.CIPHERTEXTS, false)
       java.nio.file.Files.exists(path) must equalTo(true)
+      val lines = java.nio.file.Files.readAllLines(path, java.nio.charset.StandardCharsets.UTF_8)
+      lines.size() must equalTo(1)
     }
   }
 

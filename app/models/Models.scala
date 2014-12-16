@@ -11,26 +11,7 @@ import play.api.libs.json._
 import java.sql.Timestamp
 
 
-case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp) {
-  def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
-    val json = Json.parse(vote)
-    val encryptedValue = json.validate[EncryptedVote]
-
-    encryptedValue.fold (
-      errors => throw new ValidationException(s"Error parsing vote json: $errors"),
-      encrypted => {
-
-        encrypted.validate(pks, checkResidues)
-
-        val hashed = Crypto.sha256(vote)
-
-        if(hashed != hash) throw new ValidationException("Hash mismatch")
-
-        copy(vote = json.toString)
-      }
-    )
-  }
-}
+case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp)
 
 class Votes(tag: Tag) extends Table[Vote](tag, "vote") {
   def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -55,7 +36,7 @@ object Votes {
   def findByElectionId(electionId: Long)(implicit s: Session): List[Vote] = votes.filter(_.electionId === electionId).list
 
   def findByElectionIdRange(electionId: Long, drop: Long, take: Long)(implicit s: Session): List[Vote] = {
-    votes.filter(_.electionId === electionId).drop(drop).take(take).list
+    votes.filter(_.electionId === electionId).sortBy(_.created.desc).drop(drop).take(take).list
   }
 
   def checkHash(id: Long, hash: String)(implicit s: Session): Option[Vote] = votes.filter(_.id === id).filter(_.hash === hash).firstOption
@@ -142,7 +123,28 @@ case class TallyResponse(status: String, data: TallyData)
 
 case class PublicKeySession(pubkey: PublicKey, session_id: String)
 case class PublicKey(q: BigInt, p: BigInt, y:BigInt, g: BigInt)
-case class RawVote(alpha: BigInt, beta: BigInt, commitment: String, challenge: BigInt, response: BigInt)
+
+case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: String) {
+  def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
+    val json = Json.parse(vote)
+    val encryptedValue = json.validate[EncryptedVote]
+
+    encryptedValue.fold (
+      errors => throw new ValidationException(s"Error parsing vote json: $errors"),
+      encrypted => {
+
+        encrypted.validate(pks, checkResidues)
+
+        val hashed = Crypto.sha256(vote)
+
+        if(hashed != hash) throw new ValidationException("Hash mismatch")
+
+        // copy(vote = json.toString)
+        Vote(None, election_id, voter_id, vote, hash, new java.sql.Timestamp(new java.util.Date().getTime))
+      }
+    )
+  }
+}
 
 case class EncryptedVote(a: String, choices: Array[Choice], election_hash: ElectionHash, issue_date: String, proofs: Array[Popk]) {
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
@@ -194,3 +196,5 @@ case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
 case class ElectionHash(a: String, value: String)
 
 class ValidationException(message: String) extends Exception(message)
+
+case class RawVote(alpha: BigInt, beta: BigInt, commitment: String, challenge: BigInt, response: BigInt)

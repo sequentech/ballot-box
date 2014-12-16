@@ -31,7 +31,7 @@ object BallotboxApi extends Controller with Response {
   def vote(electionId: Long, voterId: String) =
     LHAction("vote-$0-$1", List(electionId, voterId)).async(BodyParsers.parse.json) { request => Future {
 
-    val voteValue = request.body.validate[Vote]
+    val voteValue = request.body.validate[VoteDTO]
 
       voteValue.fold (
 
@@ -90,6 +90,7 @@ object BallotboxApi extends Controller with Response {
     }
   }
 
+  // FIXME dont need to do timestamp comparison as the order is guaranteed by the DB
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long) = DB.withSession { implicit session => Future {
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)

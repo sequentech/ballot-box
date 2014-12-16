@@ -37,6 +37,7 @@ object JsonFormatters {
     }
   }
 
+  implicit val voteDtoF = Json.format[VoteDTO]
   implicit val voteF = Json.format[Vote]
   implicit val electionF = Json.format[Election]
   implicit val urlF = Json.format[Url]
