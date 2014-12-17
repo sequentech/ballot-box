@@ -251,4 +251,4 @@ to run 5 cycles serially, casting 100 votes in each (votes duplicated)
 to run 10 cycles in parallel, using election.json as election config, config.json as agora-results config,
 casting 100 votes and starting at id 50
 
-    ./cycle.py -i 50 -e 100 -c election.json -r config.json
+    ./cycle.py -i 50 -e 100 -c election.json -r config.json -p
