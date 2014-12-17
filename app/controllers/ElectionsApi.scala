@@ -143,7 +143,7 @@ object ElectionsApi extends Controller with Response {
     Logger.info(s"publishing results for election $id")
 
     val future = getElection(id).flatMap { e =>
-      if(e.state == Elections.TALLY_OK) {
+      if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) {
         pubResults(id, e.results)
       }
       else {

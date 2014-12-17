@@ -82,7 +82,7 @@ def show_elections(result):
     print(v)
 
 def get_db_connection(cfg):
-    engine = create_engine('postgresql+psycopg2://%s:%s@localhost/%s' % (cfg['db_user'], cfg['db_password'], cfg['db_name']))
+    engine = create_engine('postgresql+psycopg2://%s:%s@localhost/%s' % (db_user, db_password, db_name))
     conn = engine.connect()
 
     return conn
@@ -146,6 +146,24 @@ def create(cfg, args):
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/create' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def start(cfg, args):
+
+    auth = get_hmac(cfg, 'start-%d' % cfg['election_id'])
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/start' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def stop(cfg, args):
+
+    auth = get_hmac(cfg, 'stop-%d' % cfg['election_id'])
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/stop' % (host, port, cfg['election_id'])
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
@@ -225,33 +243,6 @@ def tally_no_dump(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
-def publish_results(cfg, args):
-
-    auth = get_hmac(cfg, 'admin-%d' % cfg['election_id'])
-    host,port = get_local_hostport()
-    headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/publish-results' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers)
-    print(r.status_code, r.text)
-
-def start(cfg, args):
-
-    auth = get_hmac(cfg, 'start-%d' % cfg['election_id'])
-    host,port = get_local_hostport()
-    headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/start' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers)
-    print(r.status_code, r.text)
-
-def stop(cfg, args):
-
-    auth = get_hmac(cfg, 'stop-%d' % cfg['election_id'])
-    host,port = get_local_hostport()
-    headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/stop' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers)
-    print(r.status_code, r.text)
-
 def calculate_results(cfg, args):
     path = args.results_config
     if path != None and os.path.isfile(path):
@@ -266,6 +257,15 @@ def calculate_results(cfg, args):
             print(r.status_code, r.text)
     else:
         print("no config file %s" % path)
+
+def publish_results(cfg, args):
+
+    auth = get_hmac(cfg, 'admin-%d' % cfg['election_id'])
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/publish-results' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
 
 def list_votes(cfg, args):
     conn = get_db_connection(cfg)
@@ -301,9 +301,18 @@ def count_votes(cfg, args):
     conn = get_db_connection(cfg)
     votes = votes_table()
     s = select([func.count(votes.c.id)]).where(votes.c.election_id == cfg['election_id'])
-    result = conn.execute(text("select count(*) from vote where id in (select distinct on (voter_id) id from vote where election_id in :ids order by voter_id, election_id desc)"), ids=tuple(args.command[1:]))
+    # result = conn.execute(text("select count(*) from vote where id in (select distinct on (voter_id) id from vote where election_id in :ids order by voter_id, election_id desc)"), ids=tuple(args.command[1:]))
+    result = conn.execute(s)
     row = result.fetchall()
     print(row[0][0])
+
+def show_column(cfg, args):
+    conn = get_db_connection(cfg)
+    elections = elections_table()
+    s = select([elections]).where(elections.c.id == cfg['election_id'])
+    result = conn.execute(s)
+    for row in result:
+        print(row[args.column])
 
 def encryptNode(cfg, args):
     electionId = cfg['election_id']
@@ -334,16 +343,14 @@ def encryptNode(cfg, args):
 # writes votes to file, in raw format (ready to submit to the ballotbox)
 def encrypt(cfg, args):
     electionId = cfg['election_id']
-    pkFile = 'pks'
     votesFile = cfg['plaintexts']
     votesCount = cfg['encrypt-count']
-    ctexts = cfg['ciphertexts']
+    ctextsPath = cfg['ciphertexts']
 
-    print("> Encrypting votes (" + votesFile + ", pk = " + pkFile + ", " + str(votesCount) + ")..")
     publicPath = os.path.join(datastore, 'public', str(cfg['election_id']))
-    pkPath = os.path.join(publicPath, pkFile)
+    pkPath = os.path.join(publicPath, 'pks')
     votesPath = votesFile
-    ctextsPath = ctexts
+    print("> Encrypting votes (" + votesFile + ", pk = " + pkPath + ", " + str(votesCount) + ")..")
 
     if(os.path.isfile(pkPath)) and (os.path.isfile(votesPath)):
         print("> Encrypting with %s %s %s %s %s" % ("bash", "encrypt.sh", pkPath, votesPath, str(votesCount)))
@@ -364,7 +371,7 @@ def encrypt(cfg, args):
 def get_hmac(cfg, permission):
     import hmac
 
-    secret = cfg['shared_secret']
+    secret = shared_secret
     message = '%s:%d' % (permission, 1000*long(time.time()))
     _hmac = hmac.new(str(secret), str(message), hashlib.sha256).hexdigest()
     auth = '%s:%s' % (message,_hmac)
@@ -376,19 +383,26 @@ def main(argv):
     parser.add_argument('command', nargs='+', help='''register <election_json>: registers an election (uses local <id>.json file)
 update <election_id>: updates an election (uses local <id>.json file)
 create <election_id>: creates an election
-dump_votes <election_id>: dumps votes for an election (private ds)
-dump_pks <election_id>: dumps pks for an election (public ds)
+start <election_id>: starts an election (votes can be cast)
+stop <election_id>: stops an election (votes cannot be cast)
 tally <election_dir>: launches tally
-tally_no_dump <election_dir>: launches tally (does not dump votes)
+tally_no_dump <election_id>: launches tally (does not dump votes)
+calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
+publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
+show_column <election_id>: shows a column for an election
 count_votes <election_id>: count votes
 list_votes <election_dir>: list votes
 list_elections: list elections
-encrypt <election_id>: encrypts votes, places ciphertexts in datastore
+dump_pks <election_id>: dumps pks for an election (public datastore)
+encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
+encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
+dump_votes <election_id>: dumps votes for an election (private datastore)
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
+    parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
     parser.add_argument('-f', '--filters', nargs='+', default=[], help="key==value(s) filters for queries (use ~ for like)")
     args = parser.parse_args()
     command = args.command[0]
@@ -418,12 +432,6 @@ encrypt <election_id>: encrypts votes, places ciphertexts in datastore
         config['plaintexts'] = args.plaintexts
         config['encrypt-count'] = args.encrypt_count
         config['filters'] = args.filters
-
-        # CONF should read these from the app configuration
-        config['shared_secret'] = shared_secret
-        config['db_user'] = db_user
-        config['db_password'] = db_password
-        config['db_name'] = db_name
 
         eval(command + "(config, args)")
 

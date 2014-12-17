@@ -172,7 +172,7 @@ Tests
 Manual testing an election cycle
 ==============
 
-An election cycle can be run with the admin tool in the admin directory
+An election cycle can be run with the admin.py tool in the admin directory
 
 You must first create an election config json file. Here's an example
 
@@ -204,19 +204,19 @@ You must first create an election config json file. Here's an example
 
 Register the election (config must be named 50.json here)
 
-     ./admin register 50
+     ./admin.py register 50
 
 create the election
 
-    ./admin create 50
+    ./admin.py create 50
 
 dump the pks
 
-    ./admin dump_pks 50
+    ./admin.py dump_pks 50
 
 encrypt votes (you need an votes.json file to do this)
 
-    ./admin encrypt 50
+    ./admin.py encrypt 50
 
 copy the ciphertexts file to the private datastore
 
@@ -225,7 +225,7 @@ copy the ciphertexts file to the private datastore
 
 tally the election
 
-    ./admin tally_no_dump 50
+    ./admin.py tally_no_dump 50
 
 check the tally was downloaded correctly
 
