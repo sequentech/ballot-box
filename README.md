@@ -242,13 +242,13 @@ You can do automated tests of the above with the cycle.py tool in the admin dire
 
 To run 5 cycles serially, starting with id 50
 
-    ./cycle.py -i 50
+    ./cycle.py -t 5 -i 50
 
 to run 5 cycles serially, casting 100 votes in each (votes duplicated)
 
-    ./cycle.py -i 50 -e 100
+    ./cycle.py -t 5 -i 50 -e 100
 
 to run 10 cycles in parallel, using election.json as election config, config.json as agora-results config,
 casting 100 votes and starting at id 50
 
-    ./cycle.py -i 50 -e 100 -c election.json -r config.json -p
+    ./cycle.py -t 10 -i 50 -e 100 -c election.json -r config.json -p
