@@ -218,15 +218,37 @@ encrypt votes (you need an votes.json file to do this)
 
     ./admin.py encrypt 50
 
-copy the ciphertexts file to the private datastore
+start the election
 
-    mkdir ../datastore/private/50
-    cp ciphertexts_50 ../datastore/private/50/ciphertexts
+    ./admin.py start 50
+
+cast votes
+
+    ./admin cast_votes 50
 
 tally the election
 
-    ./admin.py tally_no_dump 50
+    ./admin.py tally 50
 
-check the tally was downloaded correctly
+calculate results
 
-    ls ../datastore/private/50/tally.tar.gz
+    ./admin results 50 --results-config config.json
+
+publish results
+
+    ./admin.py publish_results 50
+
+You can do automated tests of the above with the cycle.py tool in the admin directory
+
+To run 5 cycles serially, starting with id 50
+
+    ./cycle.py -i 50
+
+to run 5 cycles serially, casting 100 votes in each (votes duplicated)
+
+    ./cycle.py -i 50 -e 100
+
+to run 10 cycles in parallel, using election.json as election config, config.json as agora-results config,
+casting 100 votes and starting at id 50
+
+    ./cycle.py -i 50 -e 100 -c election.json -r config.json
