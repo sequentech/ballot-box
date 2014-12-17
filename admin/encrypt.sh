@@ -1,0 +1,4 @@
+#!/bin/sh
+IVY=/root/.ivy2/cache/
+AGORA_HOME=..
+java -classpath  $AGORA_HOME/target/scala-2.11/agora-elections_2.11-1.0-SNAPSHOT.jar:/root/.ivy2/cache/com.typesafe.play/play-json_2.11/jars/play-json_2.11-2.3.6.jar:/root/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.11.1.jar:/root/.ivy2/cache/com.fasterxml.jackson.core/jackson-core/bundles/jackson-core-2.3.3.jar:/root/.ivy2/cache/com.fasterxml.jackson.core/jackson-databind/bundles/jackson-databind-2.3.3.jar:/root/.ivy2/cache/com.fasterxml.jackson.core/jackson-annotations/bundles/jackson-annotations-2.3.2.jar:$IVY/com.typesafe.play/play-functional_2.11/jars/play-functional_2.11-2.3.6.jar:$IVY/org.joda/joda-convert/jars/joda-convert-1.6.jar:$IVY/joda-time/joda-time/jars/joda-time-2.3.jar commands.DemoVotes $*

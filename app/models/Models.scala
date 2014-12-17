@@ -66,11 +66,11 @@ object Elections {
   val REGISTERED = "registered"
   val CREATED = "created"
   val CREATE_ERROR = "create_error"
-  val TALLY_ERROR = "tally_error"
-  val TALLY_OK = "tally_ok"
   val STARTED = "started"
   val STOPPED = "stopped"
-  val RESULTS_DONE = "results_done"
+  val TALLY_OK = "tally_ok"
+  val TALLY_ERROR = "tally_error"
+  val RESULTS_OK = "results_ok"
 
   val elections = TableQuery[Elections]
 
@@ -92,7 +92,7 @@ object Elections {
   }
 
   def updateResults(id: Long, results: String)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated)).update(Elections.RESULTS_DONE, results, new Timestamp(new Date().getTime))
+    elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated)).update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
   }
 
   def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp)(implicit s: Session) = {
@@ -146,7 +146,6 @@ case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: Stri
 
         if(hashed != hash) throw new ValidationException("Hash mismatch")
 
-        // copy(vote = json.toString)
         Vote(None, election_id, voter_id, vote, hash, new Timestamp(new Date().getTime))
       }
     )
@@ -200,5 +199,3 @@ case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
 case class ElectionHash(a: String, value: String)
 
 class ValidationException(message: String) extends Exception(message)
-
-case class RawVote(alpha: BigInt, beta: BigInt, commitment: String, challenge: BigInt, response: BigInt)

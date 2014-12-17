@@ -1,8 +1,5 @@
 package utils
 
-import java.nio.file.{Paths, Files}
-import java.nio.charset.StandardCharsets
-
 import play.api.libs.json._
 import play.api._
 import play.api.Play.current
@@ -12,6 +9,8 @@ import java.io.RandomAccessFile
 import java.nio._
 import javax.xml.bind.DatatypeConverter
 import java.nio.file.StandardOpenOption._
+import java.nio.file.{Paths, Files}
+import java.nio.charset.StandardCharsets
 
 /**
   * file system election datastore
@@ -28,10 +27,11 @@ object Datastore {
   val PKS = "pks"
   val TALLY = "tally.tar.gz"
   val CONFIG = "config.json"
+  val RESULTS = "results.json"
 
   /** writes a file to an election's datastore */
-  def writeFile(electionId: Long, file: String, content: String, public: Boolean = false, append: Boolean = false) = {
-    val path = getPath(electionId, file, public)
+  def writeFile(electionId: Long, fileName: String, content: String, public: Boolean = false, append: Boolean = false) = {
+    val path = getPath(electionId, fileName, public)
     val mode = if(append) {
        Files.write(path, content.getBytes(StandardCharsets.UTF_8), APPEND)
     } else {
@@ -46,6 +46,7 @@ object Datastore {
     writeFile(electionId, PKS, pks, true)
   }
 
+  /** writes the agora-results config file (passed in api call) to disk, to call agora-results */
   def writeResultsConfig(electionId: Long, config: String) = {
     writeFile(electionId, CONFIG, config, false)
   }
@@ -87,6 +88,39 @@ object Datastore {
     DatatypeConverter.printBase64Binary(bytes).replace("+", "-").replace("/", "_")
   }
 
+  /** returns the complete path for some file in the datastore */
+  def getPath(electionId: Long, fileName: String, public: Boolean = false) = {
+    val directory = Paths.get(getStore(public), electionId.toString)
+    ensureDirectory(directory)
+    directory.resolve(fileName)
+  }
+
+  /** returns the path to the tally */
+  def getTallyPath(electionId: Long) = {
+    getPath(electionId, TALLY, false)
+  }
+
+  def publishResults(electionId: Long, results: Option[String]) = {
+    val tallyLink = getPath(electionId, TALLY, true)
+    val tallyTarget = getPath(electionId, TALLY, false)
+    if(Files.exists(tallyTarget)) {
+      Files.deleteIfExists(tallyLink)
+      Files.createSymbolicLink(tallyLink, tallyTarget)
+    }
+    else {
+      Logger.warn(s"publishResults: tally does not exist for $electionId")
+      throw new java.io.FileNotFoundException("tally does not exist")
+    }
+
+    results match {
+      case Some(result) => writeFile(electionId, RESULTS, result, true)
+      case None => {
+        Logger.warn(s"publishResults: results do not exist for $electionId")
+        throw new IllegalStateException("results not available")
+      }
+    }
+  }
+
   /** ensures that a given directory exists */
   private def ensureDirectory(path: java.nio.file.Path) = {
     if(!Files.isDirectory(path)) {
@@ -103,27 +137,14 @@ object Datastore {
     }
   }
 
-  /** returns the complete path for some file in the datastore */
-  def getPath(electionId: Long, file: String, public: Boolean = false) = {
-    val directory = Paths.get(getStore(public), electionId.toString)
-    ensureDirectory(directory)
-    directory.resolve(file)
-  }
 
-  /** returns the path to the tally */
-  def getTallyPath(electionId: Long) = {
-    getPath(electionId, TALLY, false)
-  }
+  // UNUSED remove
 
   /** reads a file from an election's datastore */
   def readFile(electionId: Long, file: String, public: Boolean = true) = {
     val path = getStore(public) + File.separator + electionId.toString + File.separator + file
     scala.io.Source.fromFile(path).mkString
   }
-
-
-  // UNUSED remove
-
 
   def readFileJson(electionId: Long, file: String, public: Boolean = true) = {
     val contents = readFile(electionId, file, public)

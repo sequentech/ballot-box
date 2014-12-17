@@ -36,7 +36,7 @@ trait TestContexts {
 {
   "id": 1,
   "title": "Votacion de candidatos",
-  "description": "Selecciona los documentos polí­tico, etico y organizativo con los que Podemos",
+  "description": "Selecciona los documentos politico, etico y organizativo con los que Podemos",
   "director": "wadobo-auth1",
   "authorities": ["openkratio-authority"],
   "layout": "pcandidates-election",
@@ -60,7 +60,7 @@ trait TestContexts {
           "max": 1,
           "min": 0,
           "num_winners": 1,
-          "title": "Secretarí­a General",
+          "title": "Secretaria General",
           "randomize_answer_order": true,
           "tally_type": "plurality-at-large",
           "answer_total_votes_percentage": "over-total-valid-votes",

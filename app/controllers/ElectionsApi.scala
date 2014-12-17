@@ -124,17 +124,37 @@ object ElectionsApi extends Controller with Response {
 
   def calculateResults(id: Long) = LHAction("results-$0", List(id)).async(BodyParsers.parse.json) { request =>
     val config = request.body.toString
-    Logger.info(s"received config $config")
+    Logger.info(s"calculating results for election $id")
 
     val future = getElection(id).flatMap { e =>
-      if(e.state == Elections.TALLY_OK) {
+      if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) {
         calcResults(id, config).flatMap( r => updateResults(e, r) )
       } else {
-        Future { BadRequest(error(s"Cannot calculate results in wrong state")) }
+        Logger.warn(s"Cannot calculate results for election $id in wrong state ${e.state}")
+        Future { BadRequest(error(s"Cannot calculate results for election $id in wrong state ${e.state}")) }
       }
     }
     future.recover {
-      case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+      case e:NoSuchElementException => BadRequest(error(s"Election $id not found"))
+    }
+  }
+
+  def publishResults(id: Long) = LHAction("admin-$0", List(id)).async {
+    Logger.info(s"publishing results for election $id")
+
+    val future = getElection(id).flatMap { e =>
+      if(e.state == Elections.TALLY_OK) {
+        pubResults(id, e.results)
+      }
+      else {
+        Logger.warn(s"cannot calculate results for election $id in unexpected state ${e.state}")
+        Future { BadRequest(error(s"cannot calculate results for election $id in unexpected state ${e.state}")) }
+      }
+    }
+    future.recover {
+      case e:NoSuchElementException => BadRequest(error(s"Election $id not found"))
+      case i:IllegalStateException => BadRequest(error(s"Election had no results"))
+      case f:java.io.FileNotFoundException => BadRequest(error(s"Election had no tally"))
     }
   }
 
@@ -143,7 +163,7 @@ object ElectionsApi extends Controller with Response {
       Ok(response(election.results))
     }
     future.recover {
-      case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+      case e:NoSuchElementException => BadRequest(error(s"Election $id not found"))
     }
   }
 
@@ -163,7 +183,7 @@ object ElectionsApi extends Controller with Response {
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
 
-  /** Called by EO when the keys are generated, this saves them and updates state*/
+  /** Called by EO when the keys are generated, this saves them and updates state */
   def keydone(id: Long) = Action.async(BodyParsers.parse.json) { request => Future {
     Logger.info(s"keydone callback ${request.body.toString}")
 
@@ -218,6 +238,11 @@ object ElectionsApi extends Controller with Response {
 
   /*-------------------------------- privates  --------------------------------*/
 
+  private def pubResults(id: Long, results: Option[String]) = Future {
+    Datastore.publishResults(id, results)
+    Ok(response("ok"))
+  }
+
   /** Future: calculates an election's results using agora-results */
   private def calcResults(id: Long, config: String) = Future {
     import scala.sys.process._
@@ -236,7 +261,7 @@ object ElectionsApi extends Controller with Response {
   /** Future: updates an election's results */
   private def updateResults(election: Election, results: String) = Future {
     DAL.elections.updateResults(election.id, results)
-    Ok(Json.toJson(0))
+    Ok(Json.toJson("ok"))
   }
 
   /** Future: downloads a tally from eo */
@@ -287,7 +312,7 @@ object ElectionsApi extends Controller with Response {
     val url = eoUrl(config.director, "public_api/tally").replace("5000", "11000")
     WS.url(url).post(data).map { resp =>
       if(resp.status == HTTP.ACCEPTED) {
-        Ok(response(0))
+        Ok(response("ok"))
       }
       else {
         BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))

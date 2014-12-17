@@ -64,8 +64,7 @@ application.local.conf
 
 test.local.conf
 
-    # FIXME change this to use a test database
-    db.default.url="jdbc:postgresql://localhost:5432/agora_elections"
+    db.default.url="jdbc:postgresql://localhost:5432/agora_elections_test"
     db.default.driver="org.postgresql.Driver"
     db.default.user=agora_elections
     db.default.pass=agora_elections
@@ -126,6 +125,33 @@ specify the follwing configuration parameters in the admin tool, at <app_root>/a
 set the executable permissions if not already set
 
     chmod u+x admin
+
+Agora-Results set up
+
+Clone and install agora-results
+
+    git clone https://github.com/agoravoting/agora-results.git
+    mkvirtualenv agora-results -p $(which python3)
+    workon agora-results
+    cd agora-results
+    pip install -r requirements.txt
+
+you must also configure these two settings in results.sh, found in agora-elections/admin
+
+    AGORA_RESULTS=/tmp/agora-results
+    VENV=/root/.virtualenvs
+
+Local vote encryption set up
+
+If you want to encrypt votes locally, you must configure these settings in admin/encrypt.sh
+
+    IVY=/root/.ivy2/cache/
+
+you must also make sure that the software is packaged from the activator console, with
+
+    [agora-elections] $ package
+
+which will generate the required jar in the target directory (note that encrypt.sh assumes scala v2.11)
 
 Winscp sync settings
 
