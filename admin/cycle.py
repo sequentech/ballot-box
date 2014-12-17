@@ -236,6 +236,12 @@ def main(argv):
     print('total_cycles = %d' % args.total_cycles)
     print('parallel = %s' % args.parallel)
 
+    if not os.path.isfile(args.election_config):
+        raise Exception("election config not found '%s'" % args.election_config)
+
+    if not os.path.isfile(args.results_config):
+        raise Exception("results config not found '%s'" % args.results_config)
+
     with open(args.election_config, 'r') as f:
         cfg = json.loads(f.read())
     cfg['id'] = args.init_id
