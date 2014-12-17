@@ -28,7 +28,16 @@ object DemoVotes {
 
     val jsonVotes = Json.parse(scala.io.Source.fromFile(args(1)).mkString)
     val votes = jsonVotes.validate[Array[Long]].get
-    val jsonEncrypted = Json.toJson(votes.map(Crypto.encrypt(pk, _)))
+
+    val toEncrypt = if(args.length == 3) {
+      val extraSize = (args(2).toInt - votes.length).min(0)
+      val extra = Array.fill(extraSize){ votes(scala.util.Random.nextInt(votes.length)) }
+      votes ++ extra
+    } else {
+      votes
+    }
+
+    val jsonEncrypted = Json.toJson(toEncrypt.map(Crypto.encrypt(pk, _)))
     println(jsonEncrypted)
   }
 }

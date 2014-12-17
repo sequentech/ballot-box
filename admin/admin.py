@@ -176,6 +176,7 @@ def cast_votes(cfg, args):
             votes = json.load(votes_file)
 
             voter_id = 0
+            print("casting %d votes.." % len(votes))
             for vote in votes:
                 vote_string = json.dumps(vote)
                 vote_hash = hashlib.sha256(vote_string).hexdigest()
@@ -192,7 +193,7 @@ def cast_votes(cfg, args):
                 headers = {'Authorization': auth, 'content-type': 'application/json'}
                 url = 'http://%s:%d/api/election/%d/voter/%d' % (host, port, cfg['election_id'], voter_id)
                 data = json.dumps(vote)
-                print("casting vote for voter %d, %s" % (voter_id, data))
+                # print("casting vote for voter %d, %s" % (voter_id, data))
                 voter_id += 1
                 r = requests.post(url, data=data, headers=headers)
                 print(r.status_code, r.text)
@@ -354,7 +355,7 @@ def encrypt(cfg, args):
 
     if(os.path.isfile(pkPath)) and (os.path.isfile(votesPath)):
         print("> Encrypting with %s %s %s %s %s" % ("bash", "encrypt.sh", pkPath, votesPath, str(votesCount)))
-        output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath], stdout = subprocess.PIPE).communicate()
+        output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
 
         print("> Received encrypt output (" + str(len(output)) + " chars)")
         parsed = json.loads(output)

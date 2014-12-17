@@ -356,7 +356,7 @@ object ElectionsApi extends Controller with Response {
     Logger.info(s"requesting at $url")
     WS.url(url).post(data).map { resp =>
       if(resp.status == HTTP.ACCEPTED) {
-        Ok(response(0))
+        Ok(response("ok"))
       }
       else {
         Logger.error(s"EO returned status ${resp.status} with body ${resp.body}")

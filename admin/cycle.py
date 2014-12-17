@@ -9,6 +9,9 @@ import time
 import json
 import os
 
+import argparse
+from argparse import RawTextHelpFormatter
+
 public_ds = '../datastore/public'
 private_ds = '../datastore/private'
 
@@ -95,11 +98,11 @@ def dump_pks(id):
     if not os.path.isfile(pks_path(id)):
         raise Exception("pks not found")
 
-def encrypt(id):
+def encrypt(id, encrypt_count):
     cfg = {}
     cfg['election_id'] = id
     cfg['plaintexts'] = 'votes.json'
-    cfg['encrypt-count'] = 0
+    cfg['encrypt-count'] = encrypt_count
     cfg['ciphertexts'] = 'ciphertexts_' + str(cfg['election_id'])
 
     args = Args()
@@ -114,13 +117,14 @@ def start(id):
     admin.start(cfg, args)
 
 def cast_votes(id):
+    cfg = {}
     cfg['election_id'] = id
     cfg['ciphertexts'] = 'ciphertexts_' + str(cfg['election_id'])
     args = Args()
     before = count_votes(id)
     admin.cast_votes(cfg, args)
     after = count_votes(id)
-    print("votes after cast: %s" % after)
+    print("votes after casting: %s" % after)
     if not after > before:
         raise Exception("no votes were cast")
 
@@ -130,13 +134,13 @@ def tally(id):
     args = Args()
     admin.tally(cfg, args)
 
-def calculate_results(id):
+def calculate_results(id, results_config):
     if not os.path.isfile(tally_path(id)):
         raise Exception("tally file not found (private ds)")
     cfg = {}
     cfg['election_id'] = id
     args = Args()
-    args.results_config = 'config.json'
+    args.results_config = results_config
     admin.calculate_results(cfg, args)
 
 def publish_results(id):
@@ -149,27 +153,40 @@ def publish_results(id):
     if not os.path.isfile(tally_public_path(id)):
         raise Exception("tally file not found (public ds")
 
-jsonPath = 'base.json'
-init_id = 69
+def main(argv):
+    parser = argparse.ArgumentParser(description='cycle testing script', formatter_class=RawTextHelpFormatter)
+    parser.add_argument('-e', '--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
+    parser.add_argument('-c', '--election-config', help='config file for election', default='election.json')
+    parser.add_argument('-r', '--results-config', help='config file for agora-results', default='config.json')
+    parser.add_argument('-i', '--init-id', help='config file for agora-results', type=int, required=True)
+    args = parser.parse_args()
 
-with open(jsonPath, 'r') as f:
-    cfg = json.loads(f.read())
-cfg['id'] = init_id
-print('************************ cfg ************************')
-print(cfg)
-print('*****************************************************')
+    print("election_config = %s" % args.election_config)
+    print("results_config = %s" % args.results_config)
+    print("init_id = %d" % args.init_id)
+    print("encrypt_count = %d" % args.encrypt_count)
 
-register(cfg)
-wait_for_state(cfg['id'], 'registered', 5)
-create(cfg['id'])
-wait_for_state(cfg['id'], 'created', 20)
-dump_pks(cfg['id'])
-encrypt(cfg['id'])
-start(cfg['id'])
-wait_for_state(cfg['id'], 'started', 5)
-cast_votes(cfg['id'])
-tally(cfg['id'])
-wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
-calculate_results(cfg['id'])
-wait_for_state(cfg['id'], 'results_ok', 5)
-publish_results(cfg['id'])
+    with open(args.election_config, 'r') as f:
+        cfg = json.loads(f.read())
+    cfg['id'] = args.init_id
+    print('************************ cfg ************************')
+    print(cfg)
+    print('*****************************************************')
+
+    register(cfg)
+    wait_for_state(cfg['id'], 'registered', 5)
+    create(cfg['id'])
+    wait_for_state(cfg['id'], 'created', 20)
+    dump_pks(cfg['id'])
+    encrypt(cfg['id'], args.encrypt_count)
+    start(cfg['id'])
+    wait_for_state(cfg['id'], 'started', 5)
+    cast_votes(cfg['id'])
+    tally(cfg['id'])
+    wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
+    calculate_results(cfg['id'], args.results_config)
+    wait_for_state(cfg['id'], 'results_ok', 5)
+    publish_results(cfg['id'])
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
