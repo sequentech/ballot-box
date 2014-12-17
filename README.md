@@ -110,7 +110,7 @@ add the director ca to the keystore
 
 Admin tool set up
 
-specify the follwing configuration parameters in the admin tool, at <app_root>/admin/admin
+specify the follwing configuration parameters in the admin tool, at <app_root>/admin/admin.py
 
     # set configuration parameters
     datastore = '/tmp/agora_elections/datastore'
@@ -124,7 +124,11 @@ specify the follwing configuration parameters in the admin tool, at <app_root>/a
 
 set the executable permissions if not already set
 
-    chmod u+x admin
+    chmod u+x admin.py
+
+do this also for the cycle tool
+
+    chmod u+x cycle.py
 
 Agora-Results set up
 
@@ -238,7 +242,11 @@ publish results
 
     ./admin.py publish_results 50
 
-You can do automated tests of the above with the cycle.py tool in the admin directory
+Automated testing of an election cycle
+==============
+
+You can do automated tests of the above with the cycle.py tool in the admin directory. This requires
+correctly setting up admin.py first, as described earlier.
 
 To run 5 cycles serially, starting with id 50
 
