@@ -187,30 +187,69 @@ An election cycle can be run with the admin.py tool in the admin directory
 You must first create an election config json file. Here's an example
 
     {
-      "election_id": 50,
-      "director": "wadobo-auth1",
-      "authorities": ["wadobo-auth3"],
-      "title": "Test election",
-      "url": "https://example.com/election/url",
-      "description": "election description",
-      "questions_data": [{
-          "question": "Who Should be President?",
-          "tally_type": "ONE_CHOICE",
-          "answers": [
-              {"a": "ballot/answer",
-              "details": "",
-              "value": "Alice"},
-              {"a": "ballot/answer",
-              "details": "",
-              "value": "Bob"}
-          ],
-          "max": 1, "min": 0
-      }],
-      "voting_start_date": "2015-12-06T18:17:14.457",
-      "voting_end_date": "2015-12-09T18:17:14.457",
-      "is_recurring": false,
-      "extra": []
+    "id": 66,
+    "title": "My vote",
+    "description": "choose stuff",
+    "director": "my_director",
+    "authorities": ["my_authority"],
+    "layout": "pcandidates-election",
+    "presentation": {
+      "share_text": "share this",
+      "theme": "foo",
+      "urls": [
+        {
+          "title": "",
+          "url": ""
+        }
+      ],
+      "theme_css": "whatever"
+    },
+    "end_date": "2013-12-09T18:17:14.457000",
+    "start_date": "2013-12-06T18:17:14.457000",
+    "questions": [
+        {
+            "description": "",
+            "layout": "pcandidates-election",
+            "max": 1,
+            "min": 0,
+            "num_winners": 1,
+            "title": "My question",
+            "randomize_answer_order": true,
+            "tally_type": "plurality-at-large",
+            "answer_total_votes_percentage": "over-total-valid-votes",
+            "answers": [
+                {
+                    "id": 0,
+                    "category": "Cat A",
+                    "details": "",
+                    "sort_order": 1,
+                    "urls": [
+                      {
+                        "title": "",
+                        "url": ""
+                      }
+                    ],
+                    "text": "Option A"
+                },
+                   {
+                    "id": 1,
+                    "category": "Cat B",
+                    "details": "",
+                    "sort_order": 1,
+                    "urls": [
+                      {
+                        "title": "",
+                        "url": ""
+                      }
+                    ],
+                    "text": "Option B"
+                }
+
+            ]
+        }
+    ]
     }
+
 
 Register the election (config must be named 50.json here)
 
@@ -252,7 +291,21 @@ Automated testing of an election cycle
 ==============
 
 You can do automated tests of the above with the cycle.py tool in the admin directory. This requires
-correctly setting up admin.py first, as described earlier.
+correctly setting up admin.py first, as described earlier. You need an election configuration as base,
+you can use one like the one above. cycle.py looks for such a file with default name 'election.json'.
+You also need an agora-results configuration file to calculate results. cycle.py looks for such a file
+at 'config.json'. Here's an example agora-results configuration file
+
+    [
+      [
+        "agora_results.pipes.results.do_tallies",
+        {"ignore_invalid_votes": true}
+      ],
+      [
+        "agora_results.pipes.results.to_files",
+        {"paths": ["results.json"]}
+      ]
+  ]
 
 To run 5 cycles serially, starting with id 50
 
