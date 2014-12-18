@@ -8,6 +8,7 @@ from functools import partial
 import time
 import json
 import os
+import traceback
 
 import argparse
 from argparse import RawTextHelpFormatter
@@ -30,7 +31,7 @@ def results_public_path(id):
 def tally_public_path(id):
     return os.path.join(public_ds, str(id), 'tally.tar.gz')
 
-def capture(function):
+def capture_stdout(function):
     def wrapper(*args):
         stdout = sys.stdout
         output = StringIO.StringIO()
@@ -42,7 +43,7 @@ def capture(function):
 
     return wrapper
 
-@capture
+@capture_stdout
 def get_state(id):
     cfg = {}
     cfg['election_id'] = id
@@ -50,7 +51,7 @@ def get_state(id):
     args.column = 'state'
     admin.show_column(cfg, args)
 
-@capture
+@capture_stdout
 def count_votes(id):
     cfg = {}
     cfg['election_id'] = id
@@ -164,71 +165,91 @@ def publish_results(id):
 
 def serial(cfg, args):
 
-    print('>>> starting serial run')
+    try:
+        print('>>> starting serial run')
 
-    for i in range(0, args.total_cycles):
-        cfg['id'] = args.init_id + i
-        print('>> starting cycle id = %d' % cfg['id'])
-        register(cfg)
-        wait_for_state(cfg['id'], 'registered', 5)
-        create(cfg['id'])
-        wait_for_state(cfg['id'], 'created', 20)
-        dump_pks(cfg['id'])
-        encrypt(cfg['id'], args.encrypt_count)
-        start(cfg['id'])
-        wait_for_state(cfg['id'], 'started', 5)
-        cast_votes(cfg['id'])
-        tally(cfg['id'])
-        wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
-        calculate_results(cfg['id'], args.results_config)
-        wait_for_state(cfg['id'], 'results_ok', 5)
-        publish_results(cfg['id'])
+        for i in range(0, args.total_cycles):
+            cfg['id'] = args.init_id + i
+            print('>> starting cycle id = %d' % cfg['id'])
+            register(cfg)
+            wait_for_state(cfg['id'], 'registered', 5)
+            create(cfg['id'])
+            wait_for_state(cfg['id'], 'created', 20)
+            dump_pks(cfg['id'])
+            encrypt(cfg['id'], args.encrypt_count)
+            start(cfg['id'])
+            wait_for_state(cfg['id'], 'started', 5)
+            cast_votes(cfg['id'])
+            tally(cfg['id'])
+            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
+            calculate_results(cfg['id'], args.results_config)
+            wait_for_state(cfg['id'], 'results_ok', 5)
+            publish_results(cfg['id'])
 
-    print('>>> finished serial run (last id = %d)' % cfg['id'])
+        print('>>> finished serial run (last id = %d)' % cfg['id'])
+
+    except Exception as e:
+        print('-'*60)
+        traceback.print_exc(file=sys.stdout)
+        print('-'*60)
+        state = get_state(cfg['id'])
+        print("id = %d, state is '%s'" % (cfg['id'], state))
 
 def parallel(cfg, args):
 
-    print('>>> starting parallel run')
+    try:
 
-    for i in range(0, args.total_cycles):
-        cfg['id'] = args.init_id + i
-        print('>> create, id = %d' % cfg['id'])
-        register(cfg)
-        wait_for_state(cfg['id'], 'registered', 5)
-        create(cfg['id'])
-        wait_for_state(cfg['id'], 'created', 20)
+        print('>>> starting parallel run')
 
-    for i in range(0, args.total_cycles):
-        cfg['id'] = args.init_id + i
-        print('>> vote, id = %d' % cfg['id'])
-        dump_pks(cfg['id'])
-        encrypt(cfg['id'], args.encrypt_count)
-        start(cfg['id'])
-        wait_for_state(cfg['id'], 'started', 5)
-        cast_votes(cfg['id'])
+        for i in range(0, args.total_cycles):
+            cfg['id'] = args.init_id + i
+            print('>> create, id = %d' % cfg['id'])
+            register(cfg)
+            wait_for_state(cfg['id'], 'registered', 5)
+            create(cfg['id'])
+            wait_for_state(cfg['id'], 'created', 20)
 
-    for i in range(0, args.total_cycles):
-        cfg['id'] = args.init_id + i
-        print('>> tally + publish, id = %d' % cfg['id'])
-        tally(cfg['id'])
-        wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
-        calculate_results(cfg['id'], args.results_config)
-        wait_for_state(cfg['id'], 'results_ok', 5)
-        publish_results(cfg['id'])
+        for i in range(0, args.total_cycles):
+            cfg['id'] = args.init_id + i
+            print('>> vote, id = %d' % cfg['id'])
+            dump_pks(cfg['id'])
+            encrypt(cfg['id'], args.encrypt_count)
+            start(cfg['id'])
+            wait_for_state(cfg['id'], 'started', 5)
+            cast_votes(cfg['id'])
 
-    print('>>> finished parallel run (last id = %d)' % cfg['id'])
+        for i in range(0, args.total_cycles):
+            cfg['id'] = args.init_id + i
+            print('>> tally + publish, id = %d' % cfg['id'])
+            tally(cfg['id'])
+            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
+            calculate_results(cfg['id'], args.results_config)
+            wait_for_state(cfg['id'], 'results_ok', 5)
+            publish_results(cfg['id'])
+
+        print('>>> finished parallel run (last id = %d)' % cfg['id'])
+
+    except Exception as e:
+        print('-'*60)
+        traceback.print_exc(file=sys.stdout)
+        print('-'*60)
+        state = get_state(cfg['id'])
+        print("id = %d, state is '%s'" % (cfg['id'], state))
 
 def main(argv):
     parser = argparse.ArgumentParser(description='cycle testing script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('-e', '--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('-c', '--election-config', help='config file for election', default='election.json')
     parser.add_argument('-r', '--results-config', help='config file for agora-results', default='config.json')
-    parser.add_argument('-i', '--init-id', help='config file for agora-results', type=int, required=True)
+    parser.add_argument('-i', '--init-id', help='config file for agora-results', type=int)
     parser.add_argument('-t', '--total-cycles', help='config file for agora-results', type=int, default='1')
     parser.add_argument('-p', '--parallel', help='config file for agora-results', action='store_true')
     args = parser.parse_args()
 
     print('************************ cfg ************************')
+    if args.init_id is None:
+        args.init_id = admin.get_max_electionid() + 1
+
     print('election_config = %s' % args.election_config)
     print('results_config = %s' % args.results_config)
     print('init_id = %d' % args.init_id)

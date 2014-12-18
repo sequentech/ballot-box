@@ -81,7 +81,14 @@ def show_elections(result):
         v.add_row(map(truncate, row))
     print(v)
 
-def get_db_connection(cfg):
+def get_max_electionid():
+    conn = get_db_connection()
+    elections = elections_table()
+    s = select([func.max(elections.c.id)])
+    result = conn.execute(s)
+    return result.first()[0]
+
+def get_db_connection():
     engine = create_engine('postgresql+psycopg2://%s:%s@localhost/%s' % (db_user, db_password, db_name))
     conn = engine.connect()
 
@@ -269,7 +276,7 @@ def publish_results(cfg, args):
     print(r.status_code, r.text)
 
 def list_votes(cfg, args):
-    conn = get_db_connection(cfg)
+    conn = get_db_connection()
     votes = votes_table()
     s = select([votes]).where(votes.c.election_id == cfg['election_id'])
     for filter in cfg['filters']:
@@ -284,7 +291,7 @@ def list_votes(cfg, args):
     show_votes(result)
 
 def list_elections(cfg, args):
-    conn = get_db_connection(cfg)
+    conn = get_db_connection()
     elections = elections_table()
     s = select([elections])
     for filter in cfg['filters']:
@@ -299,7 +306,7 @@ def list_elections(cfg, args):
     show_elections(result)
 
 def count_votes(cfg, args):
-    conn = get_db_connection(cfg)
+    conn = get_db_connection()
     votes = votes_table()
     s = select([func.count(votes.c.id)]).where(votes.c.election_id == cfg['election_id'])
     # result = conn.execute(text("select count(*) from vote where id in (select distinct on (voter_id) id from vote where election_id in :ids order by voter_id, election_id desc)"), ids=tuple(args.command[1:]))
@@ -308,7 +315,7 @@ def count_votes(cfg, args):
     print(row[0][0])
 
 def show_column(cfg, args):
-    conn = get_db_connection(cfg)
+    conn = get_db_connection()
     elections = elections_table()
     s = select([elections]).where(elections.c.id == cfg['election_id'])
     result = conn.execute(s)

@@ -37,6 +37,9 @@ object DemoVotes {
       votes
     }
 
+    val histogram = toEncrypt.groupBy(l => l).map(t => (t._1, t._2.length))
+    System.err.println("DemoVotes: tally: " + histogram)
+
     val jsonEncrypted = Json.toJson(toEncrypt.map(Crypto.encrypt(pk, _)))
     println(jsonEncrypted)
   }

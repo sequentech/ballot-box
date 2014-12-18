@@ -109,19 +109,8 @@ object BallotboxApi extends Controller with Response {
       // filter duplicates
       val noDuplicates = next.filter { vote =>
         if(timeStamps.contains(vote.voter_id)) {
-          /*val previous = timeStamps(vote.voter_id)
-          // compareTo returns a value greater than 0 if this Timestamp object is _after_ the given argument.
-          if(vote.created.compareTo(previous) > 0) {
-            timeStamps -= vote.voter_id
-            timeStamps += (vote.voter_id -> vote.created)
-            true
-          }
-          else {
-            false
-          }*/
           false
         } else {
-          // timeStamps += (vote.voter_id -> vote.created)
           timeStamps += vote.voter_id
           true
         }
@@ -129,7 +118,8 @@ object BallotboxApi extends Controller with Response {
       // TODO filter by voter id's
 
       // eo format is new line separated list of votes
-      val content = noDuplicates.map(_.vote).mkString("\n")
+      // we add an extra \n as otherwise there will be no separation between batches
+      val content = noDuplicates.map(_.vote).mkString("\n") + "\n"
       out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
     }
 
