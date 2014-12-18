@@ -191,8 +191,7 @@ def cast_votes(cfg, args):
                     "election_id": cfg['election_id'],
                     "voter_id": str(voter_id),
                     "vote": json.dumps(vote),
-                    "hash": vote_hash,
-                    "created": datetime.now().isoformat()
+                    "hash": vote_hash
                 }
 
                 auth = get_hmac(cfg, 'vote-%d-%d' % (cfg['election_id'], voter_id))
