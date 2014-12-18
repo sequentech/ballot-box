@@ -60,7 +60,7 @@ def count_votes(id):
 def wait_for_state(id, state, seconds):
     def wait():
         s = get_state(id)
-        print("wating for %s, got '%s'" % (state, s))
+        print("waiting for '%s', got '%s'" % (state, s))
         return s in state
 
     wait_for(wait, seconds)

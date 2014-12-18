@@ -30,7 +30,7 @@ object DemoVotes {
     val votes = jsonVotes.validate[Array[Long]].get
 
     val toEncrypt = if(args.length == 3) {
-      val extraSize = (args(2).toInt - votes.length).min(0)
+      val extraSize = (args(2).toInt - votes.length).max(0)
       val extra = Array.fill(extraSize){ votes(scala.util.Random.nextInt(votes.length)) }
       votes ++ extra
     } else {
