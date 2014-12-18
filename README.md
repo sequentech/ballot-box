@@ -268,4 +268,4 @@ Running (production mode)
     clean
     stage
     exit
-    target/universal/stage/bin/agora-elections
+    target/universal/stage/bin/agora-elections -v

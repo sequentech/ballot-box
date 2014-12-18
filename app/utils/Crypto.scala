@@ -13,6 +13,13 @@ import java.math.BigInteger
   */
  object Crypto {
 
+  val zero = BigInt(0)
+  val two = BigInt(2)
+  val three = BigInt(3)
+  val four = BigInt(4)
+  val five = BigInt(5)
+  val eight = BigInt(8)
+
   /** calculates an hmac */
   def hmac(secret: String, value: String): String = {
     val key = new SecretKeySpec(secret.getBytes, "HmacSHA256")
@@ -47,12 +54,6 @@ import java.math.BigInteger
     * online calculator here http://maxima-online.org/?inc=r1919443628
     */
   def legendre(value: BigInt, mod: BigInt): Long = {
-    val zero = BigInt(0)
-    val two = BigInt(2)
-    val three = BigInt(3)
-    val four = BigInt(4)
-    val five = BigInt(5)
-    val eight = BigInt(8)
 
     var modulus = mod
     var a = value.mod(modulus)
@@ -67,11 +68,6 @@ import java.math.BigInteger
         }
       }
 
-      // swap
-      /* tmp := big.NewInt(0)
-      tmp.SetBytes(a.Bytes())
-      a.SetBytes(modulus.Bytes())
-      modulus.SetBytes(tmp.Bytes())*/
       val tmp = a
       a = modulus
       modulus = tmp

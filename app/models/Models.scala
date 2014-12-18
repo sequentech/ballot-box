@@ -155,12 +155,26 @@ case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: Stri
 case class EncryptedVote(choices: Array[Choice], issue_date: String, proofs: Array[Popk]) {
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
 
+var startTime = System.nanoTime()
+
     if(checkResidues) {
       choices.zipWithIndex.foreach { case (choice, index) =>
         choice.validate(pks(index))
       }
     }
+
+var endTime = System.nanoTime()
+val residues = (endTime - startTime) / 1000000.0
+
+startTime = System.nanoTime()
     checkPopk(pks)
+endTime = System.nanoTime()
+val popks = (endTime - startTime) / 1000000.0
+
+val tot = residues + popks
+
+println(s"residues $residues, popks $popks, total $tot")
+
   }
 
   def checkPopk(pks: Array[PublicKey]) = {

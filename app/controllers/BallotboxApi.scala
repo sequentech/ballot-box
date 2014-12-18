@@ -35,10 +35,7 @@ object BallotboxApi extends Controller with Response {
 
 val globalStart = System.nanoTime()
 
-var startTime = System.nanoTime()
     val voteValue = request.body.validate[VoteDTO]
-var endTime = System.nanoTime()
-val vJson = (endTime - startTime) / 1000000.0
 
       voteValue.fold (
 
@@ -48,17 +45,14 @@ val vJson = (endTime - startTime) / 1000000.0
         try {
           DB.withSession { implicit session =>
             // val election = Elections.findById(electionId).get
-startTime = System.nanoTime()
+var startTime = System.nanoTime()
             val election = DAL.elections.findByIdWithSession(electionId).get
-endTime = System.nanoTime()
+var endTime = System.nanoTime()
 val dbPk = (endTime - startTime) / 1000000.0
             if(election.state == Elections.STARTED) {
 
-startTime = System.nanoTime()
               val pksJson = Json.parse(election.pks.get)
               val pksValue = pksJson.validate[Array[PublicKey]]
-endTime = System.nanoTime()
-val pkJson = (endTime - startTime) / 1000000.0
 
               pksValue.fold (
 
@@ -77,9 +71,9 @@ endTime = System.nanoTime()
 val dbCast = (endTime - startTime) / 1000000.0
 
 val total = (System.nanoTime() - globalStart) / 1000000.0
-val tot = vJson + pkJson + dbPk + voteValidate + dbCast
+val tot = dbPk + voteValidate + dbCast
 
-println(s"vJson $vJson, pkJson $pkJson, dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $total")
+println(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $total")
                   Ok(response(result))
                 }
               )

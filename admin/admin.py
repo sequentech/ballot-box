@@ -30,6 +30,7 @@ shared_secret = 'hohoho'
 db_user = 'agora_elections'
 db_password = 'agora_elections'
 db_name = 'agora_elections'
+db_port = 5432
 app_host = 'localhost'
 app_port = 9000
 node = '/usr/local/bin/node'
@@ -89,7 +90,7 @@ def get_max_electionid():
     return result.first()[0]
 
 def get_db_connection():
-    engine = create_engine('postgresql+psycopg2://%s:%s@localhost/%s' % (db_user, db_password, db_name))
+    engine = create_engine('postgresql+psycopg2://%s:%s@localhost:%d/%s' % (db_user, db_password, db_port, db_name))
     conn = engine.connect()
 
     return conn
