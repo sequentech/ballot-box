@@ -161,13 +161,7 @@ Winscp sync settings
 
     |.git/;conf;/logs/;target/;activator;activator.bat;*.jar
 
-Running
-======
-
-    activator
-    run
-
-Tests
+Unit tests
 =====
 
     activator
@@ -260,3 +254,18 @@ to run 10 cycles in parallel, using election.json as election config, config.jso
 casting 100 votes and starting at id 50
 
     ./cycle.py -t 10 -i 50 -e 100 -c election.json -r config.json -p
+
+Running (dev mode)
+======
+
+    activator
+    run
+
+Running (production mode)
+======
+
+    activator
+    clean
+    stage
+    exit
+    target/universal/stage/bin/agora-elections

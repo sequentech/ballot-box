@@ -4,6 +4,7 @@ import play.api.db.slick.DB
 import play.api.cache.Cache
 import play.api.db.slick.Config.driver.simple._
 import play.api.Play.current
+import play.api._
 
 import java.sql.Timestamp
 
@@ -59,8 +60,15 @@ object DAL {
       findByIdWithSession(id)
     }
     def findByIdWithSession(id: Long)(implicit s: Session): Option[Election] = Cache.getAs[Election](key(id)) match {
-      case Some(e) => Some(e)
-      case None => Elections.findById(id)
+      case Some(e) => {
+        Some(e)
+      }
+      case None => {
+        val election = Elections.findById(id)
+        // set in cache if found
+        election.map(Cache.set(key(id), _))
+        election
+      }
     }
 
     def count: Int = DB.withSession { implicit session =>
