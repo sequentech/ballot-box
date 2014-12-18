@@ -157,6 +157,18 @@ you must also make sure that the software is packaged from the activator console
 
 which will generate the required jar in the target directory (note that encrypt.sh assumes scala v2.11)
 
+Postgresql parameters
+
+Some changes can be made in /etc/postgresql/9.3/main/postgresql.conf
+
+    max_connections = 200
+    checkpoint_segments = 16
+    checkpoint_completion_target = 0.7
+
+restart the server
+
+    service restart postgresql
+
 Winscp sync settings
 
     |.git/;conf;/logs/;target/;activator;activator.bat;*.jar
@@ -269,3 +281,11 @@ Running (production mode)
     stage
     exit
     target/universal/stage/bin/agora-elections -v
+
+you probably want to give the process more memory:
+
+    target/universal/stage/bin/agora-elections -v -mem 3072
+
+the log will be found in
+
+     target/universal/stage/logs/application.log
