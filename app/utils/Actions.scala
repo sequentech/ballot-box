@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.Logger
 import scala.concurrent._
 import play.api._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 /** Logs before each request is processed */
 object LoggingAction extends ActionBuilder[Request] {
@@ -15,7 +16,7 @@ object LoggingAction extends ActionBuilder[Request] {
 }
 
 /** Authorizes requests using hmac in Authorization header */
-case class HmacAuthAction(allowed: String, data: List[Any] = List()) extends ActionFilter[Request] {
+case class HMACAuthAction(allowed: String, data: List[Any] = List()) extends ActionFilter[Request] {
   val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
   val expiry = Play.current.configuration.getString("booth.auth.expiry").get.toInt
   val regexp = """\$\{([a-zA-Z0-9]+)\}""".r
@@ -31,7 +32,6 @@ case class HmacAuthAction(allowed: String, data: List[Any] = List()) extends Act
 
   /** validate an hmac authorization code */
   def validate[A](request: Request[A])(value: String): Boolean = {
-
     try {
       // expand index variables ($0 $1 etc)
       var expanded = allowed
@@ -52,6 +52,7 @@ case class HmacAuthAction(allowed: String, data: List[Any] = List()) extends Act
       val diff = now - time
 
       if( (diff < expiry) && (Crypto.hmac(boothSecret, s"$permission:$time") == hash) && (expanded == permission) ) {
+
         return true
       }
 
@@ -64,9 +65,31 @@ case class HmacAuthAction(allowed: String, data: List[Any] = List()) extends Act
   }
 }
 
-/** pipeline: LoggingAction and then HmacAction */
+/** an action that passes through the hmac filter */
+case class HAction(allowed: String, data: List[Any] = List()) extends ActionBuilder[Request] {
+  def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
+    HMACAuthAction(allowed, data).invokeBlock(request, block)
+  }
+}
+
+// now using a filter instead of this action
+/** pipeline: LoggingAction and then HMACAction */
 case class LHAction(allowed: String, data: List[Any] = List()) extends ActionBuilder[Request] {
   def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
-    (LoggingAction andThen HmacAuthAction(allowed, data)).invokeBlock(request, block)
+    (LoggingAction andThen HMACAuthAction(allowed, data)).invokeBlock(request, block)
+  }
+}
+
+// https://www.playframework.com/documentation/2.3.x/ScalaHttpFilters
+/** logs and times request processing */
+object LoggingFilter extends Filter {
+  def apply(nextFilter: (RequestHeader) => Future[Result])(requestHeader: RequestHeader): Future[Result] = {
+    val startTime = System.currentTimeMillis
+    nextFilter(requestHeader).map { result =>
+      val endTime = System.currentTimeMillis
+      val requestTime = endTime - startTime
+      Logger.info(s"${requestHeader.method} ${requestHeader.uri} " + s"took ${requestTime}ms and returned ${result.header.status}")
+      result.withHeaders("Request-Time" -> requestTime.toString)
+    }
   }
 }

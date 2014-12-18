@@ -1,6 +1,7 @@
 package global
 
 import utils.Response
+import utils.LoggingFilter
 
 import play.api._
 import play.api.mvc._
@@ -12,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.io.File
 import scala.concurrent._
 
-object Global extends play.api.GlobalSettings with Response {
+object Global extends WithFilters(LoggingFilter) with Response {
 
   /** do start up set up here, current implementation makes some start up checks */
   override def onStart(app: play.api.Application) {

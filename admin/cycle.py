@@ -181,7 +181,7 @@ def serial(cfg, args):
             wait_for_state(cfg['id'], 'started', 5)
             cast_votes(cfg['id'])
             tally(cfg['id'])
-            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
+            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
             calculate_results(cfg['id'], args.results_config)
             wait_for_state(cfg['id'], 'results_ok', 5)
             publish_results(cfg['id'])
@@ -222,7 +222,7 @@ def parallel(cfg, args):
             cfg['id'] = args.init_id + i
             print('>> tally + publish, id = %d' % cfg['id'])
             tally(cfg['id'])
-            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 100)
+            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
             calculate_results(cfg['id'], args.results_config)
             wait_for_state(cfg['id'], 'results_ok', 5)
             publish_results(cfg['id'])

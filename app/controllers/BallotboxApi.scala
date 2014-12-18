@@ -27,11 +27,18 @@ import java.sql.Timestamp
   */
 object BallotboxApi extends Controller with Response {
 
+  val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
+
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
-    LHAction("vote-$0-$1", List(electionId, voterId)).async(BodyParsers.parse.json) { request => Future {
+    HAction("vote-$0-$1", List(electionId, voterId)).async(BodyParsers.parse.json) { request => Future {
 
+val globalStart = System.nanoTime()
+
+var startTime = System.nanoTime()
     val voteValue = request.body.validate[VoteDTO]
+var endTime = System.nanoTime()
+val vJson = (endTime - startTime) / 1000000.0
 
       voteValue.fold (
 
@@ -41,20 +48,38 @@ object BallotboxApi extends Controller with Response {
         try {
           DB.withSession { implicit session =>
             // val election = Elections.findById(electionId).get
+startTime = System.nanoTime()
             val election = DAL.elections.findByIdWithSession(electionId).get
+endTime = System.nanoTime()
+val dbPk = (endTime - startTime) / 1000000.0
             if(election.state == Elections.STARTED) {
+
+startTime = System.nanoTime()
               val pksJson = Json.parse(election.pks.get)
               val pksValue = pksJson.validate[Array[PublicKey]]
+endTime = System.nanoTime()
+val pkJson = (endTime - startTime) / 1000000.0
 
               pksValue.fold (
 
                 errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
 
                 pks => {
+startTime = System.nanoTime()
                   val validated = vote.validate(pks, true)
+endTime = System.nanoTime()
+val voteValidate = (endTime - startTime) / 1000000.0
 
                   // val result = Votes.insert(validated)
+startTime = System.nanoTime()
                   val result = DAL.votes.insertWithSession(validated)
+endTime = System.nanoTime()
+val dbCast = (endTime - startTime) / 1000000.0
+
+val total = (System.nanoTime() - globalStart) / 1000000.0
+val tot = vJson + pkJson + dbPk + voteValidate + dbCast
+
+println(s"vJson $vJson, pkJson $pkJson, dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $total")
                   Ok(response(result))
                 }
               )
@@ -70,21 +95,21 @@ object BallotboxApi extends Controller with Response {
         }
       }
     )
-  }}
+  }(slickExecutionContext)}
 
   /** check that a given hash is present in the ballotbox */
   def checkHash(electionId: Long, hash: String) =
-    LHAction("vote-$0-$1", List(electionId, hash)).async(BodyParsers.parse.json) { request => Future {
+    HAction("vote-$0-$1", List(electionId, hash)).async(BodyParsers.parse.json) { request => Future {
 
     val result = DAL.votes.checkHash(electionId, hash)
     result match {
       case Some(vote) => Ok(response(vote))
       case _ => NotFound(response("Hash not found"))
     }
-  }}
+  }(slickExecutionContext)}
 
   /** dump ciphertexts, goes to the private datastore of the election, this is an admin only command */
-  def dumpVotes(electionId: Long) = LHAction("admin-$0", List(electionId)).async { request =>
+  def dumpVotes(electionId: Long) = HAction("admin-$0", List(electionId)).async { request =>
     dumpTheVotes(electionId).map { x =>
       Ok(response(0))
     }
@@ -98,20 +123,19 @@ object BallotboxApi extends Controller with Response {
     val count = DAL.votes.countForElectionWithSession(electionId)
     val batches = (count / batchSize) + 1
     // in the current implementation we may hold a large number of timestamps
-    val timeStamps = scala.collection.mutable.Set[String]()
+    val ids = scala.collection.mutable.Set[String]()
 
     val out = Datastore.getVotesStream(electionId)
 
     for(i <- 1 to batches) {
       val drop = (i - 1) * batchSize
-      val take = i * batchSize
-      val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, take)
+      val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, batchSize)
       // filter duplicates
       val noDuplicates = next.filter { vote =>
-        if(timeStamps.contains(vote.voter_id)) {
+        if(ids.contains(vote.voter_id)) {
           false
         } else {
-          timeStamps += vote.voter_id
+          ids += vote.voter_id
           true
         }
       }
@@ -119,8 +143,10 @@ object BallotboxApi extends Controller with Response {
 
       // eo format is new line separated list of votes
       // we add an extra \n as otherwise there will be no separation between batches
-      val content = noDuplicates.map(_.vote).mkString("\n") + "\n"
-      out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+      if(noDuplicates.length > 0) {
+        val content = noDuplicates.map(_.vote).mkString("\n") + "\n"
+        out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+      }
     }
 
     out.close()

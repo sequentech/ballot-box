@@ -203,7 +203,11 @@ def cast_votes(cfg, args):
                 # print("casting vote for voter %d, %s" % (voter_id, data))
                 voter_id += 1
                 r = requests.post(url, data=data, headers=headers)
-                print(r.status_code, r.text)
+                if r.status_code != 200:
+                    print(r.status_code, r.text)
+
+            # only show the status code for the last vote cast
+            print(r.status_code, r.text)
     else:
         print("No public key or votes file, exiting..")
         exit(1)
@@ -358,16 +362,16 @@ def encrypt(cfg, args):
     publicPath = os.path.join(datastore, 'public', str(cfg['election_id']))
     pkPath = os.path.join(publicPath, 'pks')
     votesPath = votesFile
-    print("> Encrypting votes (" + votesFile + ", pk = " + pkPath + ", " + str(votesCount) + ")..")
+    print("Encrypting votes (" + votesFile + ", pk = " + pkPath + ", " + str(votesCount) + ")..")
 
     if(os.path.isfile(pkPath)) and (os.path.isfile(votesPath)):
-        print("> Encrypting with %s %s %s %s %s" % ("bash", "encrypt.sh", pkPath, votesPath, str(votesCount)))
+        print("Encrypting with %s %s %s %s %s" % ("bash", "encrypt.sh", pkPath, votesPath, str(votesCount)))
         output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
 
-        print("> Received encrypt output (" + str(len(output)) + " chars)")
+        print("Received encrypt.sh output (" + str(len(output)) + " chars)")
         parsed = json.loads(output)
 
-        print("> Writing file to " + ctextsPath)
+        print("Writing file to " + ctextsPath)
         with codecs.open(ctextsPath, encoding='utf-8', mode='w+') as votes_file:
             votes_file.write(json.dumps(parsed, sort_keys=True))
         #    for vote in parsed:

@@ -35,6 +35,7 @@ object ElectionsApi extends Controller with Response {
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
+  val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val peers = getPeers
 
   /** inserts election into the db in the registered state */
@@ -83,10 +84,10 @@ object ElectionsApi extends Controller with Response {
         Ok(response(result))
       }
     )
-  }}
+  }(slickExecutionContext)}
 
   /** Creates an election in eo */
-  def create(id: Long) = LHAction("create-$0", List(id)).async { request =>
+  def create(id: Long) = HAction("create-$0", List(id)).async { request =>
     getElection(id).flatMap(createElection).recover {
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
       case t:Throwable => {
@@ -97,32 +98,32 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** sets election in started state, votes will be accepted */
-  def start(id: Long) = LHAction("start-$0", List(id)).async { request => Future {
+  def start(id: Long) = HAction("start-$0", List(id)).async { request => Future {
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Ok(response(ret))
-  }}
+  }(slickExecutionContext)}
 
   /** sets election in stopped state, votes will not be accepted */
-  def stop(id: Long) = LHAction("stop-$0", List(id)).async { request => Future {
+  def stop(id: Long) = HAction("stop-$0", List(id)).async { request => Future {
     val ret = DAL.elections.updateState(id, Elections.STOPPED)
     Ok(response(ret))
-  }}
+  }(slickExecutionContext)}
 
   /** request a tally, dumps votes to the private ds */
-  def tally(id: Long) = LHAction("tally-$0", List(id)).async { request =>
+  def tally(id: Long) = HAction("tally-$0", List(id)).async { request =>
     val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e)))
 
     tally.recover(tallyErrorHandler)
   }
 
   /** request a tally, but do not dump votes, use those in the private ds */
-  def tallyNoDump(id: Long) = LHAction("tally-$0", List(id)).async { request =>
+  def tallyNoDump(id: Long) = HAction("tally-$0", List(id)).async { request =>
     val tally = getElection(id).flatMap(tallyElection)
 
     tally.recover(tallyErrorHandler)
   }
 
-  def calculateResults(id: Long) = LHAction("results-$0", List(id)).async(BodyParsers.parse.json) { request =>
+  def calculateResults(id: Long) = HAction("results-$0", List(id)).async(BodyParsers.parse.json) { request =>
     val config = request.body.toString
     Logger.info(s"calculating results for election $id")
 
@@ -139,7 +140,7 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def publishResults(id: Long) = LHAction("admin-$0", List(id)).async {
+  def publishResults(id: Long) = HAction("admin-$0", List(id)).async {
     Logger.info(s"publishing results for election $id")
 
     val future = getElection(id).flatMap { e =>
@@ -158,7 +159,7 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def getResults(id: Long) = LHAction("results-$0", List(id)).async { request =>
+  def getResults(id: Long) = HAction("results-$0", List(id)).async { request =>
     val future = getElection(id).map { election =>
       Ok(response(election.results))
     }
@@ -168,7 +169,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** dump pks to the public datastore, this is an admin only command */
-  def dumpPks(id: Long) = LHAction("admin-$0", List(id)).async { request =>
+  def dumpPks(id: Long) = HAction("admin-$0", List(id)).async { request =>
     val future = getElection(id).map { election =>
       val mapped = election.pks.map { pks =>
         Datastore.dumpPks(id, pks)
@@ -202,7 +203,7 @@ object ElectionsApi extends Controller with Response {
       )
     // we always return the same response to EO
     Ok(Json.toJson(0))
-  }}
+  }(slickExecutionContext)}
 
   /** Called by EO when the tally is completed, this downloads and updates state */
   def tallydone(id: Long) = Action.async(BodyParsers.parse.json) { request =>
@@ -215,7 +216,7 @@ object ElectionsApi extends Controller with Response {
 
         DAL.elections.updateState(id, Elections.TALLY_ERROR)
         Ok(response(0))
-      },
+      }(slickExecutionContext),
       resp => {
         if(resp.status == "finished") {
           // FIXME hardcoded port
@@ -230,7 +231,7 @@ object ElectionsApi extends Controller with Response {
 
             DAL.elections.updateState(id, Elections.TALLY_ERROR)
             Ok(response(0))
-          }
+          }(slickExecutionContext)
         }
       }
     )
@@ -241,7 +242,7 @@ object ElectionsApi extends Controller with Response {
   private def pubResults(id: Long, results: Option[String]) = Future {
     Datastore.publishResults(id, results)
     Ok(response("ok"))
-  }
+  }(slickExecutionContext)
 
   /** Future: calculates an election's results using agora-results */
   private def calcResults(id: Long, config: String) = Future {
@@ -262,7 +263,7 @@ object ElectionsApi extends Controller with Response {
   private def updateResults(election: Election, results: String) = Future {
     DAL.elections.updateResults(election.id, results)
     Ok(Json.toJson("ok"))
-  }
+  }(slickExecutionContext)
 
   /** Future: downloads a tally from eo */
   private def downloadTally(url: String, electionId: Long) = {
@@ -368,7 +369,7 @@ object ElectionsApi extends Controller with Response {
   /** Future: returns an election given its id, may throw nosuchelement exception */
   private def getElection(id: Long): Future[Election] = Future {
     DAL.elections.findById(id).get
-  }
+  }(slickExecutionContext)
 
   /** creates a Map[peer name => peer json] based on eopeer installed packages */
   private def getPeers: Map[String, JsObject] = {
