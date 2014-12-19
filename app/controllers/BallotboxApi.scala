@@ -110,39 +110,44 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
   }
 
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
-  def dumpTheVotes(electionId: Long) = DB.withSession { implicit session => Future {
+  def dumpTheVotes(electionId: Long) = Future {
     Logger.info(s"dumping votes for election $electionId")
+
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
-    val count = DAL.votes.countForElectionWithSession(electionId)
-    val batches = (count / batchSize) + 1
-    // in the current implementation we may hold a large number of timestamps
-    val ids = scala.collection.mutable.Set[String]()
+    DB.withSession { implicit session =>
 
-    val out = Datastore.getVotesStream(electionId)
+      val count = DAL.votes.countForElectionWithSession(electionId)
+      val batches = (count / batchSize) + 1
+      // in the current implementation we may hold a large number of ids
+      val ids = scala.collection.mutable.Set[String]()
 
-    for(i <- 1 to batches) {
-      val drop = (i - 1) * batchSize
-      val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, batchSize)
-      // filter duplicates
-      val noDuplicates = next.filter { vote =>
-        if(ids.contains(vote.voter_id)) {
-          false
-        } else {
-          ids += vote.voter_id
-          true
+      val out = Datastore.getVotesStream(electionId)
+
+      for(i <- 1 to batches) {
+        val drop = (i - 1) * batchSize
+        val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, batchSize)
+        // filter duplicates
+        val noDuplicates = next.filter { vote =>
+          if(ids.contains(vote.voter_id)) {
+            false
+          } else {
+            ids += vote.voter_id
+            true
+          }
+        }
+
+        // TODO filter by voter id's
+
+        // eo format is new line separated list of votes
+        // we add an extra \n as otherwise there will be no separation between batches
+        if(noDuplicates.length > 0) {
+          val content = noDuplicates.map(_.vote).mkString("\n") + "\n"
+          out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
         }
       }
-      // TODO filter by voter id's
-
-      // eo format is new line separated list of votes
-      // we add an extra \n as otherwise there will be no separation between batches
-      if(noDuplicates.length > 0) {
-        val content = noDuplicates.map(_.vote).mkString("\n") + "\n"
-        out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-      }
+      out.close()
     }
 
-    out.close()
-  }}
+  }
 
 }

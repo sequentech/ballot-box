@@ -62,7 +62,7 @@ def wait_for_state(id, state, seconds):
     def wait():
         s = get_state(id)
         print("waiting for '%s', got '%s'" % (state, s))
-        return s in state
+        return s != "" and s in state
 
     wait_for(wait, seconds)
 
@@ -186,6 +186,8 @@ def serial(cfg, args):
                     print('-'*60)
                     print("trying again.. %d" % j)
                     j += 1
+                    if j > 5:
+                        raise e
 
             dump_pks(cfg['id'])
             encrypt(cfg['id'], args.encrypt_count)
@@ -205,6 +207,8 @@ def serial(cfg, args):
                     print('-'*60)
                     print("trying again.. %d" % j)
                     j += 1
+                    if j > 5:
+                        raise e
 
             calculate_results(cfg['id'], args.results_config)
             wait_for_state(cfg['id'], 'results_ok', 5)

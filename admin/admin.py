@@ -297,7 +297,7 @@ def list_votes(cfg, args):
 def list_elections(cfg, args):
     conn = get_db_connection()
     elections = elections_table()
-    s = select([elections])
+    s = select([elections]).order_by(elections.c.id)
     for filter in cfg['filters']:
         if "~" in filter:
             key, value = filter.split("~")
