@@ -37,14 +37,14 @@ val globalStart = System.nanoTime()
 
     val voteValue = request.body.validate[VoteDTO]
 
-      voteValue.fold (
+    voteValue.fold (
 
       errors => BadRequest(response(s"Invalid vote json $errors")),
 
       vote => {
         try {
           DB.withSession { implicit session =>
-            // val election = Elections.findById(electionId).get
+
 var startTime = System.nanoTime()
             val election = DAL.elections.findByIdWithSession(electionId).get
 var endTime = System.nanoTime()
@@ -73,7 +73,7 @@ val dbCast = (endTime - startTime) / 1000000.0
 val total = (System.nanoTime() - globalStart) / 1000000.0
 val tot = dbPk + voteValidate + dbCast
 
-println(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $total")
+Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $total")
                   Ok(response(result))
                 }
               )
@@ -109,7 +109,6 @@ println(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $tot
     }
   }
 
-  // FIXME dont need to do timestamp comparison as the order is guaranteed by the DB
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long) = DB.withSession { implicit session => Future {
     Logger.info(s"dumping votes for election $electionId")
@@ -145,7 +144,5 @@ println(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $tot
 
     out.close()
   }}
-
-  /*-------------------------------- privates  --------------------------------*/
 
 }

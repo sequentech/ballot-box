@@ -173,15 +173,39 @@ def serial(cfg, args):
             print('>> starting cycle id = %d' % cfg['id'])
             register(cfg)
             wait_for_state(cfg['id'], 'registered', 5)
-            create(cfg['id'])
-            wait_for_state(cfg['id'], 'created', 20)
+
+            j = 1
+            while True:
+                try:
+                    create(cfg['id'])
+                    wait_for_state(cfg['id'], 'created', 30)
+                    break
+                except Exception as e:
+                    print('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print('-'*60)
+                    print("trying again.. %d" % j)
+                    j += 1
+
             dump_pks(cfg['id'])
             encrypt(cfg['id'], args.encrypt_count)
             start(cfg['id'])
             wait_for_state(cfg['id'], 'started', 5)
             cast_votes(cfg['id'])
-            tally(cfg['id'])
-            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
+
+            j = 1
+            while True:
+                try:
+                    tally(cfg['id'])
+                    wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
+                    break
+                except Exception as e:
+                    print('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print('-'*60)
+                    print("trying again.. %d" % j)
+                    j += 1
+
             calculate_results(cfg['id'], args.results_config)
             wait_for_state(cfg['id'], 'results_ok', 5)
             publish_results(cfg['id'])
@@ -206,8 +230,19 @@ def parallel(cfg, args):
             print('>> create, id = %d' % cfg['id'])
             register(cfg)
             wait_for_state(cfg['id'], 'registered', 5)
-            create(cfg['id'])
-            wait_for_state(cfg['id'], 'created', 20)
+
+            j = 1
+            while True:
+                try:
+                    create(cfg['id'])
+                    wait_for_state(cfg['id'], 'created', 30)
+                    break
+                except Exception as e:
+                    print('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print('-'*60)
+                    print("trying again.. %d" % j)
+                    j += 1
 
         for i in range(0, args.total_cycles):
             cfg['id'] = args.init_id + i
@@ -221,8 +256,20 @@ def parallel(cfg, args):
         for i in range(0, args.total_cycles):
             cfg['id'] = args.init_id + i
             print('>> tally + publish, id = %d' % cfg['id'])
-            tally(cfg['id'])
-            wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
+
+            j = 1
+            while True:
+                try:
+                    tally(cfg['id'])
+                    wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
+                    break
+                except Exception as e:
+                    print('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print('-'*60)
+                    print("trying again.. %d" % j)
+                    j += 1
+
             calculate_results(cfg['id'], args.results_config)
             wait_for_state(cfg['id'], 'results_ok', 5)
             publish_results(cfg['id'])
