@@ -8,6 +8,12 @@ import play.api._
 
 import java.sql.Timestamp
 
+/**
+  * DAL - data access layer
+  *
+  * Provides a decoupled interface to persistence functions. Adds some caching
+  *
+  */
 object DAL {
   /** straight mapping to models */
   object votes {

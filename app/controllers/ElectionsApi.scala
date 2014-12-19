@@ -22,7 +22,7 @@ import scala.concurrent._
 /**
   * Elections api
   *
-  * Pending proper threadpool isolation
+  * Threadpool isolation implemented via futures
   * see
   *
   * http://stackoverflow.com/questions/19780545/play-slick-with-securesocial-running-db-io-in-a-separate-thread-pool
@@ -39,7 +39,7 @@ object ElectionsApi extends Controller with Response {
   val peers = getPeers
 
   /** inserts election into the db in the registered state */
-  def register = LHAction("register").async(BodyParsers.parse.json) { request => Future {
+  def register = HAction("register").async(BodyParsers.parse.json) { request => Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
 
@@ -71,7 +71,7 @@ object ElectionsApi extends Controller with Response {
 
   /** Updates an election's config */
   def update(id: Long) =
-    LHAction("update-$0", List(id)).async(BodyParsers.parse.json) { request => Future {
+    HAction("update-$0", List(id)).async(BodyParsers.parse.json) { request => Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
 
@@ -84,6 +84,7 @@ object ElectionsApi extends Controller with Response {
         Ok(response(result))
       }
     )
+
   }(slickExecutionContext)}
 
   /** Creates an election in eo */
@@ -203,6 +204,7 @@ object ElectionsApi extends Controller with Response {
       )
     // we always return the same response to EO
     Ok(Json.toJson(0))
+
   }(slickExecutionContext)}
 
   /** Called by EO when the tally is completed, this downloads and updates state */

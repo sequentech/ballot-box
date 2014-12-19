@@ -86,11 +86,13 @@ import java.math.BigInteger
     }
   }
 
+  /** encode and then encrypt a plaintext */
   def encrypt(pk: PublicKey, value: Long) = {
     val encoded = encode(pk, value)
     encryptEncoded(pk, encoded)
   }
 
+  /** return a random bigint between 0 and max - 1 */
   def randomBigInt(max: BigInt) = {
     val rnd = new java.util.Random()
     var r = new BigInteger(max.underlying.bitLength, rnd)
@@ -101,6 +103,7 @@ import java.math.BigInteger
     BigInt(r)
   }
 
+  /** encode plaintext into subgroup defined by pk */
   def encode(pk: PublicKey, value: Long) = {
     val one = BigInt(1)
     val m = BigInt(value + 1)
@@ -112,6 +115,7 @@ import java.math.BigInteger
     }
   }
 
+  /** encrypt an encoded plaintext */
   def encryptEncoded(pk: PublicKey, value: BigInt) = {
     val r = randomBigInt(pk.q)
     val alpha = pk.g.modPow(r, pk.p)
@@ -127,9 +131,6 @@ import java.math.BigInteger
 
     // compute response = w +  randomness * challenge
     val response = (w + (r * challenge)).mod(pk.q)
-
-    // RawVote(alpha, beta, commitment, challenge, response)
-    // case class EncryptedVote(a: String, choices: Array[Choice], election_hash: ElectionHash, issue_date: String, proofs: Array[Popk]) {
 
     EncryptedVote(Array(Choice(alpha, beta)), "now", Array(Popk(challenge, commitment, response)))
   }
