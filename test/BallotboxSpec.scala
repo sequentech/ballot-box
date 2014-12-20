@@ -114,10 +114,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
     val newVoteJson = s"""{
         "vote": "$voteJson1020",
-        "hash": "$hash",
-        "created": "$created",
-        "election_id": $electionId,
-        "voter_id": "$voterId"
+        "vote_hash": "$hash"
     }"""
 
     Json.parse(newVoteJson)

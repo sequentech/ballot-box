@@ -58,10 +58,15 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       val now = new java.util.Date().getTime / 1000
       val diff = now - rcvTime
 
+      val compareOk = PlayCrypto.constantTimeEquals(Crypto.hmac(boothSecret, message), hash)
+
+      // Logger.info(Crypto.hmac(boothSecret, message))
+      // Logger.info(hash)
+      // Logger.info(compareOk + " " + (diff < expiry) + " " + (rcvUserId == userId) + " " + (rcvObjType == objType) + " " + (rcvObjId == objId) + " " + (rcvPerm == perm))
+
       // note that we can compare without doing contant time comparison received
       // strings because that's not critical for security, only hmac is
-      if(PlayCrypto.constantTimeEquals(Crypto.hmac(boothSecret, message), hash) &&
-        (diff < expiry) && (rcvUserId == userId) && (rcvObjType == objType) &&
+      if(compareOk && (diff < expiry) && (rcvUserId == userId) && (rcvObjType == objType) &&
         (rcvObjId == objId) && (rcvPerm == perm)) {
 
         return true

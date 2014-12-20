@@ -154,8 +154,8 @@ case class TallyData(tally_url: String, tally_hash: String)
 
 
 /** json vote submitted to the ballot box, when validated becomes a Vote */
-case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: String) {
-  def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
+case class VoteDTO(vote: String, vote_hash: String) {
+  def validate(pks: Array[PublicKey], checkResidues: Boolean, electionId: Long, voterId: String) = {
     val json = Json.parse(vote)
     val encryptedValue = json.validate[EncryptedVote]
 
@@ -167,9 +167,9 @@ case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: Stri
 
         val hashed = Crypto.sha256(vote)
 
-        if(hashed != hash) throw new ValidationException("Hash mismatch")
+        if(hashed != vote_hash) throw new ValidationException("Hash mismatch")
 
-        Vote(None, election_id, voter_id, vote, hash, new Timestamp(new Date().getTime))
+        Vote(None, electionId, voterId, vote, vote_hash, new Timestamp(new Date().getTime))
       }
     )
   }

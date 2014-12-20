@@ -20,12 +20,11 @@ Database setup
 
     postgres=# create user agora_elections;
 
-    CREATE ROLE
-
     postgres=# create database agora_elections owner agora_elections;
-    CREATE DATABASE
 
-    ALTER ROLE agora_elections WITH PASSWORD 'mypassword';
+    postgres=# create database agora_elections_test owner agora_elections;
+
+    postgres=# ALTER ROLE agora_elections WITH PASSWORD 'mypassword';
 
 Example configuration files
 

@@ -63,7 +63,7 @@ val dbPk = (endTime - startTime) / 1000000.0
 
                 pks => {
 startTime = System.nanoTime()
-                  val validated = vote.validate(pks, true)
+                  val validated = vote.validate(pks, true, electionId, voterId)
 endTime = System.nanoTime()
 val voteValidate = (endTime - startTime) / 1000000.0
 
