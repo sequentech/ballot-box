@@ -12,11 +12,12 @@ import javax.xml.bind.DatatypeConverter
 import java.math.BigInteger
 
 
-/** main hook to generate votes
+/**
+  * Encrypts votes given a pk, plaintext file and desired total
   *
-  * use runMain commands.DemoVotes <pks> <votes> from console
+  * use runMain commands.DemoVotes <pks> <votes> <total> from console
   * or
-  * activator "run-main commands.DemoVotes <pks> <votes>"
+  * activator "run-main commands.DemoVotes <pks> <votes> <total>"
   * from CLI
   */
 object DemoVotes {

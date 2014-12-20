@@ -9,7 +9,8 @@ import javax.xml.bind.DatatypeConverter
 import java.math.BigInteger
 
 
-/** main hook to generate hmacs
+/**
+  * Generates an HMAC
   *
   * use runMain commands.HMAC <secret> <message> from console
   * or

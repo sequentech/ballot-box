@@ -18,12 +18,16 @@ import play.api.libs.ws.ning.NingAsyncHttpClientConfigBuilder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent._
+import scala.sys.process._
 
 /**
   * Elections api
   *
-  * Threadpool isolation implemented via futures
-  * see
+  * General election management. An election's lifecyle is
+  *
+  * registered -> created -> started -> stopped -> tally_ok -> results_ok
+  *
+  * Threadpool isolation is implemented via futures, see
   *
   * http://stackoverflow.com/questions/19780545/play-slick-with-securesocial-running-db-io-in-a-separate-thread-pool
   * https://github.com/playframework/play-slick/issues/105
@@ -44,6 +48,7 @@ object ElectionsApi extends Controller with Response {
     val electionConfig = request.body.validate[ElectionConfig]
 
     electionConfig.fold(
+
       errors => {
         Logger.warn(s"Invalid config json, $errors")
         BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
@@ -61,6 +66,7 @@ object ElectionsApi extends Controller with Response {
 
   /** gets an election */
   def get(id: Long) = LoggingAction.async { request =>
+
     val future = getElection(id).map { election =>
       Ok(response(election))
     }
@@ -76,9 +82,11 @@ object ElectionsApi extends Controller with Response {
     val electionConfig = request.body.validate[ElectionConfig]
 
     electionConfig.fold(
+
       errors => {
         BadRequest(response(JsError.toFlatJson(errors)))
       },
+
       config => {
         val result = DAL.elections.updateConfig(id, request.body.toString, config.start_date, config.end_date)
         Ok(response(result))
@@ -89,8 +97,11 @@ object ElectionsApi extends Controller with Response {
 
   /** Creates an election in eo */
   def create(id: Long) = HAction("create-$0", List(id)).async { request =>
+
     getElection(id).flatMap(createElection).recover {
+
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+
       case t:Throwable => {
         Logger.error("Error creating election", t)
         InternalServerError(error(t.toString, ErrorCodes.EO_ERROR))
@@ -100,35 +111,42 @@ object ElectionsApi extends Controller with Response {
 
   /** sets election in started state, votes will be accepted */
   def start(id: Long) = HAction("start-$0", List(id)).async { request => Future {
+
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Ok(response(ret))
+
   }(slickExecutionContext)}
 
   /** sets election in stopped state, votes will not be accepted */
   def stop(id: Long) = HAction("stop-$0", List(id)).async { request => Future {
+
     val ret = DAL.elections.updateState(id, Elections.STOPPED)
     Ok(response(ret))
+
   }(slickExecutionContext)}
 
   /** request a tally, dumps votes to the private ds */
   def tally(id: Long) = HAction("tally-$0", List(id)).async { request =>
-    val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e)))
 
+    val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e)))
     tally.recover(tallyErrorHandler)
   }
 
   /** request a tally, but do not dump votes, use those in the private ds */
   def tallyNoDump(id: Long) = HAction("tally-$0", List(id)).async { request =>
-    val tally = getElection(id).flatMap(tallyElection)
 
+    val tally = getElection(id).flatMap(tallyElection)
     tally.recover(tallyErrorHandler)
   }
 
+  /** calculate the results for a tally using agora-results */
   def calculateResults(id: Long) = HAction("results-$0", List(id)).async(BodyParsers.parse.json) { request =>
+
     val config = request.body.toString
     Logger.info(s"calculating results for election $id")
 
     val future = getElection(id).flatMap { e =>
+
       if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) {
         calcResults(id, config).flatMap( r => updateResults(e, r) )
       } else {
@@ -142,9 +160,11 @@ object ElectionsApi extends Controller with Response {
   }
 
   def publishResults(id: Long) = HAction("admin-$0", List(id)).async {
+
     Logger.info(s"publishing results for election $id")
 
     val future = getElection(id).flatMap { e =>
+
       if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) {
         pubResults(id, e.results)
       }
@@ -161,6 +181,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   def getResults(id: Long) = HAction("results-$0", List(id)).async { request =>
+
     val future = getElection(id).map { election =>
       Ok(response(election.results))
     }
@@ -171,8 +192,10 @@ object ElectionsApi extends Controller with Response {
 
   /** dump pks to the public datastore, this is an admin only command */
   def dumpPks(id: Long) = HAction("admin-$0", List(id)).async { request =>
+
     val future = getElection(id).map { election =>
       val mapped = election.pks.map { pks =>
+
         Datastore.dumpPks(id, pks)
         Ok(response("ok"))
       }
@@ -187,14 +210,17 @@ object ElectionsApi extends Controller with Response {
 
   /** Called by EO when the keys are generated, this saves them and updates state */
   def keydone(id: Long) = Action.async(BodyParsers.parse.json) { request => Future {
+
     Logger.info(s"keydone callback ${request.body.toString}")
 
     val cr = request.body.validate[CreateResponse]
     cr.fold(
+
         errors => {
           Logger.error(s"Error parsing create response " + JsError.toFlatJson(errors))
           DAL.elections.updateState(id, Elections.CREATE_ERROR)
         },
+
         response => {
           val pks = response.session_data.map(_.pubkey)
           // Datastore.writeFile(id, "pks", Json.toJson(pks).toString)
@@ -209,16 +235,20 @@ object ElectionsApi extends Controller with Response {
 
   /** Called by EO when the tally is completed, this downloads and updates state */
   def tallydone(id: Long) = Action.async(BodyParsers.parse.json) { request =>
+
     Logger.info(s"tallydone callback ${request.body.toString}")
 
     val tr = request.body.validate[TallyResponse]
     tr.fold(
+
       errors => Future {
         Logger.error(s"Error parsing tally response " + JsError.toFlatJson(errors))
 
         DAL.elections.updateState(id, Elections.TALLY_ERROR)
         Ok(response(0))
+
       }(slickExecutionContext),
+
       resp => {
         if(resp.status == "finished") {
           // FIXME hardcoded port
@@ -233,6 +263,7 @@ object ElectionsApi extends Controller with Response {
 
             DAL.elections.updateState(id, Elections.TALLY_ERROR)
             Ok(response(0))
+
           }(slickExecutionContext)
         }
       }
@@ -242,13 +273,14 @@ object ElectionsApi extends Controller with Response {
   /*-------------------------------- privates  --------------------------------*/
 
   private def pubResults(id: Long, results: Option[String]) = Future {
+
     Datastore.publishResults(id, results)
     Ok(response("ok"))
+
   }(slickExecutionContext)
 
   /** Future: calculates an election's results using agora-results */
   private def calcResults(id: Long, config: String) = Future {
-    import scala.sys.process._
 
     val configPath = Datastore.writeResultsConfig(id, config)
     val tallyPath = Datastore.getTallyPath(id)
@@ -263,20 +295,19 @@ object ElectionsApi extends Controller with Response {
 
   /** Future: updates an election's results */
   private def updateResults(election: Election, results: String) = Future {
+
     DAL.elections.updateResults(election.id, results)
     Ok(Json.toJson("ok"))
+
   }(slickExecutionContext)
 
   /** Future: downloads a tally from eo */
   private def downloadTally(url: String, electionId: Long) = {
     import play.api.libs.iteratee._
-    import java.nio.file._
 
     Logger.info(s"downloading tally from $url")
 
     // taken from https://www.playframework.com/documentation/2.3.x/ScalaWS
-
-    // make the request
     val futureResponse: Future[(WSResponseHeaders, Enumerator[Array[Byte]])] =
     WS.url(url).getStream()
 
@@ -284,12 +315,10 @@ object ElectionsApi extends Controller with Response {
       case (headers, body) =>
        val out = Datastore.getTallyStream(electionId)
 
-      // The iteratee that writes to the output stream
       val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
         out.write(bytes)
       }
 
-      // Feed the body into the iteratee
       (body |>>> iteratee).andThen {
         case result =>
         // Close the output stream whether there was an error or not
@@ -304,6 +333,7 @@ object ElectionsApi extends Controller with Response {
 
   /** Future: tallies an election in eo */
   private def tallyElection(election: Election): Future[Result] = {
+
     val configJson = Json.parse(election.configuration)
     val config = configJson.validate[ElectionConfig].get
 
@@ -314,6 +344,7 @@ object ElectionsApi extends Controller with Response {
     // FIXME remove hardcoded port replace
     val url = eoUrl(config.director, "public_api/tally").replace("5000", "11000")
     WS.url(url).post(data).map { resp =>
+
       if(resp.status == HTTP.ACCEPTED) {
         Ok(response("ok"))
       }
@@ -325,6 +356,7 @@ object ElectionsApi extends Controller with Response {
 
   /** Future: creates an election in eo */
   private def createElection(election: Election): Future[Result] = {
+
     val configJson = Json.parse(election.configuration)
     val config = configJson.validate[ElectionConfig].get
     // collect all authorities
@@ -347,9 +379,9 @@ object ElectionsApi extends Controller with Response {
     val withCallback = (jsObject + callback)
     val withAuthorities = withCallback - "authorities" + ("authorities" -> authData)
     // FIXME once EO accepts an integer id remove this part
-    val data = withAuthorities - "id" + ("id" -> JsString(election.id.toString))
+    // val data = withAuthorities - "id" + ("id" -> JsString(election.id.toString))
     // val data = withAuthorities + ("id" -> JsNumber(BigDecimal(election.id)))
-    // val data = withAuthorities
+    val data = withAuthorities
 
     Logger.info("creating election with\n" + data)
 
@@ -358,6 +390,7 @@ object ElectionsApi extends Controller with Response {
     val url = eoUrl(config.director, "public_api/election").replace("5000", "11000")
     Logger.info(s"requesting at $url")
     WS.url(url).post(data).map { resp =>
+
       if(resp.status == HTTP.ACCEPTED) {
         Ok(response("ok"))
       }
@@ -370,11 +403,14 @@ object ElectionsApi extends Controller with Response {
 
   /** Future: returns an election given its id, may throw nosuchelement exception */
   private def getElection(id: Long): Future[Election] = Future {
+
     DAL.elections.findById(id).get
+
   }(slickExecutionContext)
 
   /** creates a Map[peer name => peer json] based on eopeer installed packages */
   private def getPeers: Map[String, JsObject] = {
+
     val dir = Play.current.configuration.getString("app.eopeers.dir").get
     val peersDir = new java.io.File(dir)
 
@@ -391,19 +427,9 @@ object ElectionsApi extends Controller with Response {
     peers.toMap
   }
 
-  /** gets the api url for eo authority */
-  private def eoUrl(auth: String, path: String) = {
-    val port = peers.get(auth).map(_ \ "port").getOrElse(5000)
-    s"https://$auth:$port/$path"
-  }
-
-  /** gets our api url (for eo initiated callbacks) */
-  private def apiUrl(suffix: String) = {
-    s"$urlRoot" + suffix
-  }
-
   /** creates the json auth data for the given set of authorities */
   private def getAuthData(authorities: Set[String]): JsArray = {
+
     val auths = authorities.map { a =>
       Json.obj(
         "name" -> a,
@@ -416,6 +442,7 @@ object ElectionsApi extends Controller with Response {
 
   /** creates the json data for an eo tally operation */
   private def getTallyData(electionId: Long) = {
+
     val votesHash = Datastore.hashVotes(electionId)
     Json.obj(
       "election_id" -> electionId.toString,
@@ -428,10 +455,23 @@ object ElectionsApi extends Controller with Response {
 
   /** handles errors for tally futures */
   private val tallyErrorHandler: PartialFunction[Throwable, Result] = {
+
     case e:NoSuchElementException => BadRequest(error(s"Election not found", ErrorCodes.NO_ELECTION))
+
     case t:Throwable => {
       Logger.error("Error tallying election", t)
       InternalServerError(error("Error while launching tally", ErrorCodes.TALLY_ERROR))
     }
+  }
+
+  /** gets the api url for eo authority */
+  private def eoUrl(auth: String, path: String) = {
+    val port = peers.get(auth).map(_ \ "port").getOrElse(5000)
+    s"https://$auth:$port/$path"
+  }
+
+  /** gets our api url (for eo initiated callbacks) */
+  private def apiUrl(suffix: String) = {
+    s"$urlRoot" + suffix
   }
 }

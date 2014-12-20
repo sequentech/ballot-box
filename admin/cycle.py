@@ -248,6 +248,7 @@ def parallel(cfg, args):
                     print("trying again.. %d" % j)
                     j += 1
 
+
         for i in range(0, args.total_cycles):
             cfg['id'] = args.init_id + i
             print('>> vote, id = %d' % cfg['id'])

@@ -22,13 +22,14 @@ trait Response {
 
   implicit val errorFormatter = Json.format[Error]
 
-  // need to manually write reads/writes for generic types
+  /** need to manually write reads/writes for generic types */
   implicit def responseReads[T: Format]: Reads[Response[T]] = new Reads[Response[T]] {
     def reads(json: JsValue): JsResult[Response[T]] = JsSuccess(new Response[T] (
        (json \ "payload").as[T]
     ))
   }
 
+  /** need to manually write reads/writes for generic types */
   implicit def responseWrites[T: Format]: Writes[Response[T]] = new Writes[Response[T]] {
     def writes(response: Response[T]) = JsObject(Seq(
         "date" -> JsString(new java.sql.Timestamp(System.currentTimeMillis()).toString),

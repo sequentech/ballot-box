@@ -24,6 +24,9 @@ import java.sql.Timestamp
 /**
   * Ballotbox api
   *
+  * Provides ballot casting, hash checking and ballotbox vote dumping
+  *
+  * Thread pool isolation implemented via futures
   */
 object BallotboxApi extends Controller with Response {
 
@@ -64,7 +67,6 @@ startTime = System.nanoTime()
 endTime = System.nanoTime()
 val voteValidate = (endTime - startTime) / 1000000.0
 
-                  // val result = Votes.insert(validated)
 startTime = System.nanoTime()
                   val result = DAL.votes.insertWithSession(validated)
 endTime = System.nanoTime()
@@ -104,6 +106,7 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
 
   /** dump ciphertexts, goes to the private datastore of the election, this is an admin only command */
   def dumpVotes(electionId: Long) = HAction("admin-$0", List(electionId)).async { request =>
+
     dumpTheVotes(electionId).map { x =>
       Ok(response(0))
     }
@@ -111,6 +114,7 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
 
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long) = Future {
+
     Logger.info(s"dumping votes for election $electionId")
 
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
@@ -128,6 +132,7 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
         val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, batchSize)
         // filter duplicates
         val noDuplicates = next.filter { vote =>
+
           if(ids.contains(vote.voter_id)) {
             false
           } else {
@@ -147,7 +152,6 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
       }
       out.close()
     }
-
   }
 
 }

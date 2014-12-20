@@ -13,6 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.io.File
 import scala.concurrent._
 
+/** Application global object, serves to control startup and control cross-cutting concerns */
 object Global extends WithFilters(LoggingFilter) with Response {
 
   /** do start up set up here, current implementation makes some start up checks */

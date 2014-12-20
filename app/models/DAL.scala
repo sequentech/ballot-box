@@ -11,10 +11,11 @@ import java.sql.Timestamp
 /**
   * DAL - data access layer
   *
-  * Provides a decoupled interface to persistence functions. Adds some caching
+  * Provides a decoupled interface to persistence functions. Do caching here.
   *
   */
 object DAL {
+
   /** straight mapping to models */
   object votes {
 
@@ -62,6 +63,7 @@ object DAL {
 
   /** adds a caching layer */
   object elections {
+
     def findById(id: Long): Option[Election] = DB.withSession { implicit session =>
       findByIdWithSession(id)
     }

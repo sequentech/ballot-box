@@ -65,7 +65,7 @@ def elections_table():
     return elections
 
 def truncate(data):
-    data = str(data)
+    data = unicode(data)
     return (data[:20] + '..') if len(data) > 20 else data
 
 def show_votes(result):
@@ -301,10 +301,10 @@ def list_elections(cfg, args):
     for filter in cfg['filters']:
         if "~" in filter:
             key, value = filter.split("~")
-            s = s.where(getattr(votes.c, key).like(value))
+            s = s.where(getattr(elections.c, key).like(value))
         else:
             key, value = filter.split("==")
-            s = s.where(getattr(votes.c, key) == (value))
+            s = s.where(getattr(elections.c, key) == (value))
 
     result = conn.execute(s)
     show_elections(result)

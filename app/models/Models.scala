@@ -11,9 +11,10 @@ import play.api.libs.json._
 import java.sql.Timestamp
 import java.util.Date
 
-
+/** vote object */
 case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp)
 
+/** relational representation of votes */
 class Votes(tag: Tag) extends Table[Vote](tag, "vote") {
   def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def electionId = column[Long]("election_id", O.NotNull)
@@ -24,6 +25,7 @@ class Votes(tag: Tag) extends Table[Vote](tag, "vote") {
   def * = (id.?, electionId, voterId, vote, hash, created) <> (Vote.tupled, Vote.unapply _)
 }
 
+/** data access object for votes */
 object Votes {
 
   val votes = TableQuery[Votes]
@@ -48,8 +50,10 @@ object Votes {
   def countForElection(electionId: Long)(implicit s: Session): Int = votes.filter(_.electionId === electionId).length.run
 }
 
+/** election object */
 case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp])
 
+/** relational representation of elections */
 class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
@@ -62,6 +66,7 @@ class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?) <> (Election.tupled, Election.unapply _)
 }
 
+/** data access object for elections */
 object Elections {
   val REGISTERED = "registered"
   val CREATED = "created"
@@ -108,29 +113,47 @@ object Elections {
   }
 }
 
-/*-------------------------------- transients  --------------------------------*/
+/*-------------------------------- transient models  --------------------------------*/
 
+/** an election configuration defines an election */
 case class ElectionConfig(
   id: Long, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation)
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation
+)
 
+/** defines presentation options for an election */
 case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String)
 
+/** defines a question asked in an election */
 case class Question(
   description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String, randomize_answer_order: Boolean,
-  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer])
+  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer]
+)
 
+/** defines a possible answer for a question asked in an election */
 case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String)
+
+/** an url to be shown when presenting election data */
 case class Url(title: String, url: String)
 
-case class CreateResponse(status: String, session_data: Array[PublicKeySession])
-// {"status":"error","data":{"message":"election tally failed for some reason"},"reference":{"action":"POST /tally","election_id":"49"}}
-case class TallyData(tally_url: String, tally_hash: String)
-case class TallyResponse(status: String, data: TallyData)
 
+/** eo create election response message */
+case class CreateResponse(status: String, session_data: Array[PublicKeySession])
+
+/** eo public key message component */
 case class PublicKeySession(pubkey: PublicKey, session_id: String)
+
+/** el gamal public key */
 case class PublicKey(q: BigInt, p: BigInt, y:BigInt, g: BigInt)
 
+/** eo tally election response message */
+case class TallyResponse(status: String, data: TallyData)
+
+/** eo tally data message component */
+case class TallyData(tally_url: String, tally_hash: String)
+
+
+/** json vote submitted to the ballot box, when validated becomes a Vote */
 case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: String) {
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
     val json = Json.parse(vote)
@@ -152,7 +175,10 @@ case class VoteDTO(election_id: Long, voter_id: String, vote: String, hash: Stri
   }
 }
 
+/** the ciphertext present in a json vote (VoteDTO), including proofs of plaintext knowledge */
 case class EncryptedVote(choices: Array[Choice], issue_date: String, proofs: Array[Popk]) {
+
+  /** ciphertext validation: choice is quadratic residue and validation of proof of plaintext knowledge */
   def validate(pks: Array[PublicKey], checkResidues: Boolean) = {
 
     if(checkResidues) {
@@ -164,6 +190,7 @@ case class EncryptedVote(choices: Array[Choice], issue_date: String, proofs: Arr
     checkPopk(pks)
   }
 
+  /** validates proof of plaintext knowledge, schnorr protocol */
   def checkPopk(pks: Array[PublicKey]) = {
 
     proofs.zipWithIndex.foreach { case (proof, index) =>
@@ -189,14 +216,19 @@ case class EncryptedVote(choices: Array[Choice], issue_date: String, proofs: Arr
   }
 }
 
+/** the el-gamal ciphertext itself */
 case class Choice(alpha: BigInt, beta: BigInt) {
+
+  /** checks that both alpha and beta are quadratic residues in p */
   def validate(pk: PublicKey) = {
 
     if(!Crypto.quadraticResidue(alpha, pk.p)) throw new ValidationException("Alpha quadratic non-residue")
     if(!Crypto.quadraticResidue(beta, pk.p)) throw new ValidationException("Beta quadratic non-residue")
   }
 }
-case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
-case class ElectionHash(a: String, value: String)
 
+/** proof of plaintext knowledge, according to schnorr protocol*/
+case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
+
+/** used to signal a validation error when validating votes */
 class ValidationException(message: String) extends Exception(message)
