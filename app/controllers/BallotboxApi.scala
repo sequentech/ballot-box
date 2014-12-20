@@ -31,6 +31,7 @@ import java.sql.Timestamp
 object BallotboxApi extends Controller with Response {
 
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
+  val maxRevotes = Play.current.configuration.getInt("app.api.max_revotes").getOrElse(5)
 
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
@@ -45,43 +46,39 @@ val globalStart = System.nanoTime()
       errors => BadRequest(response(s"Invalid vote json $errors")),
 
       vote => {
+
         try {
+
           DB.withSession { implicit session =>
 
-var startTime = System.nanoTime()
             val election = DAL.elections.findByIdWithSession(electionId).get
-var endTime = System.nanoTime()
-val dbPk = (endTime - startTime) / 1000000.0
-            if(election.state == Elections.STARTED) {
+            val votesCast = DAL.votes.countForElectionAndVoter(electionId, voterId)
 
-              val pksJson = Json.parse(election.pks.get)
-              val pksValue = pksJson.validate[Array[PublicKey]]
+            if(votesCast >= maxRevotes) {
+              Logger.warn(s"Maximum number of revotes reached for voterId $voterId")
+              BadRequest(response(s"Maximum number of revotes reached"))
+            } else {
 
-              pksValue.fold (
+              if(election.state == Elections.STARTED) {
 
-                errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
+                val pksJson = Json.parse(election.pks.get)
+                val pksValue = pksJson.validate[Array[PublicKey]]
 
-                pks => {
-startTime = System.nanoTime()
-                  val validated = vote.validate(pks, true, electionId, voterId)
-endTime = System.nanoTime()
-val voteValidate = (endTime - startTime) / 1000000.0
+                pksValue.fold (
 
-startTime = System.nanoTime()
-                  val result = DAL.votes.insertWithSession(validated)
-endTime = System.nanoTime()
-val dbCast = (endTime - startTime) / 1000000.0
+                  errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
 
-val total = (System.nanoTime() - globalStart) / 1000000.0
-val tot = dbPk + voteValidate + dbCast
+                  pks => {
 
-Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, $total")
-                  Ok(response(result))
-                }
-              )
-            }
-            else {
-              BadRequest(response(s"Election is not open"))
+                    val validated = vote.validate(pks, true, electionId, voterId)
+                    val result = DAL.votes.insertWithSession(validated)
+                    Ok(response(result))
+                  }
+                )
+              }
+              else {
+                BadRequest(response(s"Election is not open"))
+              }
             }
           }
         }

@@ -48,6 +48,10 @@ object Votes {
   def count(implicit s: Session): Int = votes.length.run
 
   def countForElection(electionId: Long)(implicit s: Session): Int = votes.filter(_.electionId === electionId).length.run
+
+  def countForElectionAndVoter(electionId: Long, voterId: String)(implicit s: Session): Int = {
+    votes.filter(_.electionId === electionId).filter(_.voterId === voterId).length.run
+  }
 }
 
 /** election object */

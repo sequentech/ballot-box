@@ -41,6 +41,8 @@ application.local.conf
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
 
+    app.api.max_revotes=5
+
     app.eopeers.dir=/etc/eopeers/
 
     booth.auth.secret=hohoho

@@ -58,6 +58,10 @@ object DAL {
       Votes.countForElection(electionId)
     }
 
+    def countForElectionAndVoter(electionId: Long, voterId: String)(implicit s: Session): Int = {
+      Votes.countForElectionAndVoter(electionId,voterId)
+    }
+
     private def key(id: Long) = s"vote.$id"
   }
 
