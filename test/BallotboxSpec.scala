@@ -60,7 +60,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
       val response = route(FakeRequest(POST, routes.BallotboxApi.vote(1, "1").url)
         .withJsonBody(voteJson)
-        .withHeaders(("Authorization", getAuth("1:election:1:vote")))
+        .withHeaders(("Authorization", getAuth("1", "election", 1, "vote")))
       ).get
 
       status(response) must equalTo(OK)
@@ -82,7 +82,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
       val response = route(FakeRequest(POST, routes.BallotboxApi.vote(1, "1").url)
         .withJsonBody(voteJson)
-        .withHeaders(("Authorization", getAuth("1:election:1:vote")))
+        .withHeaders(("Authorization", getAuth("1", "election", 1, "vote")))
       ).get
 
       status(response) must equalTo(OK)
@@ -91,7 +91,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
       val response2 = route(FakeRequest(POST, routes.BallotboxApi.vote(1, "1").url)
         .withJsonBody(voteJson)
-        .withHeaders(("Authorization", getAuth("1:election:1:vote")))
+        .withHeaders(("Authorization", getAuth("1", "election", 1, "vote")))
       ).get
 
       status(response2) must equalTo(OK)

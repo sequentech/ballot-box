@@ -85,11 +85,12 @@ trait TestContexts {
 """)
   }
 
-  def getAuth(permission: String) = {
+  def getAuth(userId: String, objType: String, objId: Long, perm: String) = {
     val authSecret = Play.current.configuration.getString("booth.auth.secret").get
-    val head = permission + ":" + (new java.util.Date().getTime / 1000)
+    val time = (new java.util.Date().getTime / 1000)
+    val head = s"$userId:$objType:$objId:$perm:$time"
 
-    return "khmac:///sha-256;" + Crypto.hmac(authSecret, head) + "/" + head
+    "khmac:///sha-256;" + Crypto.hmac(authSecret, head) + "/" + head
   }
 
   abstract class AppWithDbData(app: FakeApplication = TestSettings.getTestApp) extends WithApplication(app) {

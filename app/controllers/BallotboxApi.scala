@@ -34,7 +34,7 @@ object BallotboxApi extends Controller with Response {
 
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
-    HAction2(voterId, "election", electionId, "vote").async(BodyParsers.parse.json) { request => Future {
+    HAction(voterId, "election", electionId, "vote").async(BodyParsers.parse.json) { request => Future {
 
 val globalStart = System.nanoTime()
 
@@ -95,7 +95,7 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
 
   /** check that a given hash is present in the ballotbox */
   def checkHash(electionId: Long, hash: String) =
-    HAction("vote-$0-$1", List(electionId, hash)).async(BodyParsers.parse.json) { request => Future {
+    HAction("", "election", electionId, "check-hash").async(BodyParsers.parse.json) { request => Future {
 
     val result = DAL.votes.checkHash(electionId, hash)
     result match {
@@ -105,7 +105,7 @@ Logger.info(s"dbPk $dbPk, voteValidate $voteValidate, dbCast $dbCast, tot $tot, 
   }(slickExecutionContext)}
 
   /** dump ciphertexts, goes to the private datastore of the election, this is an admin only command */
-  def dumpVotes(electionId: Long) = HAction("admin-$0", List(electionId)).async { request =>
+  def dumpVotes(electionId: Long) = HAction("", "election", electionId, "admin").async { request =>
 
     dumpTheVotes(electionId).map { x =>
       Ok(response(0))

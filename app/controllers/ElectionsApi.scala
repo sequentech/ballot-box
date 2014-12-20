@@ -43,7 +43,7 @@ object ElectionsApi extends Controller with Response {
   val peers = getPeers
 
   /** inserts election into the db in the registered state */
-  def register = HAction("register").async(BodyParsers.parse.json) { request => Future {
+  def register = HAction("", "election", 0, "admin").async(BodyParsers.parse.json) { request => Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
 
@@ -65,7 +65,7 @@ object ElectionsApi extends Controller with Response {
   }}
 
   /** gets an election */
-  def get(id: Long) = LoggingAction.async { request =>
+  def get(id: Long) = Action.async { request =>
 
     val future = getElection(id).map { election =>
       Ok(response(election))
@@ -77,7 +77,7 @@ object ElectionsApi extends Controller with Response {
 
   /** Updates an election's config */
   def update(id: Long) =
-    HAction("update-$0", List(id)).async(BodyParsers.parse.json) { request => Future {
+    HAction("", "election", id, "admin").async(BodyParsers.parse.json) { request => Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
 
@@ -96,7 +96,7 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** Creates an election in eo */
-  def create(id: Long) = HAction("create-$0", List(id)).async { request =>
+  def create(id: Long) = HAction("", "election", id, "admin").async { request =>
 
     getElection(id).flatMap(createElection).recover {
 
@@ -110,7 +110,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** sets election in started state, votes will be accepted */
-  def start(id: Long) = HAction("start-$0", List(id)).async { request => Future {
+  def start(id: Long) = HAction("", "election", id, "admin").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Ok(response(ret))
@@ -118,7 +118,7 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** sets election in stopped state, votes will not be accepted */
-  def stop(id: Long) = HAction("stop-$0", List(id)).async { request => Future {
+  def stop(id: Long) = HAction("", "election", id, "admin").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STOPPED)
     Ok(response(ret))
@@ -126,21 +126,21 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** request a tally, dumps votes to the private ds */
-  def tally(id: Long) = HAction("tally-$0", List(id)).async { request =>
+  def tally(id: Long) = HAction("", "election", id, "admin").async { request =>
 
     val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e)))
     tally.recover(tallyErrorHandler)
   }
 
   /** request a tally, but do not dump votes, use those in the private ds */
-  def tallyNoDump(id: Long) = HAction("tally-$0", List(id)).async { request =>
+  def tallyNoDump(id: Long) = HAction("", "election", id, "admin").async { request =>
 
     val tally = getElection(id).flatMap(tallyElection)
     tally.recover(tallyErrorHandler)
   }
 
   /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("results-$0", List(id)).async(BodyParsers.parse.json) { request =>
+  def calculateResults(id: Long) = HAction("", "election", id, "admin").async(BodyParsers.parse.json) { request =>
 
     val config = request.body.toString
     Logger.info(s"calculating results for election $id")
@@ -159,7 +159,7 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def publishResults(id: Long) = HAction("admin-$0", List(id)).async {
+  def publishResults(id: Long) = HAction("", "election", id, "admin").async {
 
     Logger.info(s"publishing results for election $id")
 
@@ -180,7 +180,7 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def getResults(id: Long) = HAction("results-$0", List(id)).async { request =>
+  def getResults(id: Long) = HAction("", "election", id, "get-results").async { request =>
 
     val future = getElection(id).map { election =>
       Ok(response(election.results))
@@ -191,7 +191,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** dump pks to the public datastore, this is an admin only command */
-  def dumpPks(id: Long) = HAction("admin-$0", List(id)).async { request =>
+  def dumpPks(id: Long) = HAction("", "election", id, "admin").async { request =>
 
     val future = getElection(id).map { election =>
       val mapped = election.pks.map { pks =>
@@ -440,7 +440,7 @@ object ElectionsApi extends Controller with Response {
 
     val votesHash = Datastore.hashVotes(electionId)
     Json.obj(
-      "election_id" -> electionId.toString,
+      "election_id" -> electionId,
       "callback_url" -> apiUrl(routes.ElectionsApi.tallydone(electionId).url),
       "extra" -> List[String](),
       "votes_url" -> Datastore.getCiphertextsUrl(electionId),
