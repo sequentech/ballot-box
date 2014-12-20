@@ -34,7 +34,7 @@ object BallotboxApi extends Controller with Response {
 
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
-    HAction("vote-$0-$1", List(electionId, voterId)).async(BodyParsers.parse.json) { request => Future {
+    HAction2(voterId, "election", electionId, "vote").async(BodyParsers.parse.json) { request => Future {
 
 val globalStart = System.nanoTime()
 
