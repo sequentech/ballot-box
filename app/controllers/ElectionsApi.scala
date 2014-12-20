@@ -223,7 +223,6 @@ object ElectionsApi extends Controller with Response {
 
         response => {
           val pks = response.session_data.map(_.pubkey)
-          // Datastore.writeFile(id, "pks", Json.toJson(pks).toString)
           // automatically sets status to CREATED
           DAL.elections.setPublicKeys(id, Json.toJson(pks).toString)
         }
@@ -339,7 +338,7 @@ object ElectionsApi extends Controller with Response {
 
     // get the tally data, including votes hash, url and callback
     val data = getTallyData(election.id)
-    Logger.info("requesting tally with\n" + data)
+    Logger.info(s"requesting tally with\n$data")
 
     // FIXME remove hardcoded port replace
     val url = eoUrl(config.director, "public_api/tally").replace("5000", "11000")
@@ -378,18 +377,14 @@ object ElectionsApi extends Controller with Response {
 
     val withCallback = (jsObject + callback)
     val withAuthorities = withCallback - "authorities" + ("authorities" -> authData)
-    // FIXME once EO accepts an integer id remove this part
-    // val data = withAuthorities - "id" + ("id" -> JsString(election.id.toString))
-    // val data = withAuthorities + ("id" -> JsNumber(BigDecimal(election.id)))
-    val data = withAuthorities
 
-    Logger.info("creating election with\n" + data)
+    Logger.info(s"creating election with\n$withAuthorities")
 
     // create election in eo
     // FIXME remove hardcoded port replace
     val url = eoUrl(config.director, "public_api/election").replace("5000", "11000")
     Logger.info(s"requesting at $url")
-    WS.url(url).post(data).map { resp =>
+    WS.url(url).post(withAuthorities).map { resp =>
 
       if(resp.status == HTTP.ACCEPTED) {
         Ok(response("ok"))
