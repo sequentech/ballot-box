@@ -101,12 +101,9 @@ def write_node_votes(votesData, filePath):
     votes = []
     for vote in votesData:
         data = {
-            "a": "encrypted-vote-v1",
             "proofs": [],
             "choices": [],
-            "voter_username": 'foo',
             "issue_date": str(datetime.now()),
-            "election_hash": {"a": "hash/sha256/value", "value": "foobar"},
         }
 
         q_answer = vote['question0']

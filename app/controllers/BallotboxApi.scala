@@ -37,10 +37,7 @@ object BallotboxApi extends Controller with Response {
   def vote(electionId: Long, voterId: String) =
     HAction(voterId, "election", electionId, "vote").async(BodyParsers.parse.json) { request => Future {
 
-val globalStart = System.nanoTime()
-
     val voteValue = request.body.validate[VoteDTO]
-
     voteValue.fold (
 
       errors => BadRequest(response(s"Invalid vote json $errors")),
@@ -57,7 +54,8 @@ val globalStart = System.nanoTime()
             if(votesCast >= maxRevotes) {
               Logger.warn(s"Maximum number of revotes reached for voterId $voterId")
               BadRequest(response(s"Maximum number of revotes reached"))
-            } else {
+            }
+            else {
 
               if(election.state == Elections.STARTED) {
 
