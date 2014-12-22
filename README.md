@@ -171,10 +171,6 @@ restart the server
 
     service restart postgresql
 
-Winscp sync settings
-
-    |.git/;conf;/logs/;target/;activator;activator.bat;*.jar
-
 Unit tests
 =====
 
