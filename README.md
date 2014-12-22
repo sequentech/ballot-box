@@ -123,14 +123,13 @@ specify the follwing configuration parameters in the admin tool, at <app_root>/a
     app_port = 9000
     node = '/usr/local/bin/node'
 
-set the executable permissions if not already set
+set the executable permissions if not already set for several admin scripts
 
     chmod u+x admin.py
-
-do this also for the cycle and batch tools
-
     chmod u+x cycle.py
     chmod u+x batch.py
+    chmod u+x encrypt.sh
+    chmod u+x results.sh
 
 Agora-Results set up
 
@@ -149,7 +148,8 @@ you must also configure these two settings in results.sh, found in agora-electio
 
 Local vote encryption set up
 
-If you want to encrypt votes locally, you must configure these settings in admin/encrypt.sh
+If you want to encrypt votes locally (for testing purposes, see below), you must configure these
+settings in admin/encrypt.sh
 
     IVY=/root/.ivy2/cache/
 
@@ -161,7 +161,7 @@ which will generate the required jar in the target directory (note that encrypt.
 
 Postgresql parameters
 
-Some changes can be made in /etc/postgresql/9.3/main/postgresql.conf
+Some tuning changes can be made in /etc/postgresql/<version>/main/postgresql.conf
 
     max_connections = 200
     checkpoint_segments = 16
