@@ -127,9 +127,10 @@ set the executable permissions if not already set
 
     chmod u+x admin.py
 
-do this also for the cycle tool
+do this also for the cycle and batch tools
 
     chmod u+x cycle.py
+    chmod u+x batch.py
 
 Agora-Results set up
 
@@ -180,7 +181,7 @@ Unit tests
     activator
     test
 
-Manual testing an election cycle
+Administration
 ==============
 
 An election cycle can be run with the admin.py tool in the admin directory
@@ -264,7 +265,7 @@ dump the pks
 
     ./admin.py dump_pks 50
 
-encrypt votes (you need an votes.json file to do this)
+encrypt votes (normally only used for testing; you need an votes.json file to do this)
 
     ./admin.py encrypt 50
 
@@ -272,7 +273,7 @@ start the election
 
     ./admin.py start 50
 
-cast votes
+cast votes (normally only used for testing, votes are generated with encrypt)
 
     ./admin cast_votes 50
 
@@ -288,10 +289,32 @@ publish results
 
     ./admin.py publish_results 50
 
+You can also carry out administration commands in batch mode, with batch.py. batch.py expects a directory
+with configuration files for both election definition and agora-results set up. The files must be in this
+format
+
+    <id>.results.json
+
+for election configuration files, and
+
+    <id>.config.results.json
+
+for agora-results configuration files. batch.py will run the command for all the configuration files
+found in the given directory, in increasing order of id. For example
+
+    ./batch.py -c create -d json_files
+
+will register, create and start elections for all configuration files in directory 'json_files'. If you
+only want to operate on a range, you can use this form
+
+    ./batch.py -c create -d json_files -s 1000 -e 2000
+
+which will create elections with id beginning with 1000 up to 2000 (both inclusive)
+
 Automated testing of an election cycle
 ==============
 
-You can do automated tests of the above with the cycle.py tool in the admin directory. This requires
+You can do automated tests with the cycle.py tool in the admin directory. This requires
 correctly setting up admin.py first, as described earlier. You need an election configuration as base,
 you can use one like the one above. cycle.py looks for such a file with default name 'election.json'.
 You also need an agora-results configuration file to calculate results. cycle.py looks for such a file
@@ -317,7 +340,7 @@ to run 5 cycles serially, casting 100 votes in each (votes duplicated)
     ./cycle.py -t 5 -i 50 -e 100
 
 to run 10 cycles in parallel, using election.json as election config, config.json as agora-results config,
-casting 100 votes and starting at id 50
+casting 100 votes and starting at id 50:
 
     ./cycle.py -t 10 -i 50 -e 100 -c election.json -r config.json -p
 
