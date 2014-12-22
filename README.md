@@ -336,10 +336,6 @@ Running (production mode)
     exit
     target/universal/stage/bin/agora-elections -v
 
-you probably want to give the process more memory:
-
-    target/universal/stage/bin/agora-elections -v -mem 3072
-
 the log will be found in
 
      target/universal/stage/logs/application.log

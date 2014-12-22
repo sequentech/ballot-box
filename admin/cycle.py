@@ -247,6 +247,8 @@ def parallel(cfg, args):
                     print('-'*60)
                     print("trying again.. %d" % j)
                     j += 1
+                    if j > 5:
+                        raise e
 
 
         for i in range(0, args.total_cycles):
@@ -274,6 +276,8 @@ def parallel(cfg, args):
                     print('-'*60)
                     print("trying again.. %d" % j)
                     j += 1
+                    if j > 5:
+                        raise e
 
             calculate_results(cfg['id'], args.results_config)
             wait_for_state(cfg['id'], 'results_ok', 5)
