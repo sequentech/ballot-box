@@ -362,6 +362,10 @@ Running (production mode)
     exit
     target/universal/stage/bin/agora-elections -v
 
+you probably want to pass in a configuraiton file
+
+    target/universal/stage/bin/agora-elections -Dconfig.file=/full/path/to/conf/application-prod.conf
+
 the log will be found in
 
      target/universal/stage/logs/application.log
