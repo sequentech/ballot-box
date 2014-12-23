@@ -131,6 +131,13 @@ set the executable permissions if not already set for several admin scripts
     chmod u+x encrypt.sh
     chmod u+x results.sh
 
+Create a virtualenv for the admin script and install admin script requirements:
+
+    mkvirutalenv agora_elections -p $(which python2)
+    workon agora_elections
+    cd agora_elections/admin
+    pip install -r requirements.txt
+
 Agora-Results set up
 
 Clone and install agora-results
