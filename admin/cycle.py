@@ -178,7 +178,7 @@ def serial(cfg, args):
             while True:
                 try:
                     create(cfg['id'])
-                    wait_for_state(cfg['id'], 'created', 30)
+                    wait_for_state(cfg['id'], 'created', 60)
                     break
                 except Exception as e:
                     print('-'*60)
@@ -239,7 +239,7 @@ def parallel(cfg, args):
             while True:
                 try:
                     create(cfg['id'])
-                    wait_for_state(cfg['id'], 'created', 30)
+                    wait_for_state(cfg['id'], 'created', 60)
                     break
                 except Exception as e:
                     print('-'*60)
