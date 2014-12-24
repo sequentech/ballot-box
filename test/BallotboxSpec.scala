@@ -26,7 +26,7 @@ import models._
 import controllers._
 import play.api.db.slick.DB
 
-
+// FIXME add hash check test
 @RunWith(classOf[JUnitRunner])
 class BallotboxSpec extends Specification with TestContexts with Response {
 
