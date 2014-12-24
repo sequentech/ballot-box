@@ -89,9 +89,7 @@ object BallotboxApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** check that a given hash is present in the ballotbox */
-  def checkHash(electionId: Long, hash: String) =
-    HAction("", "election", electionId, "check-hash").async(BodyParsers.parse.json) { request => Future {
-
+  def checkHash(electionId: Long, hash: String) = Action.async { request => Future {
     val result = DAL.votes.checkHash(electionId, hash)
     result match {
       case Some(vote) => Ok(response(vote))

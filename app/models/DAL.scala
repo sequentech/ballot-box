@@ -92,6 +92,11 @@ object DAL {
       Elections.insert(election)
     }
 
+    def insertWithSession(election: Election)(implicit s:Session) = DB.withSession { implicit session =>
+      Cache.remove(key(election.id))
+      Elections.insert(election)
+    }
+
     def updateState(id: Long, state: String) = DB.withSession { implicit session =>
       Cache.remove(key(id))
       Elections.updateState(id, state)

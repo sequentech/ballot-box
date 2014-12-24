@@ -332,7 +332,7 @@ at 'config.json'. Here's an example agora-results configuration file
         "agora_results.pipes.results.to_files",
         {"paths": ["results.json"]}
       ]
-  ]
+    ]
 
 To run 5 cycles serially, starting with id 50
 

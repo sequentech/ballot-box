@@ -56,10 +56,20 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val result = DAL.elections.insert(Election(config.id, request.body.toString,
-            Elections.REGISTERED, config.start_date, config.end_date, None, None, None))
+        DB.withSession { implicit session =>
 
-        Ok(response(result))
+          val existing = DAL.elections.findByIdWithSession(config.id)
+          existing match {
+
+            case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
+
+            case None => {
+              val result = DAL.elections.insert(Election(config.id, request.body.toString,
+                Elections.REGISTERED, config.start_date, config.end_date, None, None, None))
+              Ok(response(result))
+            }
+          }
+        }
       }
     )
   }}

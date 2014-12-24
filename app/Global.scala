@@ -47,6 +47,11 @@ object Global extends WithFilters(LoggingFilter) with Response {
     Future { InternalServerError(Json.toJson(Error(s"Internal error while processing request $request", ErrorCodes.GENERAL_ERROR))) }
   }
 
+  override def onBadRequest(request: RequestHeader, error: String) = {
+    Logger.warn(s"Bad Request: $error")
+    Future.successful(BadRequest(response("Bad Request: " + error)))
+  }
+
   /** ensures the configuration property is set */
   private def ensureCfgExists(cfg: String) = {
     Play.current.configuration.getString(cfg) match {

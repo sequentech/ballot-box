@@ -42,7 +42,7 @@ object Votes {
     votes.filter(_.electionId === electionId).sortBy(_.created.desc).drop(drop).take(take).list
   }
 
-  def checkHash(id: Long, hash: String)(implicit s: Session): Option[Vote] = votes.filter(_.id === id).filter(_.hash === hash).firstOption
+  def checkHash(electionId: Long, hash: String)(implicit s: Session): Option[Vote] = votes.filter(_.electionId === electionId).filter(_.hash === hash).firstOption
 
   // def count(implicit s: Session): Int = Query(votes.length).first
   def count(implicit s: Session): Int = votes.length.run
