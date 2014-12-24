@@ -92,7 +92,7 @@ object BallotboxApi extends Controller with Response {
   def checkHash(electionId: Long, hash: String) = Action.async { request => Future {
     val result = DAL.votes.checkHash(electionId, hash)
     result match {
-      case Some(vote) => Ok(response(vote))
+      case Some(vote) => Ok(response(vote.copy(voter_id = "")))
       case _ => NotFound(response("Hash not found"))
     }
   }(slickExecutionContext)}
