@@ -260,8 +260,8 @@ object ElectionsApi extends Controller with Response {
 
       resp => {
         if(resp.status == "finished") {
-          // FIXME hardcoded port
-          downloadTally(resp.data.tally_url.replace("5000", "11000"), id).map { _ =>
+
+          downloadTally(resp.data.tally_url, id).map { _ =>
 
             DAL.elections.updateState(id, Elections.TALLY_OK)
             Ok(response(0))
@@ -350,8 +350,7 @@ object ElectionsApi extends Controller with Response {
     val data = getTallyData(election.id)
     Logger.info(s"requesting tally with\n$data")
 
-    // FIXME remove hardcoded port replace
-    val url = eoUrl(config.director, "public_api/tally").replace("5000", "11000")
+    val url = eoUrl(config.director, "public_api/tally")
     WS.url(url).post(data).map { resp =>
 
       if(resp.status == HTTP.ACCEPTED) {
@@ -391,8 +390,7 @@ object ElectionsApi extends Controller with Response {
     Logger.info(s"creating election with\n$withAuthorities")
 
     // create election in eo
-    // FIXME remove hardcoded port replace
-    val url = eoUrl(config.director, "public_api/election").replace("5000", "11000")
+    val url = eoUrl(config.director, "public_api/election")
     Logger.info(s"requesting at $url")
     WS.url(url).post(withAuthorities).map { resp =>
 
