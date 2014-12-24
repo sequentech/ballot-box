@@ -46,13 +46,9 @@ object Votes {
     val vote = votes.filter(_.electionId === electionId).filter(_.hash === hash).firstOption
 
     // we make sure the hash corresponds to the last vote, otherwise return None
-    vote match {
-      case Some(v) => {
-        val latest = votes.filter(_.electionId === electionId).filter(_.voterId === v.voter_id).sortBy(_.created.desc).firstOption
-
-        latest.filter(_.hash == hash).headOption
-      }
-      case None => None
+    vote.flatMap { v =>
+      val latest = votes.filter(_.electionId === electionId).filter(_.voterId === v.voter_id).sortBy(_.created.desc).firstOption
+      latest.filter(_.hash == hash)
     }
   }
 
