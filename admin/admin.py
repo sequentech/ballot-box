@@ -241,6 +241,22 @@ def tally(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def tally_voter_ids(cfg, args):
+    path = args.voter_ids
+    if path != None and os.path.isfile(path):
+        with open(path) as config_file:
+            ids = json.load(config_file)
+
+        auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
+        host,port = get_local_hostport()
+        headers = {'Authorization': auth}
+        url = 'http://%s:%d/api/election/%d/tally' % (host, port, cfg['election_id'])
+        r = requests.post(url, headers=headers, data=json.dumps(ids))
+        print(r.status_code, r.text)
+
+    else:
+        print("no valid ids file %s" % path)
+
 def tally_no_dump(cfg, args):
 
     auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
@@ -410,6 +426,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
+    parser.add_argument('--voter-ids', help='json list of valid voter ids to tally')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
     parser.add_argument('-f', '--filters', nargs='+', default=[], help="key==value(s) filters for queries (use ~ for like)")
     args = parser.parse_args()

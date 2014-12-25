@@ -10,6 +10,7 @@ POST    /api/election/:id/create                              controllers.Electi
 POST    /api/election/:id/start                               controllers.ElectionsApi.start(id: Long)
 POST    /api/election/:id/stop                                controllers.ElectionsApi.stop(id: Long)
 POST    /api/election/:id/tally                               controllers.ElectionsApi.tally(id: Long)
+POST    /api/election/:id/tally-voter-ids                     controllers.ElectionsApi.tallyWithVoterIds(id: Long)
 POST    /api/election/:id/tally-no-dump                       controllers.ElectionsApi.tallyNoDump(id: Long)
 POST    /api/election/:id/calculate-results                   controllers.ElectionsApi.calculateResults(id: Long)
 POST    /api/election/:id/publish-results                     controllers.ElectionsApi.publishResults(id: Long)

@@ -106,7 +106,7 @@ object BallotboxApi extends Controller with Response {
   }
 
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
-  def dumpTheVotes(electionId: Long) = Future {
+  def dumpTheVotes(electionId: Long, validVoterIds: Option[Set[String]] = None) = Future {
 
     Logger.info(s"dumping votes for election $electionId")
 
@@ -134,12 +134,14 @@ object BallotboxApi extends Controller with Response {
           }
         }
 
-        // TODO filter by voter id's
+        // filter by voter id's, if present
+        val maybeValid = validVoterIds.map( ids => noDuplicates.filter( vote => ids.contains(vote.voter_id)) )
+        val valid = maybeValid.getOrElse(noDuplicates)
 
         // eo format is new line separated list of votes
         // we add an extra \n as otherwise there will be no separation between batches
-        if(noDuplicates.length > 0) {
-          val content = noDuplicates.map(_.vote).mkString("\n") + "\n"
+        if(valid.length > 0) {
+          val content = valid.map(_.vote).mkString("\n") + "\n"
           out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
         }
       }

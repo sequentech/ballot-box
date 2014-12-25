@@ -142,6 +142,15 @@ object ElectionsApi extends Controller with Response {
     tally.recover(tallyErrorHandler)
   }
 
+  /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
+  def tallyWithVoterIds(id: Long) = HAction("", "election", id, "admin").async(BodyParsers.parse.json) { request =>
+
+    val validIds = request.body.asOpt[List[String]].map(_.toSet)
+
+    val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id, validIds).flatMap(_ => tallyElection(e)))
+    tally.recover(tallyErrorHandler)
+  }
+
   /** request a tally, but do not dump votes, use those in the private ds */
   def tallyNoDump(id: Long) = HAction("", "election", id, "admin").async { request =>
 
