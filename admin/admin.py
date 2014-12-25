@@ -409,7 +409,8 @@ update <election_id>: updates an election (uses local <id>.json file)
 create <election_id>: creates an election
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
-tally <election_dir>: launches tally
+tally <election_id>: launches tally
+tally_voter_ids <election_id>: launches tally, only counts votes matching passed voter ids
 tally_no_dump <election_id>: launches tally (does not dump votes)
 calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
 publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
@@ -426,7 +427,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
-    parser.add_argument('--voter-ids', help='json list of valid voter ids to tally')
+    parser.add_argument('--voter-ids', help='json list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
     parser.add_argument('-f', '--filters', nargs='+', default=[], help="key==value(s) filters for queries (use ~ for like)")
     args = parser.parse_args()
