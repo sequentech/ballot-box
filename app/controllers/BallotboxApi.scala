@@ -105,6 +105,16 @@ object BallotboxApi extends Controller with Response {
     }
   }
 
+  /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
+  def dumpVotesWithVoterIds(electionId: Long) = HAction("", "election", electionId, "admin").async(BodyParsers.parse.json) { request =>
+
+    val validIds = request.body.asOpt[List[String]].map(_.toSet)
+
+    dumpTheVotes(electionId, validIds).map { x =>
+      Ok(response(0))
+    }
+  }
+
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long, validVoterIds: Option[Set[String]] = None) = Future {
 

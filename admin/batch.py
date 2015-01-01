@@ -67,6 +67,20 @@ def main(argv):
                 cycle.tally(cfg['id'])
                 cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
 
+    elif args.command == 'tally_with_ids':
+        election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
+        print(election_configs)
+
+        for config in election_configs:
+            with open(os.path.join(args.directory, config), 'r') as f:
+                cfg = json.loads(f.read())
+                next_id = cfg['payload']['id']
+                print('next id %d, dumping votes with matching ids (in private ds)' % next_id)
+                cycle.dump_votes_with_ids(next_id)
+                print('next id %d, tallying' % next_id)
+                cycle.tally_no_dump(next_id)
+                cycle.wait_for_state(next_id, ['tally_ok', 'results_ok'], 10000)
+
     elif args.command == 'results':
         results_configs = get_results_configs(args.directory, args.start_id, args.end_id)
         print(results_configs)

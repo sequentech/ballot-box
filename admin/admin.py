@@ -23,10 +23,11 @@ from prettytable import PrettyTable
 
 from sqlalchemy import create_engine, select, func, text
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
+from sqlalchemy import distinct
 
 # set configuration parameters
-datastore = '/tmp/agora_elections/datastore'
-shared_secret = 'hohoho'
+datastore = '/home/agoraelections/agora-elections/datastore'
+shared_secret = 'rie5niiPphieH9aeTa9jeiKu'
 db_user = 'agora_elections'
 db_password = 'agora_elections'
 db_name = 'agora_elections'
@@ -145,6 +146,14 @@ def update(cfg, args):
     r = requests.post(url, data=json.dumps(cfg['electionConfig']), headers=headers)
     print(r.status_code, r.text)
 
+def get(election_id):
+    host,port = get_local_hostport()
+    headers = {'content-type': 'application/json'}
+    url = 'http://%s:%d/api/election/%d' % (host, port, election_id)
+    r = requests.get(url, headers=headers)
+    print(r.status_code, r.text[:200])
+    return r.status_code, r.text
+
 def create(cfg, args):
 
     auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
@@ -208,27 +217,80 @@ def cast_votes(cfg, args):
         exit(1)
 
 
-    '''auth = get_hmac(cfg, 'admin-%d' % cfg['election_id'])
-    host,port = get_local_hostport()
-    headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/dumpVotes' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers)
-    print(r.status_code, r.text)'''
-
 def dump_votes(cfg, args):
     auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/dumpVotes' % (host, port, cfg['election_id'])
+    url = 'http://%s:%d/api/election/%d/dump-votes' % (host, port, cfg['election_id'])
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
+
+def dump_votes_with_ids(cfg, args):
+    path = args.voter_ids
+    if path != None and os.path.isfile(path):
+        with open(path) as ids_file:
+            ids = json.load(ids_file)
+
+        auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
+        host,port = get_local_hostport()
+        headers = {'Authorization': auth, 'content-type': 'application/json'}
+        url = 'http://%s:%d/api/election/%d/dump-votes-voter-ids' % (host, port, cfg['election_id'])
+        # print('json is %s' % json.dumps(ids))
+        r = requests.post(url, headers=headers, data=json.dumps(ids))
+        print(r.status_code, r.text)
+
+    else:
+        print("no valid ids file %s" % path)
+
+# remove
+def dump_ids(cfg, args):
+    conn = get_db_connection()
+    votes = votes_table()
+
+    with open(args.elections_file, 'r') as f:
+        groups = f.read().splitlines()
+
+    with open(args.voter_ids, 'r') as f:
+        ids = set(f.read().splitlines())
+
+    allowed_by_voter = {}
+
+    for group in groups:
+        for election in group.split(','):
+            s = select([votes]).where(votes.c.election_id == election).order_by(votes.c.created)
+            result = conn.execute(s)
+            rows = result.fetchall()
+            for row in rows:
+                if row[2] in ids:
+                    allowed_by_voter[row[2]] = election
+
+        sys.stdout.write('.')
+
+    allowed_by_election = {}
+
+    for voter in allowed_by_voter:
+        election = allowed_by_voter[voter]
+        if election not in allowed_by_election:
+            allowed_by_election[election] = [voter]
+        else:
+            allowed_by_election[election].append(voter)
+
+    # print(allowed_by_election)
+    for election in allowed_by_election:
+        dir_path = os.path.join(datastore, 'private', election)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        file_path = os.path.join(dir_path, 'ids')
+        print(file_path)
+        with codecs.open(file_path, encoding='utf-8', mode='w+') as ids_file:
+            ids_file.write(json.dumps(allowed_by_election[election]))
 
 def dump_pks(cfg, args):
 
     auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/dumpPks' % (host, port, cfg['election_id'])
+    url = 'http://%s:%d/api/election/%d/dump-pks' % (host, port, cfg['election_id'])
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
@@ -244,8 +306,8 @@ def tally(cfg, args):
 def tally_voter_ids(cfg, args):
     path = args.voter_ids
     if path != None and os.path.isfile(path):
-        with open(path) as config_file:
-            ids = json.load(config_file)
+        with open(path) as ids_file:
+            ids = json.load(ids_file)
 
         auth = get_hmac(cfg, "", "election", cfg['election_id'], "admin")
         host,port = get_local_hostport()
@@ -323,11 +385,19 @@ def list_elections(cfg, args):
 def count_votes(cfg, args):
     conn = get_db_connection()
     votes = votes_table()
-    s = select([func.count(votes.c.id)]).where(votes.c.election_id == cfg['election_id'])
-    # result = conn.execute(text("select count(*) from vote where id in (select distinct on (voter_id) id from vote where election_id in :ids order by voter_id, election_id desc)"), ids=tuple(args.command[1:]))
+    if 'election_id' in cfg:
+        s = select([func.count(distinct(votes.c.voter_id))]).where(votes.c.election_id.in_(cfg['election_id']))
+        s2 = select([func.count(votes.c.voter_id)]).where(votes.c.election_id.in_(cfg['election_id']))
+    else:
+        s = select([func.count(distinct(votes.c.voter_id))])
+        s2 = select([func.count(votes.c.voter_id)])
+
     result = conn.execute(s)
     row = result.fetchall()
-    print(row[0][0])
+    result2 = conn.execute(s2)
+    row2 = result2.fetchall()
+
+    print("%d (%d)" % (row[0][0], row2[0][0]))
 
 def show_column(cfg, args):
     conn = get_db_connection()
@@ -402,6 +472,13 @@ def get_hmac(cfg, userId, objType, objId, perm):
 
     return ret
 
+def is_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
 def main(argv):
     parser = argparse.ArgumentParser(description='agora-elections admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('command', nargs='+', help='''register <election_json>: registers an election (uses local <id>.json file)
@@ -409,13 +486,13 @@ update <election_id>: updates an election (uses local <id>.json file)
 create <election_id>: creates an election
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
-tally <election_id>: launches tally
-tally_voter_ids <election_id>: launches tally, only counts votes matching passed voter ids
+tally <election_dir>: launches tally
+tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
 calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
 publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
 show_column <election_id>: shows a column for an election
-count_votes <election_id>: count votes
+count_votes [election_id, [election_id], ...]: count votes
 list_votes <election_dir>: list votes
 list_elections: list elections
 dump_pks <election_id>: dumps pks for an election (public datastore)
@@ -427,7 +504,9 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
-    parser.add_argument('--voter-ids', help='json list of valid voter ids to tally (used with tally_voter_ids)')
+    parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
+    # remove
+    parser.add_argument('--elections-file', help='file with grouped elections')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
     parser.add_argument('-f', '--filters', nargs='+', default=[], help="key==value(s) filters for queries (use ~ for like)")
     args = parser.parse_args()
@@ -437,23 +516,31 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
 
         # commands that use an election id
         if len(args.command) == 2:
-            config['election_id'] = int(args.command[1])
-
-            if args.ciphertexts is None:
-                config['ciphertexts'] = 'ciphertexts_' + str(config['election_id'])
+            if command == 'count_votes':
+                if is_int(args.command[1]) or ',' in args.command[1]:
+                    config['election_id'] = args.command[1].split(',')
+                else:
+                    with open(args.command[1], 'r') as f:
+                        lines = f.read().splitlines()
+                        config['election_id'] = lines
             else:
-                config['ciphertexts'] = args.ciphertexts
+                config['election_id'] = int(args.command[1])
 
-            if command in ["register", "update"]:
-                jsonPath = '%s.json' % config['election_id']
-                if not os.path.isfile(jsonPath):
-                    print("%s is not a file" % jsonPath)
-                    exit(1)
-                print("> loading config in %s" % jsonPath)
-                with open(jsonPath, 'r') as f:
-                    electionConfig = json.loads(f.read())
+                if args.ciphertexts is None:
+                    config['ciphertexts'] = 'ciphertexts_' + str(config['election_id'])
+                else:
+                    config['ciphertexts'] = args.ciphertexts
 
-                config['electionConfig'] = electionConfig
+                if command in ["register", "update"]:
+                    jsonPath = '%s.json' % config['election_id']
+                    if not os.path.isfile(jsonPath):
+                        print("%s is not a file" % jsonPath)
+                        exit(1)
+                    print("> loading config in %s" % jsonPath)
+                    with open(jsonPath, 'r') as f:
+                        electionConfig = json.loads(f.read())
+
+                    config['electionConfig'] = electionConfig
 
         config['plaintexts'] = args.plaintexts
         config['encrypt-count'] = args.encrypt_count

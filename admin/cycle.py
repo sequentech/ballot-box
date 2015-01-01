@@ -31,6 +31,9 @@ def results_public_path(id):
 def tally_public_path(id):
     return os.path.join(public_ds, str(id), 'tally.tar.gz')
 
+def ids_path(id):
+    return os.path.join(private_ds, str(id), 'ids')
+
 def capture_stdout(function):
     def wrapper(*args):
         stdout = sys.stdout
@@ -141,6 +144,23 @@ def tally(id):
     args = Args()
     print('> tally..')
     admin.tally(cfg, args)
+
+# remove
+def tally_no_dump(id):
+    cfg = {}
+    cfg['election_id'] = id
+    args = Args()
+    print('> tally_no_dump..')
+    admin.tally_no_dump(cfg, args)
+
+# remove
+def dump_votes_with_ids(id):
+    cfg = {}
+    cfg['election_id'] = id
+    args = Args()
+    args.voter_ids = ids_path(id)
+    print('> dump_votes_with_ids..')
+    admin.dump_votes_with_ids(cfg, args)
 
 def calculate_results(id, results_config):
     if not os.path.isfile(tally_path(id)):
