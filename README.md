@@ -133,7 +133,7 @@ set the executable permissions if not already set for several admin scripts
 
 Create a virtualenv for the admin script and install admin script requirements:
 
-    mkvirutalenv agora_elections -p $(which python2)
+    mkvirtualenv agora_elections -p $(which python2)
     workon agora_elections
     cd agora_elections/admin
     pip install -r requirements.txt
