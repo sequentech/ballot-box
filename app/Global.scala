@@ -24,6 +24,7 @@ object Global extends WithFilters(LoggingFilter) with Response {
     ensureCfgExists("booth.auth.expiry")
     ensureCfgExists("app.datastore.public")
     ensureCfgExists("app.datastore.private")
+    ensureCfgExists("app.eopeers.dir")
 
     val publicDs = Play.current.configuration.getString("app.datastore.public").get
     val privateDs = Play.current.configuration.getString("app.datastore.private").get
@@ -38,6 +39,14 @@ object Global extends WithFilters(LoggingFilter) with Response {
 
     if( (!privateDsF.exists) || (!privateDsF.isDirectory) || (!privateDsF.canWrite)) {
       Logger.error(s"$privateDs not directory or is not writable")
+      System.exit(1)
+    }
+
+    val peers = Play.current.configuration.getString("app.eopeers.dir").get
+    val peersDir = new java.io.File(peers)
+
+    if ((!peersDir.exists) || (!peersDir.isDirectory)) {
+      Logger.error(s"$peers not a directory")
       System.exit(1)
     }
   }

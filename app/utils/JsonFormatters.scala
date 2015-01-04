@@ -15,7 +15,9 @@ object JsonFormatters {
   val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS")
 
   implicit val formatTimestamp = new Format[Timestamp] {
-    def writes(ts: Timestamp): JsValue = JsString(ts.toString())
+    def writes(ts: Timestamp): JsValue = {
+      JsString(dateFormat.format(ts))
+    }
     def reads(ts: JsValue): JsResult[Timestamp] = {
       try {
         val date = dateFormat.parse(ts.as[String])
@@ -40,12 +42,14 @@ object JsonFormatters {
   implicit val voteDtoF = Json.format[VoteDTO]
   implicit val voteF = Json.format[Vote]
   implicit val electionF = Json.format[Election]
+
   implicit val urlF = Json.format[Url]
   implicit val answerF = Json.format[Answer]
   implicit val questionF = Json.format[Question]
 
   implicit val presentationF = Json.format[ElectionPresentation]
   implicit val configF = Json.format[ElectionConfig]
+  implicit val electionDtoF = Json.format[ElectionDTO]
 
   implicit val publicKeyF = Json.format[PublicKey]
   implicit val publicKeySessionF = Json.format[PublicKeySession]

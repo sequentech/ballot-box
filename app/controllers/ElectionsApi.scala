@@ -78,7 +78,7 @@ object ElectionsApi extends Controller with Response {
   def get(id: Long) = Action.async { request =>
 
     val future = getElection(id).map { election =>
-      Ok(response(election))
+      Ok(response(election.getDTO))
     }
     future.recover {
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
@@ -426,7 +426,7 @@ object ElectionsApi extends Controller with Response {
     val dir = Play.current.configuration.getString("app.eopeers.dir").get
     val peersDir = new java.io.File(dir)
 
-    val peers = peersDir.listFiles.filter(!_.isDirectory).map { file =>
+    val peers = peersDir.listFiles.filter(f => f.isDirectory && f.getName.endsWith(".pkg")).map { file =>
       val text = scala.io.Source.fromFile(file)
       // get the file name without extension
       val name = file.getName().split('.')(0)

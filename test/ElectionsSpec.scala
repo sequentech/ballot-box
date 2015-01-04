@@ -39,15 +39,22 @@ class ElectionsSpec extends Specification with TestContexts with Response {
       status(response) must equalTo(FORBIDDEN)
     }
 
-    "allow registering an election" in new AppWithDbData() {
+    "allow registering an retrieving an election" in new AppWithDbData() {
 
       // for this to work we need to set the pk for the election manually (for election 1020)
-      val response = route(FakeRequest(POST, routes.ElectionsApi.register.url)
+      var response = route(FakeRequest(POST, routes.ElectionsApi.register.url)
         .withJsonBody(TestData.config)
         .withHeaders(("Authorization", getAuth("", "election", 0, "admin")))
       ).get
 
       responseCheck(response, (r:Response[Int]) => r.payload > 0)
+
+      response = route(FakeRequest(GET, routes.ElectionsApi.get(1).url)
+        .withJsonBody(TestData.config)
+        // .withHeaders(("Authorization", getAuth("", "election", 0, "admin")))
+      ).get
+
+      responseCheck(response, (r:Response[ElectionDTO]) => r.payload.configuration.title == "Votacion de candidatos")
     }
 
     "allow updating an election" in new AppWithDbData() {
@@ -73,6 +80,8 @@ class ElectionsSpec extends Specification with TestContexts with Response {
     contentType(result) must beSome.which(_ == "application/json")
 
     val parsed = Try(Json.parse(contentAsString(result))).map(_.validate[T])
+    // force it to crash if parse errors
+    parsed.get
 
     parsed must beLike {
       case Success(JsSuccess(response, _)) if f(response) => ok

@@ -27,7 +27,7 @@ from sqlalchemy import distinct
 
 # set configuration parameters
 datastore = '/home/agoraelections/agora-elections/datastore'
-shared_secret = 'rie5niiPphieH9aeTa9jeiKu'
+shared_secret = '<password>'
 db_user = 'agora_elections'
 db_password = 'agora_elections'
 db_name = 'agora_elections'
@@ -146,7 +146,8 @@ def update(cfg, args):
     r = requests.post(url, data=json.dumps(cfg['electionConfig']), headers=headers)
     print(r.status_code, r.text)
 
-def get(election_id):
+def get(cfg, args):
+    election_id = cfg['election_id']
     host,port = get_local_hostport()
     headers = {'content-type': 'application/json'}
     url = 'http://%s:%d/api/election/%d' % (host, port, election_id)
@@ -238,9 +239,10 @@ def dump_votes_with_ids(cfg, args):
         # print('json is %s' % json.dumps(ids))
         r = requests.post(url, headers=headers, data=json.dumps(ids))
         print(r.status_code, r.text)
-
+        return r.status_code
     else:
         print("no valid ids file %s" % path)
+        return 400
 
 # remove
 def dump_ids(cfg, args):
@@ -315,9 +317,10 @@ def tally_voter_ids(cfg, args):
         url = 'http://%s:%d/api/election/%d/tally' % (host, port, cfg['election_id'])
         r = requests.post(url, headers=headers, data=json.dumps(ids))
         print(r.status_code, r.text)
-
+        return r.status_code
     else:
         print("no valid ids file %s" % path)
+        return 400
 
 def tally_no_dump(cfg, args):
 

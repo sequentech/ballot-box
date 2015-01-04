@@ -76,10 +76,16 @@ def main(argv):
                 cfg = json.loads(f.read())
                 next_id = cfg['payload']['id']
                 print('next id %d, dumping votes with matching ids (in private ds)' % next_id)
-                cycle.dump_votes_with_ids(next_id)
+                ret = cycle.dump_votes_with_ids(next_id)
+                if ret in [400, 500]:
+                     print("dump_votes_with_ids returned %d, continuing without it" % ret)
+                     continue
                 print('next id %d, tallying' % next_id)
-                cycle.tally_no_dump(next_id)
+                ret = cycle.tally_no_dump(next_id)
                 cycle.wait_for_state(next_id, ['tally_ok', 'results_ok'], 10000)
+                if ret in [400, 500]:
+                     print("tally_no_dump ids returned %d, continuing without it" % ret)
+                     continue
 
     elif args.command == 'results':
         results_configs = get_results_configs(args.directory, args.start_id, args.end_id)
