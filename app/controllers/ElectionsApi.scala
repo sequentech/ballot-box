@@ -426,10 +426,11 @@ object ElectionsApi extends Controller with Response {
     val dir = Play.current.configuration.getString("app.eopeers.dir").get
     val peersDir = new java.io.File(dir)
 
-    val peers = peersDir.listFiles.filter(f => f.isDirectory && f.getName.endsWith(".pkg")).map { file =>
+    val peers = peersDir.listFiles.filter(f => !f.isDirectory && (f.getName.endsWith(".pkg")||f.getName.endsWith(".package"))).map { file =>
       val text = scala.io.Source.fromFile(file)
       // get the file name without extension
-      val name = file.getName().split('.')(0)
+      val ar = file.getName().split('.')
+      val name = ar.slice(0, ar.length - 1).mkString(".")
       val allLines = text.mkString
       val peer = Json.parse(allLines).as[JsObject]
       text.close()
