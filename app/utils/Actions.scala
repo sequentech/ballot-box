@@ -64,9 +64,12 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       // Logger.info(hash)
       // Logger.info(compareOk + " " + (diff < expiry) + " " + (rcvUserId == userId) + " " + (rcvObjType == objType) + " " + (rcvObjId == objId) + " " + (rcvPerm == perm))
 
+      // if the userId is the empty string we don't mind the user
+      val userOk = (rcvUserId == userId || userId == "")
+
       // note that we can compare without doing contant time comparison received
       // strings because that's not critical for security, only hmac is
-      if(compareOk && (diff < expiry) && (rcvUserId == userId) && (rcvObjType == objType) &&
+      if(compareOk && (diff < expiry) && userOk && (rcvObjType == objType) &&
         (rcvObjId == objId) && (rcvPerm == perm)) {
 
         return true
