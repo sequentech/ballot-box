@@ -142,8 +142,24 @@ case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, s
 /** an election configuration defines an election */
 case class ElectionConfig(
   id: Long, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation
-)
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
+
+  def validate() = {
+    /*
+    id
+    director
+    authorities.map { auth =>
+
+    }
+    description
+
+    questions.map(_.validate())
+    start_date
+    end_date
+    presentation.validate()
+    */
+  }
+}
 
 /** defines presentation options for an election */
 case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String)
