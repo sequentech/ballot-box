@@ -43,36 +43,14 @@ object ElectionsApi extends Controller with Response {
   val peers = getPeers
 
   /** inserts election into the db in the registered state */
-  def register = HAction("", "AuthEvent", 0, "admin").async(BodyParsers.parse.json) { request => Future {
+  def register = HAction("", "AuthEvent", 0, "admin").async(BodyParsers.parse.json) { request =>
+    registerElection(request)
+  }
 
-    val electionConfig = request.body.validate[ElectionConfig]
-
-    electionConfig.fold(
-
-      errors => {
-        Logger.warn(s"Invalid config json, $errors")
-        BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
-      },
-
-      config => {
-
-        DB.withSession { implicit session =>
-
-          val existing = DAL.elections.findByIdWithSession(config.id)
-          existing match {
-
-            case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
-
-            case None => {
-              val result = DAL.elections.insert(Election(config.id, request.body.toString,
-                Elections.REGISTERED, config.start_date, config.end_date, None, None, None))
-              Ok(response(result))
-            }
-          }
-        }
-      }
-    )
-  }}
+  /** updates an election's config */
+  def update(id: Long) = HAction("", "AuthEvent", id, "admin").async(BodyParsers.parse.json) { request =>
+    updateElection(id, request)
+  }
 
   /** gets an election */
   def get(id: Long) = Action.async { request =>
@@ -84,26 +62,6 @@ object ElectionsApi extends Controller with Response {
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
     }
   }
-
-  /** Updates an election's config */
-  def update(id: Long) =
-    HAction("", "AuthEvent", id, "admin").async(BodyParsers.parse.json) { request => Future {
-
-    val electionConfig = request.body.validate[ElectionConfig]
-
-    electionConfig.fold(
-
-      errors => {
-        BadRequest(response(JsError.toFlatJson(errors)))
-      },
-
-      config => {
-        val result = DAL.elections.updateConfig(id, request.body.toString, config.start_date, config.end_date)
-        Ok(response(result))
-      }
-    )
-
-  }(slickExecutionContext)}
 
   /** Creates an election in eo */
   def create(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
@@ -290,6 +248,63 @@ object ElectionsApi extends Controller with Response {
 
   /*-------------------------------- privates  --------------------------------*/
 
+  /** Future: inserts election into the db in the registered state */
+  private def registerElection(request: Request[JsValue]) = Future {
+
+    val electionConfig = request.body.validate[ElectionConfig]
+
+    electionConfig.fold(
+
+      errors => {
+        Logger.warn(s"Invalid config json, $errors")
+        BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+      },
+
+      config => {
+
+        val validated = config.validate(peers)
+
+        DB.withSession { implicit session =>
+
+          val existing = DAL.elections.findByIdWithSession(validated.id)
+          existing match {
+
+            case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
+
+            case None => {
+              val result = DAL.elections.insert(Election(validated.id, validated.asString, Elections.REGISTERED,
+                validated.start_date, validated.end_date, None, None, None))
+              Ok(response(result))
+            }
+          }
+        }
+      }
+    )
+  }(slickExecutionContext)
+
+  /** Future: updates an election's config */
+  private def updateElection(id: Long, request: Request[JsValue]) = Future {
+
+    val electionConfig = request.body.validate[ElectionConfig]
+
+    electionConfig.fold(
+
+      errors => {
+        BadRequest(response(JsError.toFlatJson(errors)))
+      },
+
+      config => {
+
+        val validated = config.validate(peers)
+
+        val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
+        Ok(response(result))
+      }
+    )
+
+  }(slickExecutionContext)
+
+  /** Future: links tally and copies results into public datastore */
   private def pubResults(id: Long, results: Option[String]) = Future {
 
     Datastore.publishResults(id, results)

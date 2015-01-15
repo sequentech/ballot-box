@@ -36,8 +36,7 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       val start = "khmac:///sha-256;";
       val slashPos = start.length + 64;
 
-      if(!value.startsWith(start) || value.length < slashPos ||
-        value.charAt(slashPos) != '/') {
+      if(!value.startsWith(start) || value.length < slashPos || value.charAt(slashPos) != '/') {
         Logger.warn(s"Malformed authorization header")
         return false
       }

@@ -144,20 +144,40 @@ case class ElectionConfig(
   id: Long, director: String, authorities: Array[String], title: String, description: String,
   questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
 
-  def validate() = {
-    /*
-    id
-    director
-    authorities.map { auth =>
-
+  /**
+   * validates an election config, this does two things:
+   *
+   * 1) throws ValidationException if the content cannot be made valid
+   *
+   * 2) transforms the content that can be made valid
+   *
+   * returns a valid ElectionConfig
+   *
+   */
+  def validate(peers: Map[String, JsObject]) = {
+    // collect all authorities
+    val auths = (director +: authorities).toSet
+    // make sure that all requested authorities are available as peers
+    auths.foreach { auth =>
+      if(!peers.contains(auth)) {
+        throw new ValidationException("One or more authorities were not found")
+      }
     }
-    description
+    this
 
+    /* TODO implement validation for
+    id
+    description
     questions.map(_.validate())
     start_date
     end_date
     presentation.validate()
     */
+  }
+
+  /** returns a json string representation */
+  def asString() = {
+    Json.stringify(Json.toJson(this))
   }
 }
 
