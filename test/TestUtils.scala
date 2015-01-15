@@ -35,10 +35,10 @@ trait TestContexts {
     val config = Json.parse("""
 {
   "id": 1,
-  "title": "Votacion de candidatos",
+  "title": "Votación de candidatos",
   "description": "Selecciona los documentos politico, etico y organizativo con los que Podemos",
-  "director": "wadobo-auth1",
-  "authorities": ["openkratio-authority"],
+  "director": "test-auth1.agoravoting.com",
+  "authorities": ["test-auth2.agoravoting.com"],
   "layout": "pcandidates-election",
   "presentation": {
     "share_text": "lo que sea",
@@ -46,7 +46,7 @@ trait TestContexts {
     "urls": [
       {
         "title": "",
-        "url": ""
+        "url": "http://www.google.com"
       }
     ],
     "theme_css": "whatever"
@@ -73,7 +73,7 @@ trait TestContexts {
                   "urls": [
                     {
                       "title": "",
-                      "url": ""
+                      "url": "http://www.google.com"
                     }
                   ],
                   "text": "Fulanita de tal"

@@ -12,5 +12,7 @@ libraryDependencies ++= Seq(
   ws,
   "com.typesafe.play" %% "play-slick" % "0.8.0",
   "org.postgresql" % "postgresql" % "9.3-1100-jdbc4",
-  "org.bouncycastle" % "bcprov-jdk16" % "1.45"
+  "org.bouncycastle" % "bcprov-jdk16" % "1.45",
+  "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
+  "commons-validator" % "commons-validator" % "1.4.1"
 )

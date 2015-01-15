@@ -394,10 +394,11 @@ object ElectionsApi extends Controller with Response {
     // collect all authorities
     val auths = (config.director +: config.authorities).toSet
     // make sure that all requested authorities are available as peers
-    val present = auths.map(peers.contains _)
-    if(present.contains(false)) {
-      return Future {
-        BadRequest(error("One or more authorities were not found (eopeers dir)", ErrorCodes.MISSING_AUTH))
+    auths.foreach { auth =>
+      if(!peers.contains(auth)) {
+        return Future {
+          BadRequest(error("One or more authorities were not found (eopeers dir)", ErrorCodes.MISSING_AUTH))
+        }
       }
     }
 

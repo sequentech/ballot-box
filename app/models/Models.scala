@@ -2,6 +2,8 @@ package models
 
 import utils.Crypto
 import utils.JsonFormatters._
+import utils.Validator
+import utils.ValidationException
 
 import play.api.Play.current
 import play.api.db.slick.Config.driver.simple._
@@ -145,17 +147,19 @@ case class ElectionConfig(
   questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
 
   /**
-   * validates an election config, this does two things:
-   *
-   * 1) throws ValidationException if the content cannot be made valid
-   *
-   * 2) transforms the content that can be made valid
-   *
-   * returns a valid ElectionConfig
-   *
-   */
+    * validates an election config, this does two things:
+    *
+    * 1) validation: throws ValidationException if the content cannot be made valid
+    *
+    * 2) sanitation: transforms the content that can be made valid
+    *
+    * returns a valid ElectionConfig
+    *
+    */
   def validate(peers: Map[String, JsObject]) = {
-    // collect all authorities
+
+    if(id < 0) throw new ValidationException(s"Invalid id $id")
+    // validate authorities
     val auths = (director +: authorities).toSet
     // make sure that all requested authorities are available as peers
     auths.foreach { auth =>
@@ -163,16 +167,19 @@ case class ElectionConfig(
         throw new ValidationException("One or more authorities were not found")
       }
     }
-    this
 
-    /* TODO implement validation for
-    id
-    description
-    questions.map(_.validate())
-    start_date
-    end_date
-    presentation.validate()
-    */
+    Validator.validateString(title, 100, "invalid title")
+    if(description.length > 300) throw new ValidationException("description too long")
+    val descriptionOk = Validator.sanitizeHtml(description)
+    val questionsOk = questions.map(_.validate())
+
+    // TODO
+    // start_date
+    // end_date
+
+    val presentationOk = presentation.validate()
+
+    this.copy(description = descriptionOk, questions = questionsOk, presentation = presentationOk)
   }
 
   /** returns a json string representation */
@@ -182,19 +189,76 @@ case class ElectionConfig(
 }
 
 /** defines presentation options for an election */
-case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String)
+case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String) {
+
+  def validate() = {
+
+    Validator.validateString(share_text, 200, "invalid share_text")
+    Validator.validateString(theme, 100, "invalid theme")
+    val urlsOk = urls.map(_.validate())
+    Validator.validateString(theme_css, 100, "invalid theme_css")
+
+    this.copy(urls = urlsOk)
+  }
+}
 
 /** defines a question asked in an election */
 case class Question(
   description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String, randomize_answer_order: Boolean,
-  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer]
-)
+  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer]) {
+
+  def validate() = {
+
+    if(description.length > 300) throw new ValidationException("description too long")
+    val descriptionOk = Validator.sanitizeHtml(description)
+
+    Validator.validateString(layout, 100, "invalid layout")
+    // TODO compare with answers
+    if(max < 1) throw new ValidationException("invalid max")
+    // TODO compare with answers
+    if(min < 0) throw new ValidationException("invalid min")
+    // TODO compare with answers
+    if(num_winners < 1) throw new ValidationException("invalid num_winners")
+    Validator.validateString(title, 100, "invalid title")
+    // TODO not looking inside the value
+    Validator.validateString(tally_type, 100, "invalid tally_type")
+    // TODO not looking inside the value
+    Validator.validateString(answer_total_votes_percentage, 100, "invalid answer_total_votes_percentage")
+    val answersOk = answers.map(_.validate())
+
+    this.copy(description = descriptionOk, answers = answersOk)
+  }
+}
 
 /** defines a possible answer for a question asked in an election */
-case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String)
+case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String) {
+
+  def validate() = {
+    if(id < 0) throw new ValidationException("invalid id")
+    Validator.validateString(category, 100, "invalid category")
+
+    if(details.length > 300) throw new ValidationException("details too long")
+    val detailsOk = Validator.sanitizeHtml(details)
+    // TODO not looking inside the value
+    if(sort_order < 0) throw new ValidationException("invalid sort_order")
+    if(text.length > 300) throw new ValidationException("text too long")
+    val textOk = Validator.sanitizeHtml(text)
+    val urlsOk = urls.map(_.validate())
+
+    this.copy(details = detailsOk, urls = urlsOk, text = textOk)
+  }
+}
 
 /** an url to be shown when presenting election data */
-case class Url(title: String, url: String)
+case class Url(title: String, url: String) {
+
+  def validate() = {
+    Validator.validateString(title, 100, s"invalid url title $title")
+    Validator.validateUrl(url, s"invalid url $url")
+
+    this
+  }
+}
 
 
 /** eo create election response message */
@@ -289,6 +353,3 @@ case class Choice(alpha: BigInt, beta: BigInt) {
 
 /** proof of plaintext knowledge, according to schnorr protocol*/
 case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
-
-/** used to signal a validation error when validating votes */
-class ValidationException(message: String) extends Exception(message)
