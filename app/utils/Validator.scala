@@ -17,6 +17,9 @@ import scala.util.matching._
   */
 object Validator {
 
+  val SHORT_STRING = 100
+  val LONG_STRING = 300
+
   /*-------------------------------- querying methods  --------------------------------*/
 
   /** generic regex matcher */
@@ -46,6 +49,11 @@ object Validator {
   }
 
   /*-------------------------------- exception throwing methods  --------------------------------*/
+
+  /** if predicate not satisfied throw ValidationException */
+  def assert(f: => Boolean, message: String) = {
+    if(!f) throw new ValidationException(message)
+  }
 
   /** allows characters, space, numbers, underscore and hyphen */
   def validateString(value: String, limit: Int, message: String) = {

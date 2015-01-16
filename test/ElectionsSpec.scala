@@ -54,7 +54,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
         // .withHeaders(("Authorization", getAuth("", "election", 0, "admin")))
       ).get
 
-      responseCheck(response, (r:Response[ElectionDTO]) => r.payload.configuration.title == "Votacion de candidatos")
+      responseCheck(response, (r:Response[ElectionDTO]) => r.payload.configuration.title == "Votación de candidatos")
     }
 
     "allow updating an election" in new AppWithDbData() {

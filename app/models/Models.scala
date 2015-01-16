@@ -2,6 +2,7 @@ package models
 
 import utils.Crypto
 import utils.JsonFormatters._
+import utils.Validator._
 import utils.Validator
 import utils.ValidationException
 
@@ -158,19 +159,22 @@ case class ElectionConfig(
     */
   def validate(peers: Map[String, JsObject]) = {
 
-    if(id < 0) throw new ValidationException(s"Invalid id $id")
+    assert(id >= 0, s"Invalid id $id")
     // validate authorities
     val auths = (director +: authorities).toSet
+
+    assert(auths.size >= 2, s"Need at least two authorities (${auths.size})")
+
     // make sure that all requested authorities are available as peers
     auths.foreach { auth =>
-      if(!peers.contains(auth)) {
-        throw new ValidationException("One or more authorities were not found")
-      }
+      assert(peers.contains(auth), "One or more authorities were not found")
     }
 
-    Validator.validateString(title, 100, "invalid title")
-    if(description.length > 300) throw new ValidationException("description too long")
-    val descriptionOk = Validator.sanitizeHtml(description)
+    validateString(title, SHORT_STRING, "invalid title")
+    assert(description.length <= LONG_STRING, "description too long")
+    val descriptionOk = sanitizeHtml(description)
+
+    assert(questions.size >= 1, "need at least one queston")
     val questionsOk = questions.map(_.validate())
 
     // TODO
@@ -188,20 +192,6 @@ case class ElectionConfig(
   }
 }
 
-/** defines presentation options for an election */
-case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String) {
-
-  def validate() = {
-
-    Validator.validateString(share_text, 200, "invalid share_text")
-    Validator.validateString(theme, 100, "invalid theme")
-    val urlsOk = urls.map(_.validate())
-    Validator.validateString(theme_css, 100, "invalid theme_css")
-
-    this.copy(urls = urlsOk)
-  }
-}
-
 /** defines a question asked in an election */
 case class Question(
   description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String, randomize_answer_order: Boolean,
@@ -209,21 +199,22 @@ case class Question(
 
   def validate() = {
 
-    if(description.length > 300) throw new ValidationException("description too long")
-    val descriptionOk = Validator.sanitizeHtml(description)
+    assert(description.length <= LONG_STRING, "description too long")
+    val descriptionOk = sanitizeHtml(description)
 
-    Validator.validateString(layout, 100, "invalid layout")
+    validateString(layout, SHORT_STRING, "invalid layout")
     // TODO compare with answers
-    if(max < 1) throw new ValidationException("invalid max")
+    assert(max >= 1, "invalid max")
     // TODO compare with answers
-    if(min < 0) throw new ValidationException("invalid min")
+    assert(min >= 0, "invalid min")
     // TODO compare with answers
-    if(num_winners < 1) throw new ValidationException("invalid num_winners")
-    Validator.validateString(title, 100, "invalid title")
+    assert(num_winners >= 1, "invalid num_winners")
+    validateString(title, SHORT_STRING, "invalid title")
     // TODO not looking inside the value
-    Validator.validateString(tally_type, 100, "invalid tally_type")
+    validateString(tally_type, SHORT_STRING, "invalid tally_type")
     // TODO not looking inside the value
-    Validator.validateString(answer_total_votes_percentage, 100, "invalid answer_total_votes_percentage")
+    validateString(answer_total_votes_percentage, SHORT_STRING, "invalid answer_total_votes_percentage")
+    assert(answers.size >= 1, s"need at least one answer (${answers.size})")
     val answersOk = answers.map(_.validate())
 
     this.copy(description = descriptionOk, answers = answersOk)
@@ -234,18 +225,32 @@ case class Question(
 case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String) {
 
   def validate() = {
-    if(id < 0) throw new ValidationException("invalid id")
-    Validator.validateString(category, 100, "invalid category")
+    assert(id >= 0, "invalid id")
+    validateString(category, SHORT_STRING, "invalid category")
 
-    if(details.length > 300) throw new ValidationException("details too long")
-    val detailsOk = Validator.sanitizeHtml(details)
+    assert(details.length <= LONG_STRING, "details too long")
+    val detailsOk = sanitizeHtml(details)
     // TODO not looking inside the value
-    if(sort_order < 0) throw new ValidationException("invalid sort_order")
-    if(text.length > 300) throw new ValidationException("text too long")
-    val textOk = Validator.sanitizeHtml(text)
+    assert(sort_order >= 0, "invalid sort_order")
+    assert(text.length <= LONG_STRING, "text too long")
+    val textOk = sanitizeHtml(text)
     val urlsOk = urls.map(_.validate())
 
     this.copy(details = detailsOk, urls = urlsOk, text = textOk)
+  }
+}
+
+/** defines presentation options for an election */
+case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String) {
+
+  def validate() = {
+
+    validateString(share_text, LONG_STRING, "invalid share_text")
+    validateString(theme, SHORT_STRING, "invalid theme")
+    val urlsOk = urls.map(_.validate())
+    validateString(theme_css, SHORT_STRING, "invalid theme_css")
+
+    this.copy(urls = urlsOk)
   }
 }
 
@@ -253,8 +258,8 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
 case class Url(title: String, url: String) {
 
   def validate() = {
-    Validator.validateString(title, 100, s"invalid url title $title")
-    Validator.validateUrl(url, s"invalid url $url")
+    validateString(title, SHORT_STRING, s"invalid url title $title")
+    validateUrl(url, s"invalid url $url")
 
     this
   }
