@@ -40,6 +40,7 @@ object ElectionsApi extends Controller with Response {
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
+  val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
   val peers = getPeers
 
   /** inserts election into the db in the registered state */
@@ -96,7 +97,15 @@ object ElectionsApi extends Controller with Response {
   /** request a tally, dumps votes to the private ds */
   def tally(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
 
-    val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e)))
+    val tally = getElection(id).flatMap { e =>
+      if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
+        BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e))
+      }
+      else {
+        Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
+        Future { BadRequest(error(s"Cannot tally election $id in wrong state ${e.state}")) }
+      }
+    }
     tally.recover(tallyErrorHandler)
   }
 
@@ -105,14 +114,30 @@ object ElectionsApi extends Controller with Response {
 
     val validIds = request.body.asOpt[List[String]].map(_.toSet)
 
-    val tally = getElection(id).flatMap(e => BallotboxApi.dumpTheVotes(e.id, validIds).flatMap(_ => tallyElection(e)))
+    val tally = getElection(id).flatMap { e =>
+      if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
+        BallotboxApi.dumpTheVotes(e.id, validIds).flatMap(_ => tallyElection(e))
+      }
+      else {
+        Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
+        Future { BadRequest(error(s"Cannot tally election $id in wrong state ${e.state}")) }
+      }
+    }
     tally.recover(tallyErrorHandler)
   }
 
   /** request a tally, but do not dump votes, use those in the private ds */
   def tallyNoDump(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
 
-    val tally = getElection(id).flatMap(tallyElection)
+    val tally = getElection(id).flatMap { e =>
+      if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
+        tallyElection(e)
+      }
+      else {
+        Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
+        Future { BadRequest(error(s"Cannot tally election $id in wrong state ${e.state}")) }
+      }
+    }
     tally.recover(tallyErrorHandler)
   }
 
@@ -182,6 +207,10 @@ object ElectionsApi extends Controller with Response {
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
     }
   }
+
+  def getAuthorities = Action.async { request => Future {
+      Ok(response(peers))
+  }}
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
 
@@ -446,11 +475,20 @@ object ElectionsApi extends Controller with Response {
       val text = scala.io.Source.fromFile(file)
       // get the file name without extension
       val ar = file.getName().split('.')
-      val name = ar.slice(0, ar.length - 1).mkString(".")
+      val key = ar.slice(0, ar.length - 1).mkString(".")
       val allLines = text.mkString
       val peer = Json.parse(allLines).as[JsObject]
+
+      // add extra authority info
+      val appcfg = Play.current.configuration
+      val name = appcfg.getString(s"app.authorities.$key.name").getOrElse("Unnamed Authority")
+      val _name = "name" -> JsString(name)
+      val description = appcfg.getString(s"app.authorities.$key.description").getOrElse("Authority description")
+      val _description = "description" -> JsString(description)
+      val peerExtra = peer + _name + _description
+
       text.close()
-      name -> peer
+      key -> peerExtra
     }
 
     peers.toMap

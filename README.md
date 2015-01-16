@@ -45,6 +45,8 @@ application.local.conf
 
     app.eopeers.dir=/etc/eopeers/
 
+    app.partial-tallies=false
+
     booth.auth.secret=hohoho
     booth.auth.expiry=600000
 
@@ -60,6 +62,17 @@ application.local.conf
           { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
         ]
       }
+    }
+
+    app.authorities {
+        test-auth1.agoravoting.com = {
+            name = "Agora Voting auth 1"
+            description = "My authority 1"
+        }
+        "test-auth2.agoravoting.com" = {
+            name = "Agora Voting auth 2"
+            description = "My authority 2"
+        }
     }
 
 
@@ -78,6 +91,8 @@ test.local.conf
 
     app.eopeers.dir=/etc/eopeers/
 
+    app.partial-tallies=false
+
     booth.auth.secret=hohoho
     booth.auth.expiry=600000
 
@@ -95,7 +110,19 @@ test.local.conf
       }
     }
 
+    app.authorities {
+        test-auth1.agoravoting.com = {
+            name = "Agora Voting auth 1"
+            description = "My authority 1"
+        }
+        "test-auth2.agoravoting.com" = {
+            name = "Agora Voting auth 2"
+            description = "My authority 2"
+        }
+    }
+
     logger.scala.slick.jdbc.JdbcBackend.statement=DEBUG
+
 
 Key store set up
 
