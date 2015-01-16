@@ -18,30 +18,38 @@ import scala.util.matching._
 object Validator {
 
   val SHORT_STRING = 100
+  val IDENTIFIER_STRING = 100
   val LONG_STRING = 300
 
   /*-------------------------------- querying methods  --------------------------------*/
 
   /** generic regex matcher */
-  def isRegexOk(value: String, regex: Regex) = value match {
+  def isRegex(value: String, regex: Regex) = value match {
     case regex(_*) => true
     case _ => false
   }
 
   /** allows characters, space, numbers, underscore and hyphen */
   def isSimpleString(value: String) = {
-    val basicRegex = """[\p{L}0-9 _\-]*""".r
+    val simpleRegex = """[\p{L}0-9 _\-]*""".r
 
-    isRegexOk(value, basicRegex)
+    isRegex(value, simpleRegex)
   }
 
   /** allows characters, space, numbers, underscore and hyphen */
-  def isStringOk(value: String, limit: Int) = {
+  def isIdentifierString(value: String) = {
+    val identifierRegex = """[a-zA-Z0-9_\-]*""".r
+
+    isRegex(value, identifierRegex) && value.length < IDENTIFIER_STRING
+  }
+
+  /** allows characters, space, numbers, underscore and hyphen */
+  def isString(value: String, limit: Int) = {
     isSimpleString(value) && value.length < limit
   }
 
   /** allows urls with http/https */
-  def isUrlOk(url: String) = {
+  def isUrl(url: String) = {
     // Get an UrlValidator with custom schemes
     val customSchemes = Array("https","http")
     val customValidator = new UrlValidator(customSchemes)
@@ -57,12 +65,17 @@ object Validator {
 
   /** allows characters, space, numbers, underscore and hyphen */
   def validateString(value: String, limit: Int, message: String) = {
-    if(!isStringOk(value, limit)) throw new ValidationException(message)
+    if(!isString(value, limit)) throw new ValidationException(message)
+  }
+
+  /** allows characters, space, numbers, underscore and hyphen */
+  def validateIdentifier(value: String, message: String) = {
+    if(!isIdentifierString(value)) throw new ValidationException(message)
   }
 
   /** allows urls with http/https */
   def validateUrl(url: String, message: String) = {
-    if(!isUrlOk(url)) throw new ValidationException(message)
+    if(!isUrl(url)) throw new ValidationException(message)
   }
 
   /*-------------------------------- sanitizing methods  --------------------------------*/

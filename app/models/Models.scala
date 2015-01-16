@@ -120,7 +120,8 @@ object Elections {
   }
 
   def updateResults(id: Long, results: String)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated)).update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
+    elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated))
+    .update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
   }
 
   def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp)(implicit s: Session) = {
@@ -138,13 +139,13 @@ object Elections {
 
 /*-------------------------------- transient models  --------------------------------*/
 
-case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp]
+/** used to return an election with config in structured form */
+case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
+  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp]
 )
 
 /** an election configuration defines an election */
-case class ElectionConfig(
-  id: Long, director: String, authorities: Array[String], title: String, description: String,
+case class ElectionConfig(id: Long, director: String, authorities: Array[String], title: String, description: String,
   questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
 
   /**
@@ -193,28 +194,26 @@ case class ElectionConfig(
 }
 
 /** defines a question asked in an election */
-case class Question(
-  description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String, randomize_answer_order: Boolean,
-  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer]) {
+case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
+  randomize_answer_order: Boolean, tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer]) {
 
   def validate() = {
 
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
-    validateString(layout, SHORT_STRING, "invalid layout")
-    // TODO compare with answers
+    validateIdentifier(layout, "invalid layout")
     assert(max >= 1, "invalid max")
-    // TODO compare with answers
+    assert(max <= answers.size, "max greater than answers")
     assert(min >= 0, "invalid min")
-    // TODO compare with answers
+    assert(min <= answers.size, "min greater than answers")
     assert(num_winners >= 1, "invalid num_winners")
+    assert(num_winners <= answers.size, "num_winners greater than answers")
     validateString(title, SHORT_STRING, "invalid title")
     // TODO not looking inside the value
-    validateString(tally_type, SHORT_STRING, "invalid tally_type")
+    validateIdentifier(tally_type, "invalid tally_type")
     // TODO not looking inside the value
-    validateString(answer_total_votes_percentage, SHORT_STRING, "invalid answer_total_votes_percentage")
-    assert(answers.size >= 1, s"need at least one answer (${answers.size})")
+    validateIdentifier(answer_total_votes_percentage, "invalid answer_total_votes_percentage")
     val answersOk = answers.map(_.validate())
 
     this.copy(description = descriptionOk, answers = answersOk)
@@ -246,9 +245,9 @@ case class ElectionPresentation(share_text: String, theme: String, urls: Array[U
   def validate() = {
 
     validateString(share_text, LONG_STRING, "invalid share_text")
-    validateString(theme, SHORT_STRING, "invalid theme")
+    validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
-    validateString(theme_css, SHORT_STRING, "invalid theme_css")
+    validateIdentifier(theme_css, "invalid theme_css")
 
     this.copy(urls = urlsOk)
   }

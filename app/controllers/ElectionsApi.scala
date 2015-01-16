@@ -272,8 +272,8 @@ object ElectionsApi extends Controller with Response {
             case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
 
             case None => {
-              val result = DAL.elections.insert(Election(validated.id, validated.asString, Elections.REGISTERED,
-                validated.start_date, validated.end_date, None, None, None))
+              val result = DAL.elections.insert(Election(validated.id, validated.asString,
+                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None))
               Ok(response(result))
             }
           }
