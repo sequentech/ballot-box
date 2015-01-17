@@ -41,7 +41,7 @@ object ElectionsApi extends Controller with Response {
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
-  val peers = getPeers
+  val authorities = getAuthorityData
 
   /** inserts election into the db in the registered state */
   def register = HAction("", "AuthEvent", 0, "admin").async(BodyParsers.parse.json) { request =>
@@ -209,7 +209,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   def getAuthorities = Action.async { request => Future {
-      Ok(response(peers))
+      Ok(response(authorities.mapValues(_ \ "public")))
   }}
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
@@ -291,7 +291,7 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val validated = config.validate(peers)
+        val validated = config.validate(authorities)
 
         DB.withSession { implicit session =>
 
@@ -324,7 +324,7 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val validated = config.validate(peers)
+        val validated = config.validate(authorities)
 
         val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
         Ok(response(result))
@@ -422,11 +422,11 @@ object ElectionsApi extends Controller with Response {
     val config = configJson.validate[ElectionConfig].get
     // collect all authorities
     val auths = (config.director +: config.authorities).toSet
-    // make sure that all requested authorities are available as peers
+    // make sure that all requested authorities are available
     auths.foreach { auth =>
-      if(!peers.contains(auth)) {
+      if(!authorities.contains(auth)) {
         return Future {
-          BadRequest(error("One or more authorities were not found (eopeers dir)", ErrorCodes.MISSING_AUTH))
+          BadRequest(error("One or more authorities were not found", ErrorCodes.MISSING_AUTH))
         }
       }
     }
@@ -466,28 +466,39 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)
 
   /** creates a Map[peer name => peer json] based on eopeer installed packages */
-  private def getPeers: Map[String, JsObject] = {
+  private def getAuthorityData: Map[String, JsObject] = {
 
     val dir = Play.current.configuration.getString("app.eopeers.dir").get
     val peersDir = new java.io.File(dir)
 
-    val peers = peersDir.listFiles.filter(f => !f.isDirectory && (f.getName.endsWith(".pkg")||f.getName.endsWith(".package"))).map { file =>
+    val peerFiles = peersDir.listFiles.filter(f => !f.isDirectory &&
+      (f.getName.endsWith(".pkg")||f.getName.endsWith(".package"))
+    )
+
+    val peers = peerFiles.map { file =>
       val text = scala.io.Source.fromFile(file)
       // get the file name without extension
       val ar = file.getName().split('.')
       val key = ar.slice(0, ar.length - 1).mkString(".")
       val allLines = text.mkString
       val peer = Json.parse(allLines).as[JsObject]
+      text.close()
 
       // add extra authority info
       val appcfg = Play.current.configuration
+      val authCfg = s"app.authorities.$key"
+
       val name = appcfg.getString(s"app.authorities.$key.name").getOrElse("Unnamed Authority")
       val _name = "name" -> JsString(name)
       val description = appcfg.getString(s"app.authorities.$key.description").getOrElse("Authority description")
       val _description = "description" -> JsString(description)
-      val peerExtra = peer + _name + _description
+      val extra = AuthData(appcfg.getString(s"$authCfg.name"), appcfg.getString(s"$authCfg.description"),
+        appcfg.getString(s"$authCfg.url"), appcfg.getString(s"$authCfg.image"))
 
-      text.close()
+      // val peerExtra = peer + _name + _description
+      val peerExtra = peer + ("public" -> Json.toJson(extra))
+
+      println(peerExtra)
       key -> peerExtra
     }
 
@@ -495,16 +506,16 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** creates the json auth data for the given set of authorities */
-  private def getAuthData(authorities: Set[String]): JsArray = {
+  private def getAuthData(auths: Set[String]): JsArray = {
 
-    val auths = authorities.map { a =>
+    val data = auths.map { a =>
       Json.obj(
         "name" -> a,
         "orchestra_url" -> eoUrl(a, "api/queues"),
-        "ssl_cert" -> peers(a) \ "ssl_certificate"
+        "ssl_cert" -> authorities(a) \ "ssl_certificate"
       )
     }
-    JsArray(auths.toSeq)
+    JsArray(data.toSeq)
   }
 
   /** creates the json data for an eo tally operation */
@@ -533,7 +544,7 @@ object ElectionsApi extends Controller with Response {
 
   /** gets the api url for eo authority */
   private def eoUrl(auth: String, path: String) = {
-    val port = peers.get(auth).map(_ \ "port").getOrElse(5000)
+    val port = authorities.get(auth).map(_ \ "port").getOrElse(5000)
     s"https://$auth:$port/$path"
   }
 

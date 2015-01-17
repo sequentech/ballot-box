@@ -357,3 +357,6 @@ case class Choice(alpha: BigInt, beta: BigInt) {
 
 /** proof of plaintext knowledge, according to schnorr protocol*/
 case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
+
+/** data describing an authority, used in admin interface */
+case class AuthData(name: Option[String], description: Option[String], url: Option[String], image: Option[String])

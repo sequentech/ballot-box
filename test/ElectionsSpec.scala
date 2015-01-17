@@ -71,6 +71,15 @@ class ElectionsSpec extends Specification with TestContexts with Response {
 
       responseCheck(response, (r:Response[Int]) => r.payload > 0)
     }
+
+    "allow retrieving authority data" in new AppWithDbData() {
+
+      val response = route(FakeRequest(GET, routes.ElectionsApi.getAuthorities.url)
+        .withHeaders(("Authorization", "bogus"))
+      ).get
+
+      responseCheck(response, (r:Response[Map[String, AuthData]]) => r.payload.size == 2)
+    }
   }
 
   def responseCheck[T: Reads](result: Future[play.api.mvc.Result], f: T => Boolean, code:Int = OK) = {

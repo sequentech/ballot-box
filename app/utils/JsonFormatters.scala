@@ -4,7 +4,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import models._
 import java.sql.Timestamp
-
 import scala.math.BigInt
 
 /**
@@ -61,4 +60,6 @@ object JsonFormatters {
 
   implicit val tallyDataF = Json.format[TallyData]
   implicit val tallyResponseF = Json.format[TallyResponse]
+
+  implicit val authDataF = Json.format[AuthData]
 }
