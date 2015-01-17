@@ -65,14 +65,18 @@ application.local.conf
     }
 
     app.authorities {
-        test-auth1.agoravoting.com = {
-            name = "Agora Voting auth 1"
-            description = "My authority 1"
-        }
-        "test-auth2.agoravoting.com" = {
-            name = "Agora Voting auth 2"
-            description = "My authority 2"
-        }
+      test-auth1.agoravoting.com = {
+        name = "Agora Voting auth 1"
+        description = "My authority 1"
+        url = "http://foo.bar.1"
+        image = "http://foo.bar.1/img.img"
+      }
+      "test-auth2.agoravoting.com" = {
+        name = "Agora Voting auth 2"
+        description = "My authority 2"
+        url = "http://foo.bar.2"
+        image = "http://foo.bar.2/img"
+      }
     }
 
 
@@ -111,14 +115,18 @@ test.local.conf
     }
 
     app.authorities {
-        test-auth1.agoravoting.com = {
-            name = "Agora Voting auth 1"
-            description = "My authority 1"
-        }
-        "test-auth2.agoravoting.com" = {
-            name = "Agora Voting auth 2"
-            description = "My authority 2"
-        }
+      test-auth1.agoravoting.com = {
+        name = "Agora Voting auth 1"
+        description = "My authority 1"
+        url = "http://foo.bar.1"
+        image = "http://foo.bar.1/img.img"
+      }
+      "test-auth2.agoravoting.com" = {
+        name = "Agora Voting auth 2"
+        description = "My authority 2"
+        url = "http://foo.bar.2"
+        image = "http://foo.bar.2/img"
+      }
     }
 
     logger.scala.slick.jdbc.JdbcBackend.statement=DEBUG
