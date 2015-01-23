@@ -59,6 +59,7 @@ object Votes {
   def count(implicit s: Session): Int = votes.length.run
 
   def countForElection(electionId: Long)(implicit s: Session): Int = votes.filter(_.electionId === electionId).length.run
+  def countUniqueForElection(electionId: Long)(implicit s: Session): Int = votes.filter(_.electionId === electionId).groupBy(v=>v.voterId).map(_._1).length.run
 
   def countForElectionAndVoter(electionId: Long, voterId: String)(implicit s: Session): Int = {
     votes.filter(_.electionId === electionId).filter(_.voterId === voterId).length.run
@@ -71,8 +72,9 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
 
   def getDTO = {
     val config = Json.parse(configuration).validate[ElectionConfig].get
-    val count = DAL.votes.countForElection(id)
-    val stats  = Stats(count)
+    val total = DAL.votes.countForElection(id)
+    val count = DAL.votes.countUniqueForElection(id)
+    val stats  = Stats(total, count)
 
     ElectionDTO(id, config, state, startDate, endDate, pks, results, resultsUpdated, stats)
   }
@@ -141,7 +143,7 @@ object Elections {
 
 /*-------------------------------- transient models  --------------------------------*/
 
-case class Stats(votes: Long)
+case class Stats(totalVotes: Long, votes: Long)
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,

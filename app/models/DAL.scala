@@ -58,6 +58,14 @@ object DAL {
       Votes.countForElection(electionId)
     }
 
+    def countUniqueForElection(electionId: Long): Int = DB.withSession { implicit session =>
+      countUniqueForElectionWithSession(electionId)
+    }
+
+    def countUniqueForElectionWithSession(electionId: Long)(implicit s: Session): Int = {
+      Votes.countUniqueForElection(electionId)
+    }
+
     def countForElectionAndVoter(electionId: Long, voterId: String)(implicit s: Session): Int = {
       Votes.countForElectionAndVoter(electionId,voterId)
     }
