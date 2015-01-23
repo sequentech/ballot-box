@@ -71,8 +71,10 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
 
   def getDTO = {
     val config = Json.parse(configuration).validate[ElectionConfig].get
+    val count = DAL.votes.countForElection(id)
+    val stats  = Stats(count)
 
-    ElectionDTO(id, config, state, startDate, endDate, pks, results, resultsUpdated)
+    ElectionDTO(id, config, state, startDate, endDate, pks, results, resultsUpdated, stats)
   }
 }
 
@@ -139,9 +141,12 @@ object Elections {
 
 /*-------------------------------- transient models  --------------------------------*/
 
+case class Stats(votes: Long)
+
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp]
+  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp],
+  stats: Stats
 )
 
 /** an election configuration defines an election */

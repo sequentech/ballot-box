@@ -48,6 +48,7 @@ object JsonFormatters {
 
   implicit val presentationF = Json.format[ElectionPresentation]
   implicit val configF = Json.format[ElectionConfig]
+  implicit val statsF = Json.format[Stats]
   implicit val electionDtoF = Json.format[ElectionDTO]
 
   implicit val publicKeyF = Json.format[PublicKey]
