@@ -68,6 +68,11 @@ object Validator {
     if(!isString(value, limit)) throw new ValidationException(message)
   }
 
+  /** allows any char */
+  def validateStringLength(value: String, limit: Int, message: String) = {
+    if(value.length > limit) throw new ValidationException(message)
+  }
+
   /** allows characters, space, numbers, underscore and hyphen */
   def validateIdentifier(value: String, message: String) = {
     if(!isIdentifierString(value)) throw new ValidationException(message)

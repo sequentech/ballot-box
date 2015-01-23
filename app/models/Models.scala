@@ -165,9 +165,10 @@ case class ElectionConfig(id: Long, director: String, authorities: Array[String]
     * returns a valid ElectionConfig
     *
     */
-  def validate(peers: Map[String, JsObject]) = {
+  def validate(peers: Map[String, JsObject], id2: Long) = {
 
     assert(id >= 0, s"Invalid id $id")
+    assert(id == id2, s"Invalid id $id")
     // validate authorities
     val auths = (director +: authorities).toSet
 
@@ -178,7 +179,7 @@ case class ElectionConfig(id: Long, director: String, authorities: Array[String]
       assert(peers.contains(auth), "One or more authorities were not found")
     }
 
-    validateString(title, SHORT_STRING, "invalid title")
+    validateStringLength(title, LONG_STRING, s"title too large: $title")
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
@@ -216,7 +217,7 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     assert(min <= answers.size, "min greater than answers")
     assert(num_winners >= 1, "invalid num_winners")
     assert(num_winners <= answers.size, "num_winners greater than answers")
-    validateString(title, SHORT_STRING, "invalid title")
+    validateStringLength(title, LONG_STRING, s"title too large: $title")
     // TODO not looking inside the value
     validateIdentifier(tally_type, "invalid tally_type")
     // TODO not looking inside the value
@@ -232,7 +233,7 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
 
   def validate() = {
     assert(id >= 0, "invalid id")
-    validateString(category, SHORT_STRING, "invalid category")
+    validateStringLength(category, SHORT_STRING, s"category too large $category")
 
     assert(details.length <= LONG_STRING, "details too long")
     val detailsOk = sanitizeHtml(details)
@@ -251,7 +252,7 @@ case class ElectionPresentation(share_text: String, theme: String, urls: Array[U
 
   def validate() = {
 
-    validateString(share_text, LONG_STRING, "invalid share_text")
+    validateStringLength(share_text, LONG_STRING, s"share_text too large $share_text")
     validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
     validateIdentifier(theme_css, "invalid theme_css")
@@ -264,7 +265,7 @@ case class ElectionPresentation(share_text: String, theme: String, urls: Array[U
 case class Url(title: String, url: String) {
 
   def validate() = {
-    validateString(title, SHORT_STRING, s"invalid url title $title")
+    validateStringLength(title, SHORT_STRING, s"invalid url title $title")
     validateUrl(url, s"invalid url $url")
 
     this

@@ -44,8 +44,8 @@ object ElectionsApi extends Controller with Response {
   val authorities = getAuthorityData
 
   /** inserts election into the db in the registered state */
-  def register = HAction("", "AuthEvent", 0, "edit").async(BodyParsers.parse.json) { request =>
-    registerElection(request)
+  def register(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+    registerElection(request, id)
   }
 
   /** updates an election's config */
@@ -278,7 +278,7 @@ object ElectionsApi extends Controller with Response {
   /*-------------------------------- privates  --------------------------------*/
 
   /** Future: inserts election into the db in the registered state */
-  private def registerElection(request: Request[JsValue]) = Future {
+  private def registerElection(request: Request[JsValue], id: Long) = Future {
 
     val electionConfig = request.body.validate[ElectionConfig]
 
@@ -291,7 +291,7 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val validated = config.validate(authorities)
+        val validated = config.validate(authorities, id)
 
         DB.withSession { implicit session =>
 
@@ -324,7 +324,7 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val validated = config.validate(authorities)
+        val validated = config.validate(authorities, id)
 
         val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
         Ok(response(result))

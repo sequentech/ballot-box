@@ -3,9 +3,9 @@
 # ~~~~
 
 # election manager
-POST    /api/election                                         controllers.ElectionsApi.register
-POST    /api/election/:id                                     controllers.ElectionsApi.update(id: Long)
+POST    /api/election/:id                                     controllers.ElectionsApi.register(id: Long)
 GET     /api/election/:id                                     controllers.ElectionsApi.get(id: Long)
+POST    /api/election/:id/update                              controllers.ElectionsApi.update(id: Long)
 POST    /api/election/:id/create                              controllers.ElectionsApi.create(id: Long)
 POST    /api/election/:id/start                               controllers.ElectionsApi.start(id: Long)
 POST    /api/election/:id/stop                                controllers.ElectionsApi.stop(id: Long)

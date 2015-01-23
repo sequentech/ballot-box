@@ -74,7 +74,7 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
         return true
       }
 
-      Logger.warn(s"Failed to authorize hmac ($value)")
+      Logger.warn(s"Failed to authorize hmac ($value) $compareOk $diff $expiry $userOk $rcvObjType $objType $rcvObjId $objId $rcvPerm $perm")
       return false
     }
     catch {

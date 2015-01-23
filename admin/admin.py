@@ -133,7 +133,7 @@ def register(cfg, args):
     auth = get_hmac(cfg, "", "AuthEvent", 0, "edit")
     host,port = get_local_hostport()
     headers = {'content-type': 'application/json', 'Authorization': auth}
-    url = 'http://%s:%d/api/election' % (host, port)
+    url = 'http://%s:%d/api/election/%d' % (host, port, cfg['electionConfig']['id'])
     r = requests.post(url, data=json.dumps(cfg['electionConfig']), headers=headers)
     print(r.status_code, r.text)
 
@@ -142,7 +142,7 @@ def update(cfg, args):
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'content-type': 'application/json', 'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d' % (host, port, cfg['election_id'])
+    url = 'http://%s:%d/api/election/%d/update' % (host, port, cfg['election_id'])
     r = requests.post(url, data=json.dumps(cfg['electionConfig']), headers=headers)
     print(r.status_code, r.text)
 
