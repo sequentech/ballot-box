@@ -57,7 +57,7 @@ object BallotboxApi extends Controller with Response {
             }
             else {
 
-              if(election.state == Elections.STARTED) {
+              if(election.state == Elections.STARTED || election.state == Elections.CREATED) {
 
                 val pksJson = Json.parse(election.pks.get)
                 val pksValue = pksJson.validate[Array[PublicKey]]
