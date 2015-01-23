@@ -44,7 +44,7 @@ object ElectionsApi extends Controller with Response {
   val authorities = getAuthorityData
 
   /** inserts election into the db in the registered state */
-  def register = HAction("", "AuthEvent", 0, "admin").async(BodyParsers.parse.json) { request =>
+  def register = HAction("", "AuthEvent", 0, "edit").async(BodyParsers.parse.json) { request =>
     registerElection(request)
   }
 
@@ -65,7 +65,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** Creates an election in eo */
-  def create(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
+  def create(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
 
     getElection(id).flatMap(createElection).recover {
 
@@ -79,7 +79,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** sets election in started state, votes will be accepted */
-  def start(id: Long) = HAction("", "AuthEvent", id, "admin").async { request => Future {
+  def start(id: Long) = HAction("", "AuthEvent", id, "edit").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Ok(response(ret))
@@ -87,7 +87,7 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** sets election in stopped state, votes will not be accepted */
-  def stop(id: Long) = HAction("", "AuthEvent", id, "admin").async { request => Future {
+  def stop(id: Long) = HAction("", "AuthEvent", id, "edit").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STOPPED)
     Ok(response(ret))
@@ -95,7 +95,7 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** request a tally, dumps votes to the private ds */
-  def tally(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
+  def tally(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
 
     val tally = getElection(id).flatMap { e =>
       if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
@@ -110,7 +110,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
-  def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "admin").async(BodyParsers.parse.json) { request =>
+  def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
 
     val validIds = request.body.asOpt[List[String]].map(_.toSet)
 
@@ -127,7 +127,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** request a tally, but do not dump votes, use those in the private ds */
-  def tallyNoDump(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
+  def tallyNoDump(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
 
     val tally = getElection(id).flatMap { e =>
       if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
@@ -142,7 +142,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "admin").async(BodyParsers.parse.json) { request =>
+  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
 
     val config = request.body.toString
     Logger.info(s"calculating results for election $id")
@@ -161,7 +161,7 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def publishResults(id: Long) = HAction("", "AuthEvent", id, "admin").async {
+  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit").async {
 
     Logger.info(s"publishing results for election $id")
 
@@ -193,7 +193,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** dump pks to the public datastore, this is an admin only command */
-  def dumpPks(id: Long) = HAction("", "AuthEvent", id, "admin").async { request =>
+  def dumpPks(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
 
     val future = getElection(id).map { election =>
       val mapped = election.pks.map { pks =>

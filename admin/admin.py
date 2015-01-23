@@ -130,7 +130,7 @@ def write_node_votes(votesData, filePath):
 
 def register(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", 0, "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", 0, "edit")
     host,port = get_local_hostport()
     headers = {'content-type': 'application/json', 'Authorization': auth}
     url = 'http://%s:%d/api/election' % (host, port)
@@ -139,7 +139,7 @@ def register(cfg, args):
 
 def update(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'content-type': 'application/json', 'Authorization': auth}
     url = 'http://%s:%d/api/election/%d' % (host, port, cfg['election_id'])
@@ -157,7 +157,7 @@ def get(cfg, args):
 
 def create(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/create' % (host, port, cfg['election_id'])
@@ -166,7 +166,7 @@ def create(cfg, args):
 
 def start(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/start' % (host, port, cfg['election_id'])
@@ -175,7 +175,7 @@ def start(cfg, args):
 
 def stop(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/stop' % (host, port, cfg['election_id'])
@@ -219,7 +219,7 @@ def cast_votes(cfg, args):
 
 
 def dump_votes(cfg, args):
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/dump-votes' % (host, port, cfg['election_id'])
@@ -289,7 +289,7 @@ def dump_ids(cfg, args):
 
 def dump_pks(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/dump-pks' % (host, port, cfg['election_id'])
@@ -298,7 +298,7 @@ def dump_pks(cfg, args):
 
 def tally(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/tally' % (host, port, cfg['election_id'])
@@ -311,7 +311,7 @@ def tally_voter_ids(cfg, args):
         with open(path) as ids_file:
             ids = json.load(ids_file)
 
-        auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+        auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
         host,port = get_local_hostport()
         headers = {'Authorization': auth}
         url = 'http://%s:%d/api/election/%d/tally' % (host, port, cfg['election_id'])
@@ -324,7 +324,7 @@ def tally_voter_ids(cfg, args):
 
 def tally_no_dump(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/tally-no-dump' % (host, port, cfg['election_id'])
@@ -337,7 +337,7 @@ def calculate_results(cfg, args):
         with open(path) as config_file:
             config = json.load(config_file)
 
-            auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+            auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
             host,port = get_local_hostport()
             headers = {'Authorization': auth, 'content-type': 'application/json'}
             url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
@@ -348,7 +348,7 @@ def calculate_results(cfg, args):
 
 def publish_results(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/publish-results' % (host, port, cfg['election_id'])

@@ -98,7 +98,7 @@ object BallotboxApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** dump ciphertexts, goes to the private datastore of the election, this is an admin only command */
-  def dumpVotes(electionId: Long) = HAction("", "AuthEvent", electionId, "admin").async { request =>
+  def dumpVotes(electionId: Long) = HAction("", "AuthEvent", electionId, "edit").async { request =>
 
     dumpTheVotes(electionId).map { x =>
       Ok(response(0))
@@ -106,7 +106,7 @@ object BallotboxApi extends Controller with Response {
   }
 
   /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
-  def dumpVotesWithVoterIds(electionId: Long) = HAction("", "AuthEvent", electionId, "admin").async(BodyParsers.parse.json) { request =>
+  def dumpVotesWithVoterIds(electionId: Long) = HAction("", "AuthEvent", electionId, "edit").async(BodyParsers.parse.json) { request =>
 
     val validIds = request.body.asOpt[List[String]].map(_.toSet)
 

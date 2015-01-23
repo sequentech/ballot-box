@@ -89,6 +89,14 @@ def register(config):
     print('> register..')
     admin.register(cfg, args)
 
+def update(config):
+    cfg = {}
+    cfg['electionConfig'] = config
+    cfg['election_id'] = config['id']
+    args = Args()
+    print('> update..')
+    admin.update(cfg, args)
+
 def create(id):
     cfg = {}
     cfg['election_id'] = id

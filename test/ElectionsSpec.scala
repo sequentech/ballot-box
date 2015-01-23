@@ -44,7 +44,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
       // for this to work we need to set the pk for the election manually (for election 1020)
       var response = route(FakeRequest(POST, routes.ElectionsApi.register.url)
         .withJsonBody(TestData.config)
-        .withHeaders(("Authorization", getAuth("", "AuthEvent", 0, "admin")))
+        .withHeaders(("Authorization", getAuth("", "AuthEvent", 0, "edit")))
       ).get
 
       responseCheck(response, (r:Response[Int]) => r.payload > 0)
@@ -66,7 +66,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
 
       val response = route(FakeRequest(POST, routes.ElectionsApi.update(1).url)
         .withJsonBody(TestData.config)
-        .withHeaders(("Authorization", getAuth("", "AuthEvent", 1, "admin")))
+        .withHeaders(("Authorization", getAuth("", "AuthEvent", 1, "edit")))
       ).get
 
       responseCheck(response, (r:Response[Int]) => r.payload > 0)
