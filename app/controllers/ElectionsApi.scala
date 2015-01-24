@@ -49,7 +49,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** updates an election's config */
-  def update(id: Long) = HAction("", "AuthEvent", id, "admin").async(BodyParsers.parse.json) { request =>
+  def update(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
     updateElection(id, request)
   }
 
