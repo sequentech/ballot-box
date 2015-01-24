@@ -232,7 +232,7 @@ def dump_votes_with_ids(cfg, args):
         with open(path) as ids_file:
             ids = json.load(ids_file)
 
-        auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "admin")
+        auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
         host,port = get_local_hostport()
         headers = {'Authorization': auth, 'content-type': 'application/json'}
         url = 'http://%s:%d/api/election/%d/dump-votes-voter-ids' % (host, port, cfg['election_id'])
