@@ -182,13 +182,19 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def getResults(id: Long) = HAction("", "AuthEvent", id, "get-results").async { request =>
+  def getResults(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
 
     val future = getElection(id).map { election =>
       Ok(response(election.results))
     }
     future.recover {
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found"))
+    }
+  }
+
+  def getElectionVoters(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+    getVoters(id).map { voters =>
+        Ok(response(Json.toJson( voters.map(v => v.voter_id) )))
     }
   }
 
@@ -457,6 +463,11 @@ object ElectionsApi extends Controller with Response {
       }
     }
   }
+
+  /** Future: returns the list of voters from a election id */
+  private def getVoters(id: Long): Future[List[Vote]] = Future {
+    DAL.votes.findByElectionId(id)
+  }(slickExecutionContext)
 
   /** Future: returns an election given its id, may throw nosuchelement exception */
   private def getElection(id: Long): Future[Election] = Future {
