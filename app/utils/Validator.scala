@@ -17,9 +17,9 @@ import scala.util.matching._
   */
 object Validator {
 
-  val SHORT_STRING = 100
-  val IDENTIFIER_STRING = 100
-  val LONG_STRING = 300
+  val SHORT_STRING = 300
+  val IDENTIFIER_STRING = 300
+  val LONG_STRING = 3000
 
   /*-------------------------------- querying methods  --------------------------------*/
 
