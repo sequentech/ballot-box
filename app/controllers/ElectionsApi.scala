@@ -198,6 +198,12 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
+  def getElectionStats(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+    getStats(id).map { s =>
+        Ok(response(Json.toJson( s )))
+    }
+  }
+
   /** dump pks to the public datastore, this is an admin only command */
   def dumpPks(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
 
@@ -467,6 +473,12 @@ object ElectionsApi extends Controller with Response {
   /** Future: returns the list of voters from a election id */
   private def getVoters(id: Long): Future[List[Vote]] = Future {
     DAL.votes.findByElectionId(id)
+  }(slickExecutionContext)
+
+  private def getStats(id: Long): Future[Stats] = Future {
+    val total = DAL.votes.countForElection(id)
+    val count = DAL.votes.countUniqueForElection(id)
+    Stats(total, count)
   }(slickExecutionContext)
 
   /** Future: returns an election given its id, may throw nosuchelement exception */
