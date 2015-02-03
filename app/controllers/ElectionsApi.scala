@@ -25,7 +25,7 @@ import scala.sys.process._
   *
   * General election management. An election's lifecyle is
   *
-  * registered -> created -> started -> stopped -> tally_ok -> results_ok
+  * registered -> created -> started -> stopped -> doing_tally -> tally_ok -> results_ok
   *
   * Threadpool isolation is implemented via futures, see
   *
@@ -411,18 +411,27 @@ object ElectionsApi extends Controller with Response {
     val configJson = Json.parse(election.configuration)
     val config = configJson.validate[ElectionConfig].get
 
-    // get the tally data, including votes hash, url and callback
-    val data = getTallyData(election.id)
-    Logger.info(s"requesting tally with\n$data")
+    // if there's no votes we don't try the tally
+    val votes = DAL.votes.countForElection(election.id)
+    if(votes == 0) {
+        Future { Ok(response("There's no votes in this election")) }
+    } else if (election.state == Elections.TALLY_OK || election.state == Elections.DOING_TALLY) {
+        Future { Ok(response("ok")) }
+    } else {
+      // get the tally data, including votes hash, url and callback
+      val data = getTallyData(election.id)
+      Logger.info(s"requesting tally with\n$data")
 
-    val url = eoUrl(config.director, "public_api/tally")
-    WS.url(url).post(data).map { resp =>
+      val url = eoUrl(config.director, "public_api/tally")
+      WS.url(url).post(data).map { resp =>
 
-      if(resp.status == HTTP.ACCEPTED) {
-        Ok(response("ok"))
-      }
-      else {
-        BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+        if(resp.status == HTTP.ACCEPTED) {
+          DAL.elections.updateState(election.id, Elections.DOING_TALLY)
+          Ok(response("ok"))
+        }
+        else {
+          BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+        }
       }
     }
   }

@@ -99,6 +99,7 @@ object Elections {
   val TALLY_OK = "tally_ok"
   val TALLY_ERROR = "tally_error"
   val RESULTS_OK = "results_ok"
+  val DOING_TALLY = "doing_tally"
 
   val elections = TableQuery[Elections]
 
