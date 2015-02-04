@@ -414,7 +414,7 @@ object ElectionsApi extends Controller with Response {
     // if there's no votes we don't try the tally
     val votes = DAL.votes.countForElection(election.id)
     if(votes == 0) {
-        Future { Ok(response("There's no votes in this election")) }
+        Future { BadRequest(response("There's no votes in this election")) }
     } else if (election.state == Elections.TALLY_OK || election.state == Elections.DOING_TALLY) {
         Future { Ok(response("ok")) }
     } else {
