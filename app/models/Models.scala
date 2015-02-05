@@ -147,7 +147,7 @@ case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, s
   endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp])
 
 /** an election configuration defines an election */
-case class ElectionConfig(id: Long, director: String, authorities: Array[String], title: String, description: String,
+case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
   questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
 
   /**
@@ -163,6 +163,7 @@ case class ElectionConfig(id: Long, director: String, authorities: Array[String]
   def validate(peers: Map[String, JsObject], id2: Long) = {
 
     assert(id >= 0, s"Invalid id $id")
+    validateIdentifier(layout, "invalid layout")
     assert(id == id2, s"Invalid id $id")
     // validate authorities
     val auths = (director +: authorities).toSet
