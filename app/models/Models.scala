@@ -71,7 +71,11 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
   pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp]) {
 
   def getDTO = {
-    val config = Json.parse(configuration).validate[ElectionConfig].get
+    var configJson = Json.parse(configuration)
+    if (!configJson.as[JsObject].keys.contains("layout")) {
+        configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
+    }
+    var config = configJson.validate[ElectionConfig].get
     ElectionDTO(id, config, state, startDate, endDate, pks, results, resultsUpdated)
   }
 }
