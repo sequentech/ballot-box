@@ -358,7 +358,8 @@ object ElectionsApi extends Controller with Response {
 
     val configPath = Datastore.writeResultsConfig(id, config)
     val tallyPath = Datastore.getTallyPath(id)
-    val cmd = s"$agoraResults -t $tallyPath -c $configPath -s"
+    val dirPath = Datastore.getDirPath(id)
+    val cmd = s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath"
 
     Logger.info(s"executing '$cmd'")
     val output = cmd.!!

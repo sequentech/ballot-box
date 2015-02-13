@@ -95,6 +95,11 @@ object Datastore {
     directory.resolve(fileName)
   }
 
+  /** returns the election private directory path */
+  def getDirPath(electionId: Long, public: Boolean = false) = {
+    Paths.get(getStore(public), electionId.toString)
+  }
+
   /** returns the path to the tally */
   def getTallyPath(electionId: Long) = {
     getPath(electionId, TALLY, false)
@@ -102,6 +107,8 @@ object Datastore {
 
   /** makes results public: creates a symbolic link to the tally, and creates a file with the results */
   def publishResults(electionId: Long, results: Option[String]) = {
+    val tarLink = getPath(electionId, s"$electionId.tar", true)
+    val tarTarget = getPath(electionId, s"$electionId.tar", false)
     val tallyLink = getPath(electionId, TALLY, true)
     val tallyTarget = getPath(electionId, TALLY, false)
     if(Files.exists(tallyTarget)) {
@@ -111,6 +118,15 @@ object Datastore {
     else {
       Logger.warn(s"publishResults: tally does not exist for $electionId")
       throw new java.io.FileNotFoundException("tally does not exist")
+    }
+
+    if(Files.exists(tarTarget)) {
+      Files.deleteIfExists(tarLink)
+      Files.createSymbolicLink(tarLink, tarTarget)
+    }
+    else {
+      Logger.warn(s"publishResults: tar does not exist for $electionId - $tarTarget")
+      throw new java.io.FileNotFoundException("tar does not exist")
     }
 
     results match {
