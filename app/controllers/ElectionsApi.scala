@@ -25,7 +25,7 @@ import scala.sys.process._
   *
   * General election management. An election's lifecyle is
   *
-  * registered -> created -> started -> stopped -> doing_tally -> tally_ok -> results_ok
+  * registered -> created -> started -> stopped -> doing_tally -> tally_ok -> results_ok -> results_pub
   *
   * Threadpool isolation is implemented via futures, see
   *
@@ -349,6 +349,7 @@ object ElectionsApi extends Controller with Response {
   private def pubResults(id: Long, results: Option[String]) = Future {
 
     Datastore.publishResults(id, results)
+    DAL.elections.updateState(id, Elections.RESULTS_PUB)
     Ok(response("ok"))
 
   }(slickExecutionContext)

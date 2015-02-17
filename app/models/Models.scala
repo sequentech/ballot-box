@@ -76,7 +76,13 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
     var config = configJson.validate[ElectionConfig].get
-    ElectionDTO(id, config, state, startDate, endDate, pks, results, resultsUpdated)
+    var res = None: Option[String]
+    var resUp = None: Option[Timestamp]
+    if (state == Elections.RESULTS_PUB) {
+        res = results
+        resUp = resultsUpdated
+    }
+    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp)
   }
 }
 
@@ -104,6 +110,7 @@ object Elections {
   val TALLY_ERROR = "tally_error"
   val RESULTS_OK = "results_ok"
   val DOING_TALLY = "doing_tally"
+  val RESULTS_PUB = "results_pub"
 
   val elections = TableQuery[Elections]
 
