@@ -130,7 +130,7 @@ def write_node_votes(votesData, filePath):
 
 def register(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", 0, "edit")
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['electionConfig']['id'], "edit")
     host,port = get_local_hostport()
     headers = {'content-type': 'application/json', 'Authorization': auth}
     url = 'http://%s:%d/api/election/%d' % (host, port, cfg['electionConfig']['id'])
@@ -277,15 +277,18 @@ def dump_ids(cfg, args):
         else:
             allowed_by_election[election].append(voter)
 
-    # print(allowed_by_election)
+    total = 0
     for election in allowed_by_election:
         dir_path = os.path.join(datastore, 'private', election)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         file_path = os.path.join(dir_path, 'ids')
-        print(file_path)
+        num_votes = len(allowed_by_election[election])
+        print("%d votes, file '%s', election '%s'" % (num_votes, file_path, election))
+        total += num_votes
         with codecs.open(file_path, encoding='utf-8', mode='w+') as ids_file:
             ids_file.write(json.dumps(allowed_by_election[election]))
+    print("total = %d votes" % total)
 
 def dump_pks(cfg, args):
 
