@@ -51,7 +51,7 @@ def main(argv):
                 cycle.register(cfg)
                 cycle.wait_for_state(cfg['id'], 'registered', 5)
                 cycle.create(cfg['id'])
-                cycle.wait_for_state(cfg['id'], 'created', 30)
+                cycle.wait_for_state(cfg['id'], 'created', 300)
                 cycle.start(cfg['id'])
                 cycle.wait_for_state(cfg['id'], 'started', 5)
 
