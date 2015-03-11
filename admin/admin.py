@@ -25,6 +25,8 @@ from sqlalchemy import create_engine, select, func, text
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
 from sqlalchemy import distinct
 
+from utils.votesfilter import VotesFilter
+
 # set configuration parameters
 datastore = '/home/agoraelections/agora-elections/datastore'
 shared_secret = '<password>'
@@ -249,21 +251,32 @@ def dump_ids(cfg, args):
     conn = get_db_connection()
     votes = votes_table()
 
-    with open(args.elections_file, 'r') as f:
-        groups = f.read().splitlines()
+    if args.elections_file:
+        with open(args.elections_file, 'r') as f:
+            groups = [line.split(',') for line in f.read().splitlines()]
+    else:
+        groups = [cfg['election_id']]
 
-    with open(args.voter_ids, 'r') as f:
-        ids = set(f.read().splitlines())
+    if args.voter_ids:
+        with open(args.voter_ids, 'r') as f:
+            ids = set(f.read().splitlines())
+    else:
+        ids = set()
+
+    filter_obj = None
+    if args.filter_config is not None:
+        filter_obj = VotesFilter(args.filter_config)
 
     allowed_by_voter = {}
 
     for group in groups:
-        for election in group.split(','):
+        for election in group:
             s = select([votes]).where(votes.c.election_id == election).order_by(votes.c.created)
             result = conn.execute(s)
             rows = result.fetchall()
             for row in rows:
-                if row[2] in ids:
+                if (args.voter_ids is not None and arow[2] in ids) or\
+                    (filter_obj is not None and filter_obj.check(row)):
                     allowed_by_voter[row[2]] = election
 
         sys.stdout.write('.')
@@ -499,6 +512,7 @@ calculate_results <election_id>: uses agora-results to calculate the election's 
 publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
 show_column <election_id>: shows a column for an election
 count_votes [election_id, [election_id], ...]: count votes
+dump_votes [election_id, [election_id], ...]: dump voter ids
 list_votes <election_dir>: list votes
 list_elections: list elections
 dump_pks <election_id>: dumps pks for an election (public datastore)
@@ -508,6 +522,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
+    parser.add_argument('--filter-config', help='file with filter configuration', default = '')
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
@@ -522,7 +537,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
 
         # commands that use an election id
         if len(args.command) == 2:
-            if command == 'count_votes':
+            if command in ['count_votes', 'dump_ids']:
                 if is_int(args.command[1]) or ',' in args.command[1]:
                     config['election_id'] = args.command[1].split(',')
                 else:

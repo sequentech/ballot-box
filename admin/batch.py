@@ -59,13 +59,17 @@ def main(argv):
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
         print(election_configs)
 
-        for config in results_configs:
+        for config in election_configs:
             with open(os.path.join(args.directory, config), 'r') as f:
                 cfg = json.loads(f.read())
-                print('next id %d' % cfg['id'])
+                if 'payload' in cfg:
+                    elid = cfg['payload']['id']
+                else:
+                    elid = cfg['id']
+                print('next id %d' % elid)
 
-                cycle.tally(cfg['id'])
-                cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 500)
+                cycle.tally(elid)
+                cycle.wait_for_state(elid, ['tally_ok', 'results_ok'], 500)
 
     elif args.command == 'tally_with_ids':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
