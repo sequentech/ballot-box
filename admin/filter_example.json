@@ -5,10 +5,19 @@
     "geoip_cache": "/home/agoraelections/geocache.pickle",
     "ips_log": "/home/agoraelections/nginx_log",
     "ips_regex": "^(?P<ip>\\S+).*POST /elections/api/election/(?P<election_id>\\d+)/voter/(?P<voter_id>\\w+)\\s",
+    "log_level": "info",
     "locations_whitelist": [
       {
+        "filter_type": "city_country_names",
         "city_name": "Barcelona",
         "country_name": "Spain"
+      },
+      {
+        "filter_type": "location_radius",
+        "title": "Barcelona with 100km radius. geolocation source: http://www.latlong.net/place/barcelona-spain-1433.html",
+        "location_latitude": 41.390205,
+        "location_longitude": 2.154007,
+        "radius_meters": 150000
       }
     ]
   }

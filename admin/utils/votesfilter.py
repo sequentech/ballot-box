@@ -7,6 +7,66 @@ import pickle
 import re
 import os
 
+LOG_LEVEL_ERROR = 0
+LOG_LEVEL_INFO =  1
+LOG_LEVEL_DEBUG = 2
+LOG_LEVELS = {
+  "error": 0,
+  "info":  1,
+  "debug": 2
+}
+
+# current log level
+LOG_LEVEL = LOG_LEVEL_INFO
+
+# source: http://stackoverflow.com/questions/17265278/distance-calculation-in-python-with-google-earth-coordinates
+# adapted from haversine.py <https://gist.github.com/rochacbruno/2883505>
+# see also <http://en.wikipedia.org/wiki/Haversine_formula>
+from math import atan2, cos, sin, sqrt, radians
+def calc_distance(origin, destination):
+    """great-circle distance between two points on a sphere
+       from their longitudes and latitudes in meters"""
+    lat1, lon1 = origin
+    lat2, lon2 = destination
+    radius = 63711000 # earth radius in meters
+
+    dlat = radians(lat2-lat1)
+    dlon = radians(lon2-lon1)
+    a = (sin(dlat/2) * sin(dlat/2) + cos(radians(lat1)) * cos(radians(lat2)) *
+         sin(dlon/2) * sin(dlon/2))
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    d = radius * c
+
+    return d
+
+class CityCountryNamesIpFilter(object):
+    '''
+    Filter by city and country name
+    '''
+    data = None
+
+    def __init__(self, data):
+        self.data = data
+
+    def check(self, record):
+        return self.data['city_name'] == record.city.name and\
+            self.data['country_name'] == record.country.name
+
+class LocationRadiusIpFilter(object):
+    '''
+    Filter by a lat+long plus a radius in meters
+    '''
+    data = None
+
+    def __init__(self, data):
+        self.data = data
+
+    def check(self, record):
+        return calc_distance(
+            (self.data['location_latitude'], self.data['location_longitude']),
+            (record.location.latitude, record.location.longitude)
+        ) < self.data['radius_meters']
+
 class IpFilter(object):
     '''
     Filters votes based on geolocation data
@@ -21,7 +81,7 @@ class IpFilter(object):
     cache = dict()
 
     # list of filters of valid locations read from the config file
-    locations_whitelist = []
+    location_filters = []
 
     # dictionary where the key is the ip address, and the value contains another
     # dictionary with keys like "voter_id", "election_id" or "geolocation"
@@ -34,6 +94,10 @@ class IpFilter(object):
         '''
         Loads filter configuration
         '''
+        global LOG_LEVEL
+
+        if 'log_level' in filter_config:
+            LOG_LEVEL = LOG_LEVELS[filter_config['log_level']]
 
         if 'geoip_db_path' in filter_config:
             self.gi = geoip2.database.Reader(filter_config['geoip_db_path'])
@@ -46,7 +110,13 @@ class IpFilter(object):
             with open(filter_config['geoip_cache'], mode='r') as f:
                 self.cache = pickle.load(f)
 
-        self.locations_whitelist = filter_config['locations_whitelist']
+
+        for location_check in filter_config['locations_whitelist']:
+            if location_check['filter_type'] == 'city_country_names':
+                obj_filter = CityCountryNamesIpFilter(location_check)
+            else:
+                obj_filter = LocationRadiusIpFilter(location_check)
+            self.location_filters.append(obj_filter)
 
         # load voter_ips relations
         prog = re.compile(filter_config['ips_regex'])
@@ -65,9 +135,10 @@ class IpFilter(object):
                     else:
                         self.election_counts[str(elid)] += 1
 
-        print("num_lookups = %d" % self.num_lookups)
-        for elid in self.election_counts.keys():
-            print("election id=%s total_votes=%d" % (elid, self.election_counts[elid]))
+        if LOG_LEVEL >= LOG_LEVEL_INFO:
+            print("num_lookups = %d" % self.num_lookups)
+            for elid in self.election_counts.keys():
+                print("election id=%s total_votes=%d" % (elid, self.election_counts[elid]))
 
         # save cache
         if 'geoip_cache' in filter_config:
@@ -86,7 +157,7 @@ class IpFilter(object):
           self.num_lookups += 1
           ret = self.cache[ip] = self.gi.city(ip)
           return ret
-        except:
+        except Exception as e:
           return None
 
     def check(self, vote):
@@ -102,27 +173,22 @@ class IpFilter(object):
         '''
         ip = self.voter_ips.get(vote.voter_id, None)
         if ip is None:
-            print("ip for voter_id %s not found, filtering" % vote.voter_id)
+            if LOG_LEVEL >= LOG_LEVEL_DEBUG:
+                print("ip for voter_id %s not found, filtering" % vote.voter_id)
             return False
         record = ip['geolocation']
         found_location = False
-        for location_checks in self.locations_whitelist:
+        for location_filter in self.location_filters:
             if not record:
-                print("ip = '%s' no record found, filtering" % (ip['ip']))
+                if LOG_LEVEL >= LOG_LEVEL_DEBUG:
+                    print("ip = '%s' no record found, filtering" % (ip['ip']))
                 return False
-            found_location_element = True
+            found_location = found_location or location_filter.check(record)
 
-            for key, value in location_checks.items():
-                if key == 'city_name' and record.city.name != value:
-                    found_location_element = False
-                elif key == 'country_name' and record.country.name != value:
-                    found_location_element = False
-
-            if found_location_element:
-                found_location = True
-
-        if not found_location:
-            print(("filtered: ip = '%s' voter_id = '%s' city_name = %s, country_code = '%s'" % (ip['ip'], vote.voter_id, record.city.name, record.country.name)).encode('ascii', 'ignore'))
+        if not found_location and LOG_LEVEL >= LOG_LEVEL_DEBUG:
+            print(("filtered: ip = '%s' voter_id = '%s' city_name = %s"
+                ", country_code = '%s'" % (ip['ip'], vote.voter_id,
+                record.city.name, record.country.name)).encode('ascii', 'ignore'))
         return found_location
 
 class VotesFilter(object):
