@@ -28,7 +28,7 @@ from sqlalchemy import distinct
 from utils.votesfilter import VotesFilter
 
 # set configuration parameters
-datastore = '/home/agoraelections/agora-elections/datastore'
+datastore = '/home/agoraelections/datastore'
 shared_secret = '<password>'
 db_user = 'agora_elections'
 db_password = 'agora_elections'
@@ -275,8 +275,8 @@ def dump_ids(cfg, args):
             result = conn.execute(s)
             rows = result.fetchall()
             for row in rows:
-                if (args.voter_ids is not None and arow[2] in ids) or\
-                    (filter_obj is not None and filter_obj.check(row)):
+                if (args.voter_ids is None or row[2] in ids) and\
+                    (filter_obj is None or filter_obj.check(row, election)):
                     allowed_by_voter[row[2]] = election
 
         sys.stdout.write('.')
@@ -297,7 +297,15 @@ def dump_ids(cfg, args):
             os.makedirs(dir_path)
         file_path = os.path.join(dir_path, 'ids')
         num_votes = len(allowed_by_election[election])
-        print("%d votes, file '%s', election '%s'" % (num_votes, file_path, election))
+
+        s = select([func.count(distinct(votes.c.voter_id))]).where(votes.c.election_id == election)
+        result = conn.execute(s)
+        row = result.fetchall()
+        total_votes = row[0][0]
+
+        print("election %s: %d votes (%.2f%% from %d total)" % (
+            election, num_votes, num_votes*100.0/total_votes, total_votes))
+
         total += num_votes
         with codecs.open(file_path, encoding='utf-8', mode='w+') as ids_file:
             ids_file.write(json.dumps(allowed_by_election[election]))
