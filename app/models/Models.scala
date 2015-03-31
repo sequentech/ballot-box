@@ -14,6 +14,8 @@ import play.api.libs.json._
 import java.sql.Timestamp
 import java.util.Date
 
+import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+
 /** vote object */
 case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp)
 
@@ -35,6 +37,11 @@ object Votes {
 
   def insert(vote: Vote)(implicit s: Session) = {
     (votes returning votes.map(_.id)) += vote
+  }
+
+  def byDay(id: Long)(implicit s: Session): List[(String, Long)] = {
+    val q = Q[Long, (String, Long)] + "select to_char(created, 'YYYY-MM-DD'), count(id) from vote where election_id=? group by to_char(created, 'YYYY-MM-DD') order by to_char(created, 'YYYY-MM-DD') desc"
+    q(id).list
   }
 
   def findByVoterId(voterId: String)(implicit s: Session): List[Vote] = votes.filter(_.voterId === voterId).list
@@ -151,7 +158,8 @@ object Elections {
 
 /*-------------------------------- transient models  --------------------------------*/
 
-case class Stats(totalVotes: Long, votes: Long)
+case class StatDay(day: String, votes: Long)
+case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,

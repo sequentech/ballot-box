@@ -489,7 +489,8 @@ object ElectionsApi extends Controller with Response {
   private def getStats(id: Long): Future[Stats] = Future {
     val total = DAL.votes.countForElection(id)
     val count = DAL.votes.countUniqueForElection(id)
-    Stats(total, count)
+    val byday = DAL.votes.byDay(id)
+    Stats(total, count, byday.map { x => StatDay(x._1, x._2) }.toArray)
   }(slickExecutionContext)
 
   /** Future: returns an election given its id, may throw nosuchelement exception */

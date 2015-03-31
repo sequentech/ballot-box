@@ -70,6 +70,14 @@ object DAL {
       Votes.countForElectionAndVoter(electionId,voterId)
     }
 
+    def byDay(electionId: Long): List[(String, Long)] = DB.withSession { implicit session =>
+        byDayW(electionId)
+    }
+
+    def byDayW(electionId: Long)(implicit s: Session): List[(String, Long)] = {
+      Votes.byDay(electionId)
+    }
+
     private def key(id: Long) = s"vote.$id"
   }
 
