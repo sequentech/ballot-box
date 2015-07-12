@@ -218,7 +218,7 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 
 /** defines a question asked in an election */
 case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
-  randomize_answer_order: Boolean, tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer]) {
+  randomize_answer_order: Boolean, tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
 
   def validate() = {
 
@@ -243,6 +243,15 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
   }
 }
 
+/** defines question extra data in an election */
+case class QuestionExtra(group: Option[String], next_button: Option[String]) {
+
+  def validate() = {
+    assert(!group.isDefined || group.get.length <= SHORT_STRING, "group too long")
+    assert(!next_button.isDefined || next_button.get.length <= SHORT_STRING, "next_button too long")
+  }
+}
+
 /** defines a possible answer for a question asked in an election */
 case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String) {
 
@@ -263,7 +272,7 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
 }
 
 /** defines presentation options for an election */
-case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String) {
+case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String, extra_options: Option[ElectionExtra]) {
 
   def validate() = {
 
@@ -275,6 +284,9 @@ case class ElectionPresentation(share_text: String, theme: String, urls: Array[U
     this.copy(urls = urlsOk)
   }
 }
+
+/** defines election presentation extra options for an election */
+case class ElectionExtra(foo: Option[Int])
 
 /** an url to be shown when presenting election data */
 case class Url(title: String, url: String) {
