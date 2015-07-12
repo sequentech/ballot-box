@@ -129,6 +129,7 @@ object BallotboxApi extends Controller with Response {
       val ids = scala.collection.mutable.Set[String]()
 
       val out = Datastore.getVotesStream(electionId)
+      val outInvalid = Datastore.getRemovedVoteHashesStream(electionId)
 
       for(i <- 1 to batches) {
         val drop = (i - 1) * batchSize
@@ -148,14 +149,23 @@ object BallotboxApi extends Controller with Response {
         val maybeValid = validVoterIds.map( ids => noDuplicates.filter( vote => ids.contains(vote.voter_id)) )
         val valid = maybeValid.getOrElse(noDuplicates)
 
+        val maybeInvalid = validVoterIds.map( ids => noDuplicates.filter( vote => !ids.contains(vote.voter_id)) )
+        val invalid = maybeInvalid.getOrElse(noDuplicates)
+
         // eo format is new line separated list of votes
         // we add an extra \n as otherwise there will be no separation between batches
         if(valid.length > 0) {
           val content = valid.map(_.vote).mkString("\n") + "\n"
           out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
         }
+
+        if (invalid.length > 0) {
+          val content = invalid.map(_.hash).mkString("\n") + "\n"
+          outInvalid.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+        }
       }
       out.close()
+      outInvalid.close()
     }
   }
 

@@ -24,6 +24,7 @@ object Datastore {
   val privateDs = Play.current.configuration.getString("app.datastore.private").get
 
   val CIPHERTEXTS = "ciphertexts"
+  val REMOVED_VOTE_HASHES = "removed_vote_hashes"
   val PKS = "pks"
   val TALLY = "tally.tar.gz"
   val CONFIG = "config.json"
@@ -54,6 +55,12 @@ object Datastore {
   /** opens stream to write the votes file */
   def getVotesStream(electionId: Long) = {
     val path = getPath(electionId, CIPHERTEXTS)
+    Files.newOutputStream(path)
+  }
+
+  /** opens stream to write the removed vote hashes file */
+  def getRemovedVoteHashesStream(electionId: Long) = {
+    val path = getPath(electionId, REMOVED_VOTE_HASHES)
     Files.newOutputStream(path)
   }
 
