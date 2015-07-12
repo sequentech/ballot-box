@@ -153,6 +153,13 @@ def tally(id):
     print('> tally..')
     admin.tally(cfg, args)
 
+def stop(id):
+    cfg = {}
+    cfg['election_id'] = id
+    args = Args()
+    print('> tally..')
+    admin.stop(cfg, args)
+
 # remove
 def tally_no_dump(id):
     cfg = {}

@@ -74,7 +74,24 @@ def truncate(data):
 def show_votes(result):
     v = PrettyTable(['id', 'election_id', 'voter_id', 'vote', 'hash', 'created'])
     v.padding_width = 1
+    if args.ips_log:
+        ips_re = "^(?P<ip>\\S+).*POST /elections/api/election/(?P<election_id>\\d+)/voter/(?P<voter_id>\\w+)\\s"
+        import re
+        voter_ips = {}
+        prog = re.compile(ips_re)
+        with open(args.ips_log, mode='r') as f:
+            for line in f:
+                res = prog.match(line)
+                if res is not None:
+                    voter_ips[res.group('voter_id')] = {
+                        'election_id': res.group('election_id'),
+                        'ip': res.group('ip')
+                    }
     for row in result:
+        ip = "no-ip"
+        if row[2] in voter_ips:
+            ip = voter_ips[row[2]]['ip']
+        row.append(ip)
         v.add_row(map(truncate, row))
     print(v)
 
@@ -534,6 +551,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
+    parser.add_argument('--ips-log', help='')
     # remove
     parser.add_argument('--elections-file', help='file with grouped elections')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')

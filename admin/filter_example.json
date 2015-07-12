@@ -9,35 +9,41 @@
         {
           "type": "maxmind",
           "cache_key": "maxmind_lite_db",
-          "not-located-policy": "relocate",
+          "not-located-policy": "accept",
           "filtered-policy": "relocate",
           "geoip_db_path": "/home/agoraelections/GeoLite2-City.mmdb"
         },
         {
           "type": "maxmind",
           "cache_key": "maxmind_api",
-          "not-located-policy": "relocate",
+          "not-located-policy": "cancel",
           "filtered-policy": "relocate",
-          "geoip_userid": "",
-          "geoip_license_key": ""
+          "geoip_userid": "99052",
+          "geoip_license_key": "tlVjgGAli887"
         },
         {
           "type": "ipapi",
           "cache_key": "ipapi",
-          "not-located-policy": "relocate",
+          "not-located-policy": "cancel",
           "filtered-policy": "relocate"
         },
         {
           "type": "dummy",
           "cache_key": null,
-          "not-located-policy": "accept",
+          "not-located-policy": "cancel",
           "filtered-policy": "cancel"
         }
     ],
     "locations_whitelist": [
       {
+        "type": "city_country_names",
+        "city_name": null,
+        "country_name": "Spain",
+        "num_geoservices_tested": 4
+      },
+      {
         "type": "location_radius",
-        "title": "Barcelona with 100km radius. geolocation source: http://www.latlong.net/place/barcelona-spain-1433.html",
+        "title": "Madrid with 150km radius. geolocation source: http://www.latlong.net/place/barcelona-spain-1433.html",
         "location_latitude": 41.390205,
         "location_longitude": 2.154007,
         "radius_meters": 150000

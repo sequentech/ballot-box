@@ -78,12 +78,23 @@ def main(argv):
         for config in election_configs:
             with open(os.path.join(args.directory, config), 'r') as f:
                 cfg = json.loads(f.read())
-                next_id = cfg['payload']['id']
-                print('next id %d, dumping votes with matching ids (in private ds)' % next_id)
+                if 'payload' in cfg:
+                    next_id = cfg['payload']['id']
+                else:
+                    next_id = cfg['id']
+
+                print('next id %d, dumping votes with matching ids (in private datastore)' % next_id)
                 ret = cycle.dump_votes_with_ids(next_id)
                 if ret in [400, 500]:
                      print("dump_votes_with_ids returned %d, continuing without it" % ret)
                      continue
+
+                print('next id %d, stopping election' % next_id)
+                ret = cycle.stop(next_id)
+                if ret in [400, 500]:
+                     print("stop returned %d, continuing without it" % ret)
+                     continue
+
                 print('next id %d, tallying' % next_id)
                 ret = cycle.tally_no_dump(next_id)
                 cycle.wait_for_state(next_id, ['tally_ok', 'results_ok'], 10000)
