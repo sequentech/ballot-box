@@ -244,11 +244,13 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
 }
 
 /** defines question extra data in an election */
-case class QuestionExtra(group: Option[String], next_button: Option[String]) {
+case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String]) {
 
   def validate() = {
     assert(!group.isDefined || group.get.length <= SHORT_STRING, "group too long")
     assert(!next_button.isDefined || next_button.get.length <= SHORT_STRING, "next_button too long")
+    assert(!shuffled_categories.isDefined || shuffled_categories.get.length <= LONG_STRING, "shuffled_categories too long")
+    assert(!shuffling_policy.isDefined || shuffling_policy.get.length <= SHORT_STRING, "shuffling_policy too long")
   }
 }
 
