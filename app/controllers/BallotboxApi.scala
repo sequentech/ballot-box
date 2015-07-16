@@ -178,6 +178,7 @@ object BallotboxApi extends Controller with Response {
       val hmac = Crypto.hmac(boothSecret, message)
       val khmac = s"khmac:///sha-256;$hmac/$message"
       val data = Json.obj(
+        "message" -> message,
         "credentials" -> khmac
       )
       val f = WS.url(url).post(data).map { resp =>

@@ -384,6 +384,38 @@ casting 100 votes and starting at id 50:
 
     ./cycle.py -t 10 -i 50 -e 100 -c election.json -r config.json -p
 
+Casting test votes
+==============
+
+You can cast test votes into the ballotbox with the following steps. First, edit the encrypt.sh file
+and specify the correct value for variables
+
+    IVY=/root/.ivy2/cache
+    AGORA_HOME=..
+
+In order to cast votes for an election, that election must be in the correct state, which is 'started'. This
+state implies the existence of public keys with which to encrypt votes, and also that the ballotbox will accept
+incoming votes. Casting votes is done in two steps, first encrypt some votes
+
+    ./admin.py encrypt <election_id>
+
+This command will look for plaintexts in the file 'votes.json' in the same directory, otherwise override with
+
+    ./admin.py encrypt <election_id> --plaintexts myvotes.json
+
+The votes.json file must be in json array following format, for example to encrypt the values '1' and '2'
+
+    [1, 2]
+
+Once this command completes it will have placed a file 'ciphertexts_<electionid>' in the same directory. To
+cast the ciphertexts into the ballotbox run
+
+    ./admin.py cast_votes <election_id>
+
+which will automatically look for the ciphertexts file generated above in the same directory. You can override
+this location in both commands with the '--ciphertexts' switch.
+
+
 Running (dev mode)
 ======
 
