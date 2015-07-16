@@ -407,7 +407,7 @@ The votes.json file must be in json array following format, for example to encry
 
     [1, 2]
 
-Once this command completes it will have placed a file 'ciphertexts_<electionid>' in the same directory. To
+Once this command completes it will have placed a file 'ciphertexts_electionid' in the same directory. To
 cast the ciphertexts into the ballotbox run
 
     ./admin.py cast_votes <election_id>
