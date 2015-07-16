@@ -31,7 +31,9 @@ import java.sql.Timestamp
 object BallotboxApi extends Controller with Response {
 
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
-  val maxRevotes = Play.current.configuration.getInt("app.api.max_revotes").getOrElse(5)
+  val maxRevotes = Play.current.configuration.getInt("app.api.max_revotes").getOrElse(20)
+  val voteCallbackUrl = Play.current.configuration.getString("app.vote_callback_url")
+  val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
 
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
@@ -70,6 +72,7 @@ object BallotboxApi extends Controller with Response {
 
                     val validated = vote.validate(pks, true, electionId, voterId)
                     val result = DAL.votes.insertWithSession(validated)
+                    voteCallbackUrl.map { url => postVoteCallback(url, voterId) }
                     Ok(response(result))
                   }
                 )
@@ -169,4 +172,88 @@ object BallotboxApi extends Controller with Response {
     }
   }
 
+  private def postVoteCallback(url: String, message: String) = {
+    try{
+      println(s"posting to $url")
+      val hmac = Crypto.hmac(boothSecret, message)
+      val khmac = s"khmac:///sha-256;$hmac/$message"
+      val data = Json.obj(
+        "credentials" -> khmac
+      )
+      val f = WS.url(url).post(data).map { resp =>
+        if(resp.status != HTTP.ACCEPTED) {
+          Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body}")
+        }
+      }
+      f.recover {
+        case t: Throwable => {
+          Logger.warn(s"Exception caught when posting to callback $t")
+        }
+      }
+    }
+    catch {
+      case t:Throwable => {
+        Logger.warn(s"Exception caught when posting to callback $t")
+      }
+    }
+  }
+
+  /* def vote(electionId: Long, voterId: String) =
+    HAction(voterId, "AuthEvent", electionId, "vote").async(BodyParsers.parse.json) { request =>
+
+    castVote(electionId, voterId, request).flatMap(postVoteCallback).recover {
+      case v:ValidationException => BadRequest(response(s"Failed validating vote, $v"))
+      case n:NoSuchElementException => BadRequest(response(s"No election found with id $electionId"))
+      case r:RuntimeException => BadRequest(response(r.getMessage()))
+      case i:IOException => InternalServerError(error(e.getMessage(), ErrorCodes.PK_ERROR))
+    }
+  }
+
+  private def castVote(electionId: Long, voterId: String, request: Request[JsValue]): Future[Result] = Future {
+
+    val voteValue = request.body.validate[VoteDTO]
+    voteValue.fold (
+
+      errors => BadRequest(response(s"Invalid vote json $errors")),
+
+      vote => {
+
+        DB.withSession { implicit session =>
+
+          val election = DAL.elections.findByIdWithSession(electionId).get
+          val votesCast = DAL.votes.countForElectionAndVoter(electionId, voterId)
+
+          if(votesCast >= maxRevotes) {
+            Logger.warn(s"Maximum number of revotes reached for voterId $voterId")
+            throw new RuntimeException("Maximum number of revotes reached")
+          }
+          else {
+
+            if(election.state == Elections.STARTED || election.state == Elections.CREATED) {
+
+              val pksJson = Json.parse(election.pks.get)
+              val pksValue = pksJson.validate[Array[PublicKey]]
+
+              pksValue.fold (
+
+                errors => throw new java.io.IOException("Failed reading pks for vote"),
+
+                pks => {
+
+                  val validated = vote.validate(pks, true, electionId, voterId)
+                  val result = DAL.votes.insertWithSession(validated)
+                  Ok(response(result))
+                }
+              )
+            }
+            else {
+              throw new RuntimeException("Election is not open")
+            }
+          }
+        }
+      }
+    )
+
+  }(slickExecutionContext)
+  */
 }

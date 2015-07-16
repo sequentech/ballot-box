@@ -79,6 +79,8 @@ application.local.conf
       }
     }
 
+    # app.vote_callback_url="podemos.agoravoting.com"
+
 
 test.local.conf
 
