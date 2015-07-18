@@ -218,8 +218,13 @@ restart the server
 Unit tests
 =====
 
+You can run units tests with
+
     activator
     test
+
+Note that for tests to pass the datastore directory structure specified in test.local.conf must exist
+and be writable.
 
 Administration
 ==============

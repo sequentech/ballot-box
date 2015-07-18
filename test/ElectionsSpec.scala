@@ -31,7 +31,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
 
     "reject bad auth" in new AppWithDbData() {
 
-      val response = route(FakeRequest(POST, routes.ElectionsApi.register.url)
+      val response = route(FakeRequest(POST, routes.ElectionsApi.register(1).url)
         .withJsonBody(TestData.config)
         .withHeaders(("Authorization", "bogus"))
       ).get
@@ -42,9 +42,9 @@ class ElectionsSpec extends Specification with TestContexts with Response {
     "allow registering an retrieving an election" in new AppWithDbData() {
 
       // for this to work we need to set the pk for the election manually (for election 1020)
-      var response = route(FakeRequest(POST, routes.ElectionsApi.register.url)
+      var response = route(FakeRequest(POST, routes.ElectionsApi.register(1).url)
         .withJsonBody(TestData.config)
-        .withHeaders(("Authorization", getAuth("", "AuthEvent", 0, "edit")))
+        .withHeaders(("Authorization", getAuth("", "AuthEvent", 1, "edit")))
       ).get
 
       responseCheck(response, (r:Response[Int]) => r.payload > 0)
