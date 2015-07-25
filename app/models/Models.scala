@@ -244,7 +244,7 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
 }
 
 /** defines question extra data in an election */
-case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String], restrict_choices_by_tag__name: Option[String], restrict_choices_by_tag__max: Option[String], restrict_choices_by_tag__max_error_msg: Option[String], accordion_folding_policy: Option[String], restrict_choices_by_no_tag__max: Option[String], force_allow_blank_vote: Option[String], recommended_preset__tag: Option[String], recommended_preset__title: Option[String]) {
+case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String], restrict_choices_by_tag__name: Option[String], restrict_choices_by_tag__max: Option[String], restrict_choices_by_tag__max_error_msg: Option[String], accordion_folding_policy: Option[String], restrict_choices_by_no_tag__max: Option[String], force_allow_blank_vote: Option[String], recommended_preset__tag: Option[String], recommended_preset__title: Option[String], recommended_preset__accept_text: Option[String], recommended_preset__deny_text: Option[String]) {
 
   def validate() = {
     assert(!group.isDefined || group.get.length <= SHORT_STRING, "group too long")
@@ -262,6 +262,8 @@ case class QuestionExtra(group: Option[String], next_button: Option[String], shu
 
     assert(!recommended_preset__tag.isDefined || recommended_preset__tag.get.length <= SHORT_STRING, "recommended_preset__tag too long")
     assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
+    assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
+    assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
   }
 }
 
