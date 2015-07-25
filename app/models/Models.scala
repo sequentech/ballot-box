@@ -244,7 +244,7 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
 }
 
 /** defines question extra data in an election */
-case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String], restrict_choices_by_tag__name: Option[String], restrict_choices_by_tag__max: Option[String], restrict_choices_by_tag__max_error_msg: Option[String], accordion_folding_policy: Option[String], restrict_choices_by_no_tag__max: Option[String], force_allow_blank_vote: Option[String]) {
+case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String], restrict_choices_by_tag__name: Option[String], restrict_choices_by_tag__max: Option[String], restrict_choices_by_tag__max_error_msg: Option[String], accordion_folding_policy: Option[String], restrict_choices_by_no_tag__max: Option[String], force_allow_blank_vote: Option[String], recommended_preset__tag: Option[String], recommended_preset__title: Option[String]) {
 
   def validate() = {
     assert(!group.isDefined || group.get.length <= SHORT_STRING, "group too long")
@@ -260,7 +260,8 @@ case class QuestionExtra(group: Option[String], next_button: Option[String], shu
 
     assert(!force_allow_blank_vote.isDefined || force_allow_blank_vote.get.length <= SHORT_STRING, "force_allow_blank_vote too long")
 
-    assert(!accordion_folding_policy.isDefined || accordion_folding_policy.get.length <= SHORT_STRING, "accordion_folding_policy too long")
+    assert(!recommended_preset__tag.isDefined || recommended_preset__tag.get.length <= SHORT_STRING, "recommended_preset__tag too long")
+    assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
   }
 }
 
