@@ -81,6 +81,10 @@ application.local.conf
 
     # app.vote_callback_url="podemos.agoravoting.com"
 
+    # memcached
+    # ehcacheplugin=disabled
+    # memcached.host="127.0.0.1:11211"
+    # logger.memcached=DEBUG
 
 test.local.conf
 
@@ -322,6 +326,10 @@ cast votes (normally only used for testing, votes are generated with encrypt)
 
     ./admin cast_votes 50
 
+stop the election
+
+    ./admin.py stop 50
+
 tally the election
 
     ./admin.py tally 50
@@ -400,7 +408,11 @@ and specify the correct value for variables
 
 In order to cast votes for an election, that election must be in the correct state, which is 'started'. This
 state implies the existence of public keys with which to encrypt votes, and also that the ballotbox will accept
-incoming votes. Casting votes is done in two steps, first encrypt some votes
+incoming votes. Casting votes is done in three steps, first dump the public keys
+
+    ./admin.py dump_pks <election_id>
+
+then encrypt some votes
 
     ./admin.py encrypt <election_id>
 

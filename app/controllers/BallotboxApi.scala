@@ -36,8 +36,20 @@ object BallotboxApi extends Controller with Response {
   val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
 
   /** cast a vote, performs several validations, see vote.validate */
+  /** ORIGINAL
   def vote(electionId: Long, voterId: String) =
     HAction(voterId, "AuthEvent", electionId, "vote").async(BodyParsers.parse.json) { request => Future {
+  */
+    /** ONE OFF */
+  def vote(electionId: Long, voterId_unused: String) = Action.async(BodyParsers.parse.json) { request => Future {
+
+    val voterId = request.headers.get("X-Forwarded-For").getOrElse("")
+    Logger.warn(s"the voterId is $voterId")
+    if(voterId.length == 0) {
+      BadRequest(response(s"Invalid voterId $voterId"))
+    }
+    else {
+    /** ONE OFF */
 
     val voteValue = request.body.validate[VoteDTO]
     voteValue.fold (
@@ -89,6 +101,7 @@ object BallotboxApi extends Controller with Response {
         }
       }
     )
+    } // ONE OFF
   }(slickExecutionContext)}
 
   /** check that a given hash is present in the ballotbox */
