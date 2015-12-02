@@ -314,7 +314,7 @@ object ElectionsApi extends Controller with Response {
 
             case None => {
               val result = DAL.elections.insert(Election(validated.id, validated.asString,
-                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None))
+                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real))
               Ok(response(result))
             }
           }

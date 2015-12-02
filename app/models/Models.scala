@@ -75,12 +75,15 @@ object Votes {
 
 /** election object */
 case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp]) {
+  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean) {
 
   def getDTO = {
     var configJson = Json.parse(configuration)
     if (!configJson.as[JsObject].keys.contains("layout")) {
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
+    }
+    if (!configJson.as[JsObject].keys.contains("real")) {
+        configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
     }
     var config = configJson.validate[ElectionConfig].get
     var res = None: Option[String]
@@ -89,7 +92,7 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
         res = results
         resUp = resultsUpdated
     }
-    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp)
+    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real)
   }
 }
 
@@ -103,7 +106,8 @@ class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
-  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?) <> (Election.tupled, Election.unapply _)
+  def real = column[Boolean]("real")
+  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real) <> (Election.tupled, Election.unapply _)
 }
 
 /** data access object for elections */
@@ -163,11 +167,11 @@ case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp])
+  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean) {
 
   /**
     * validates an election config, this does two things:
