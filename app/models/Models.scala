@@ -82,6 +82,9 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
     if (!configJson.as[JsObject].keys.contains("layout")) {
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
+    if (!configJson.as[JsObject].keys.contains("real")) {
+        configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
+    }
     var config = configJson.validate[ElectionConfig].get
     var res = None: Option[String]
     var resUp = None: Option[Timestamp]
