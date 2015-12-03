@@ -292,7 +292,12 @@ object ElectionsApi extends Controller with Response {
   /** Future: inserts election into the db in the registered state */
   private def registerElection(request: Request[JsValue], id: Long) = Future {
 
-    val electionConfig = request.body.validate[ElectionConfig]
+    var body = request.body.as[JsObject]
+    if (!body.as[JsObject].keys.contains("real")) {
+        body = body.as[JsObject] + ("real" -> Json.toJson(false))
+    }
+
+    val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
 
@@ -326,7 +331,12 @@ object ElectionsApi extends Controller with Response {
   /** Future: updates an election's config */
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
 
-    val electionConfig = request.body.validate[ElectionConfig]
+    var body = request.body.as[JsObject]
+    if (!body.as[JsObject].keys.contains("real")) {
+        body = body.as[JsObject] + ("real" -> Json.toJson(false))
+    }
+
+    val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
 
