@@ -75,7 +75,7 @@ object Votes {
 
 /** election object */
 case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean) {
+  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean, extra_data: Option[String]) {
 
   def getDTO = {
     var configJson = Json.parse(configuration)
@@ -92,7 +92,7 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
         res = results
         resUp = resultsUpdated
     }
-    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real)
+    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real, extra_data)
   }
 }
 
@@ -107,7 +107,8 @@ class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
   def real = column[Boolean]("real")
-  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real) <> (Election.tupled, Election.unapply _)
+  def extra_data = column[String]("extra_data", O.Nullable, O.DBType("text"))
+  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real, extra_data.?) <> (Election.tupled, Election.unapply _)
 }
 
 /** data access object for elections */
@@ -167,11 +168,11 @@ case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
+  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean, extra_data: Option[String])
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String]) {
 
   /**
     * validates an election config, this does two things:

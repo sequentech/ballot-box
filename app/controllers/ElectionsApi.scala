@@ -297,6 +297,10 @@ object ElectionsApi extends Controller with Response {
         body = body.as[JsObject] + ("real" -> Json.toJson(false))
     }
 
+    if (!body.as[JsObject].keys.contains("extra_data")) {
+        body = body.as[JsObject] + ("extra_data" -> Json.toJson(""))
+    }
+
     val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
@@ -319,7 +323,7 @@ object ElectionsApi extends Controller with Response {
 
             case None => {
               val result = DAL.elections.insert(Election(validated.id, validated.asString,
-                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real))
+                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real, None))
               Ok(response(result))
             }
           }
@@ -334,6 +338,10 @@ object ElectionsApi extends Controller with Response {
     var body = request.body.as[JsObject]
     if (!body.as[JsObject].keys.contains("real")) {
         body = body.as[JsObject] + ("real" -> Json.toJson(false))
+    }
+
+    if (!body.as[JsObject].keys.contains("extra_data")) {
+        body = body.as[JsObject] + ("extra_data" -> Json.toJson(""))
     }
 
     val electionConfig = body.validate[ElectionConfig]
