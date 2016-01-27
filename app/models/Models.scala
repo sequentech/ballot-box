@@ -171,7 +171,7 @@ case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, s
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String]) {
 
   /**
     * validates an election config, this does two things:
