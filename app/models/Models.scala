@@ -242,6 +242,11 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     // TODO not looking inside the value
     validateIdentifier(answer_total_votes_percentage, "invalid answer_total_votes_percentage")
     val answersOk = answers.map(_.validate())
+    val repeatedAnswers =  answers
+      .filter { x => answers.count(_.text == x.text) > 1 }
+      .map { x => x.text }
+    val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
+    assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
     this.copy(description = descriptionOk, answers = answersOk)
   }

@@ -312,21 +312,24 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val validated = config.validate(authorities, id)
+        try {
+          val validated = config.validate(authorities, id)
+          DB.withSession { implicit session =>
 
-        DB.withSession { implicit session =>
+            val existing = DAL.elections.findByIdWithSession(validated.id)
+            existing match {
 
-          val existing = DAL.elections.findByIdWithSession(validated.id)
-          existing match {
+              case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
 
-            case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
-
-            case None => {
-              val result = DAL.elections.insert(Election(validated.id, validated.asString,
-                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real))
-              Ok(response(result))
+              case None => {
+                val result = DAL.elections.insert(Election(validated.id, validated.asString,
+                  Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real))
+                Ok(response(result))
+              }
             }
           }
+        } catch {
+          case e: ValidationException => BadRequest(error(e.getMessage))
         }
       }
     )
