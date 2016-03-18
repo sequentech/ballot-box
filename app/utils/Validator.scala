@@ -6,6 +6,8 @@ import org.owasp.html.Sanitizers
 import org.apache.commons.validator.routines._
 import scala.util.matching._
 
+import play.api.Play.current
+
 /**
   * Utility methods for input validation and sanitation
   *
@@ -17,9 +19,9 @@ import scala.util.matching._
   */
 object Validator {
 
-  val SHORT_STRING = 300
-  val IDENTIFIER_STRING = 300
-  val LONG_STRING = 3000
+  val SHORT_STRING = Play.current.configuration.getInt("election.limits.maxShortStringLength").getOrElse(300)
+  val IDENTIFIER_STRING = Play.current.configuration.getInt("election.limits.maxShortStringLength").getOrElse(SHORT_STRING)
+  val LONG_STRING = Play.current.configuration.getInt("election.limits.maxLongStringLength").getOrElse(SHORT_STRING*10)
 
   /*-------------------------------- querying methods  --------------------------------*/
 

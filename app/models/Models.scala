@@ -202,8 +202,15 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
-    assert(questions.size >= 1, "need at least one queston")
+    assert(questions.size >= 1, "need at least one question")
     val questionsOk = questions.map(_.validate())
+
+    // check maximum number of questions
+    var maxNumQuestions = Play.current.configuration.getInt("election.limits.maxNumQuestions").getOrElse(20)
+    assert(
+      questions.size <= maxNumQuestions,
+      s"too many questions: questions.size(${questions.size}) > maxNumQuestions($maxNumQuestions)"
+    )
 
     // TODO
     // start_date
@@ -236,6 +243,14 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     assert(min <= answers.size, "min greater than answers")
     assert(num_winners >= 1, "invalid num_winners")
     assert(num_winners <= answers.size, "num_winners greater than answers")
+
+    // check maximum number of answers
+    var maxNumAnswers = Play.current.configuration.getInt("election.limits.maxNumAnswers").getOrElse(10000)
+    assert(
+      answers.size <= maxNumAnswers,
+      s"too many answers: answers.size(${answers.size}) > maxNumAnswers($maxNumAnswers)"
+    )
+
     validateStringLength(title, LONG_STRING, s"title too large: $title")
     // TODO not looking inside the value
     validateIdentifier(tally_type, "invalid tally_type")
