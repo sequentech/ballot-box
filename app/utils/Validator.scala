@@ -6,7 +6,7 @@ import org.owasp.html.Sanitizers
 import org.apache.commons.validator.routines._
 import scala.util.matching._
 
-import play.api.Play.current
+import play.api.Play
 
 /**
   * Utility methods for input validation and sanitation

@@ -6,7 +6,7 @@ import utils.Validator._
 import utils.Validator
 import utils.ValidationException
 
-import play.api.Play.current
+import play.api.Play
 import play.api.db.slick.Config.driver.simple._
 import scala.slick.lifted.Tag
 import play.api.libs.json._
