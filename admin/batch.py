@@ -55,6 +55,39 @@ def main(argv):
                 cycle.start(cfg['id'])
                 cycle.wait_for_state(cfg['id'], 'started', 5)
 
+    elif args.command == 'count':
+        election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
+        print(election_configs)
+        from sqlalchemy import create_engine, select, func, text
+        from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
+        from sqlalchemy import distinct
+
+        conn = admin.get_db_connection()
+        votes = admin.votes_table()
+        total1 = 0
+        total2 = 0
+
+        for config in election_configs:
+            with open(os.path.join(args.directory, config), 'r') as f:
+                cfg = json.loads(f.read())
+                if 'payload' in cfg:
+                    elid = cfg['payload']['id']
+                else:
+                    elid = cfg['id']
+
+                s = select([func.count(distinct(votes.c.voter_id))]).where(votes.c.election_id.in_([elid,]))
+                s2 = select([func.count(votes.c.voter_id)]).where(votes.c.election_id.in_([elid,]))
+
+                result = conn.execute(s)
+                row = result.fetchall()
+                result2 = conn.execute(s2)
+                row2 = result2.fetchall()
+                print("%d: %d (%d)" % (elid, row[0][0], row2[0][0]))
+                total1 += row[0][0]
+                total2 += row2[0][0]
+
+        print("total: %d (%d)" % (total1, total2))
+
     elif args.command == 'tally':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
         print(election_configs)
