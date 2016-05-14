@@ -305,7 +305,7 @@ case class QuestionExtra(
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
 
-    assert(!answer_columns_size.isDefined || [12,6,4,3].contains(answer_columns_size.get.toInt), "invalid answer_columns_size, can only be a string with 12,6,4,3")
+    assert(!answer_columns_size.isDefined || List(12,6,4,3).contains(answer_columns_size.get.toInt), "invalid answer_columns_size, can only be a string with 12,6,4,3")
 
     assert(!group_answer_pairs.isDefined || group_answer_pairs.get.length <= SHORT_STRING, "group_answer_pairs too long")
   }
