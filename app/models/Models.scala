@@ -283,7 +283,8 @@ case class QuestionExtra(
   recommended_preset__title: Option[String],
   recommended_preset__accept_text: Option[String],
   recommended_preset__deny_text: Option[String],
-  answer_columns_size: Option[String])
+  answer_columns_size: Option[String],
+  group_answer_pairs: Option[String])
 {
 
   def validate() = {
