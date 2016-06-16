@@ -40,7 +40,7 @@ application.local.conf
 
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
-    app.datastore.ssl_root="https://94.23.34.20"
+    app.datastore.ssl_root="https://94.23.34.20:14453"
 
     app.api.max_revotes=5
 
@@ -99,7 +99,7 @@ test.local.conf
 
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
-    app.datastore.ssl_root="https://94.23.34.20"
+    app.datastore.ssl_root="https://94.23.34.20:14453"
 
     app.eopeers.dir=./test
 

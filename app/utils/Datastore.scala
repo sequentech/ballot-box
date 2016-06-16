@@ -73,7 +73,7 @@ object Datastore {
 
   /** gets the ciphertext url that eo will use. requires proper configuration of nginx to match */
   def getCiphertextsUrl(electionId: Long) = {
-     s"$urlSSLRoot" + s"/elections/private/$electionId/ciphertexts"
+     s"$urlSSLRoot" + s"/private/$electionId/ciphertexts"
   }
 
   /** incrementally calculates sha256 hash of votes using java nio apis */
