@@ -20,6 +20,7 @@ object Datastore {
 
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.datastore.root").get
+  val urlSSLRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
   val publicDs = Play.current.configuration.getString("app.datastore.public").get
   val privateDs = Play.current.configuration.getString("app.datastore.private").get
 
@@ -72,7 +73,7 @@ object Datastore {
 
   /** gets the ciphertext url that eo will use. requires proper configuration of nginx to match */
   def getCiphertextsUrl(electionId: Long) = {
-     s"$urlRoot" + s"/private/$electionId/ciphertexts"
+     s"$urlSSLRoot" + s"/elections/private/$electionId/ciphertexts"
   }
 
   /** incrementally calculates sha256 hash of votes using java nio apis */
