@@ -20,6 +20,7 @@ object Global extends WithFilters(LoggingFilter) with Response {
   override def onStart(app: play.api.Application) {
     ensureCfgExists("app.api.root")
     ensureCfgExists("app.datastore.root")
+    ensureCfgExists("app.datastore.ssl_root")
     ensureCfgExists("booth.auth.secret")
     ensureCfgExists("booth.auth.expiry")
     ensureCfgExists("app.datastore.public")
