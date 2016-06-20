@@ -1,6 +1,6 @@
 /**
  * This file is part of agora_elections.
- * Copyright (C) 2014  Agora Voting SL <agora@agoravoting.com>
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
 
  * agora_elections is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
