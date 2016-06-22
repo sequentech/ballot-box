@@ -1,5 +1,20 @@
 #!/usr/bin/env python
 
+# This file is part of agora_elections.
+# Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+# agora_elections is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License.
+
+# agora_elections  is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+
 import admin
 import cycle
 
@@ -54,6 +69,39 @@ def main(argv):
                 cycle.wait_for_state(cfg['id'], 'created', 300)
                 cycle.start(cfg['id'])
                 cycle.wait_for_state(cfg['id'], 'started', 5)
+
+    elif args.command == 'count':
+        election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
+        print(election_configs)
+        from sqlalchemy import create_engine, select, func, text
+        from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
+        from sqlalchemy import distinct
+
+        conn = admin.get_db_connection()
+        votes = admin.votes_table()
+        total1 = 0
+        total2 = 0
+
+        for config in election_configs:
+            with open(os.path.join(args.directory, config), 'r') as f:
+                cfg = json.loads(f.read())
+                if 'payload' in cfg:
+                    elid = cfg['payload']['id']
+                else:
+                    elid = cfg['id']
+
+                s = select([func.count(distinct(votes.c.voter_id))]).where(votes.c.election_id.in_([elid,]))
+                s2 = select([func.count(votes.c.voter_id)]).where(votes.c.election_id.in_([elid,]))
+
+                result = conn.execute(s)
+                row = result.fetchall()
+                result2 = conn.execute(s2)
+                row2 = result2.fetchall()
+                print("%d: %d (%d)" % (elid, row[0][0], row2[0][0]))
+                total1 += row[0][0]
+                total2 += row2[0][0]
+
+        print("total: %d (%d)" % (total1, total2))
 
     elif args.command == 'tally':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)

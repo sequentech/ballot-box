@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package utils
 
 import org.owasp.html.HtmlPolicyBuilder
@@ -5,6 +21,8 @@ import org.owasp.html.Sanitizers
 
 import org.apache.commons.validator.routines._
 import scala.util.matching._
+
+import play.api.Play
 
 /**
   * Utility methods for input validation and sanitation
@@ -17,9 +35,9 @@ import scala.util.matching._
   */
 object Validator {
 
-  val SHORT_STRING = 300
-  val IDENTIFIER_STRING = 300
-  val LONG_STRING = 3000
+  val SHORT_STRING = Play.current.configuration.getInt("election.limits.maxShortStringLength").getOrElse(300)
+  val IDENTIFIER_STRING = Play.current.configuration.getInt("election.limits.maxShortStringLength").getOrElse(SHORT_STRING)
+  val LONG_STRING = Play.current.configuration.getInt("election.limits.maxLongStringLength").getOrElse(SHORT_STRING*10)
 
   /*-------------------------------- querying methods  --------------------------------*/
 

@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package controllers
 
 import models._
@@ -292,7 +308,16 @@ object ElectionsApi extends Controller with Response {
   /** Future: inserts election into the db in the registered state */
   private def registerElection(request: Request[JsValue], id: Long) = Future {
 
-    val electionConfig = request.body.validate[ElectionConfig]
+    var body = request.body.as[JsObject]
+    if (!body.as[JsObject].keys.contains("real")) {
+        body = body.as[JsObject] + ("real" -> Json.toJson(false))
+    }
+
+    if (!body.as[JsObject].keys.contains("extra_data")) {
+        body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
+    }
+
+    val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
 
@@ -303,21 +328,24 @@ object ElectionsApi extends Controller with Response {
 
       config => {
 
-        val validated = config.validate(authorities, id)
+        try {
+          val validated = config.validate(authorities, id)
+          DB.withSession { implicit session =>
 
-        DB.withSession { implicit session =>
+            val existing = DAL.elections.findByIdWithSession(validated.id)
+            existing match {
 
-          val existing = DAL.elections.findByIdWithSession(validated.id)
-          existing match {
+              case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
 
-            case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
-
-            case None => {
-              val result = DAL.elections.insert(Election(validated.id, validated.asString,
-                Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None))
-              Ok(response(result))
+              case None => {
+                val result = DAL.elections.insert(Election(validated.id, validated.asString,
+                  Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real))
+                Ok(response(result))
+              }
             }
           }
+        } catch {
+          case e: ValidationException => BadRequest(error(e.getMessage))
         }
       }
     )
@@ -326,7 +354,16 @@ object ElectionsApi extends Controller with Response {
   /** Future: updates an election's config */
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
 
-    val electionConfig = request.body.validate[ElectionConfig]
+    var body = request.body.as[JsObject]
+    if (!body.as[JsObject].keys.contains("real")) {
+        body = body.as[JsObject] + ("real" -> Json.toJson(false))
+    }
+
+    if (!body.as[JsObject].keys.contains("extra_data")) {
+        body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
+    }
+
+    val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
 

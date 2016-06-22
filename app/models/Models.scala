@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package models
 
 import utils.Crypto
@@ -6,7 +22,7 @@ import utils.Validator._
 import utils.Validator
 import utils.ValidationException
 
-import play.api.Play.current
+import play.api.Play
 import play.api.db.slick.Config.driver.simple._
 import scala.slick.lifted.Tag
 import play.api.libs.json._
@@ -75,12 +91,15 @@ object Votes {
 
 /** election object */
 case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp]) {
+  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean) {
 
   def getDTO = {
     var configJson = Json.parse(configuration)
     if (!configJson.as[JsObject].keys.contains("layout")) {
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
+    }
+    if (!configJson.as[JsObject].keys.contains("real")) {
+        configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
     }
     var config = configJson.validate[ElectionConfig].get
     var res = None: Option[String]
@@ -89,7 +108,7 @@ case class Election(id: Long, configuration: String, state: String, startDate: T
         res = results
         resUp = resultsUpdated
     }
-    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp)
+    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real)
   }
 }
 
@@ -103,7 +122,8 @@ class Elections(tag: Tag) extends Table[Election](tag, "election") {
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
-  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?) <> (Election.tupled, Election.unapply _)
+  def real = column[Boolean]("real")
+  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real) <> (Election.tupled, Election.unapply _)
 }
 
 /** data access object for elections */
@@ -163,11 +183,11 @@ case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp])
+  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String]) {
 
   /**
     * validates an election config, this does two things:
@@ -198,8 +218,15 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
-    assert(questions.size >= 1, "need at least one queston")
+    assert(questions.size >= 1, "need at least one question")
     val questionsOk = questions.map(_.validate())
+
+    // check maximum number of questions
+    var maxNumQuestions = Play.current.configuration.getInt("election.limits.maxNumQuestions").getOrElse(20)
+    assert(
+      questions.size <= maxNumQuestions,
+      s"too many questions: questions.size(${questions.size}) > maxNumQuestions($maxNumQuestions)"
+    )
 
     // TODO
     // start_date
@@ -232,12 +259,25 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     assert(min <= answers.size, "min greater than answers")
     assert(num_winners >= 1, "invalid num_winners")
     assert(num_winners <= answers.size, "num_winners greater than answers")
+
+    // check maximum number of answers
+    var maxNumAnswers = Play.current.configuration.getInt("election.limits.maxNumAnswers").getOrElse(10000)
+    assert(
+      answers.size <= maxNumAnswers,
+      s"too many answers: answers.size(${answers.size}) > maxNumAnswers($maxNumAnswers)"
+    )
+
     validateStringLength(title, LONG_STRING, s"title too large: $title")
     // TODO not looking inside the value
     validateIdentifier(tally_type, "invalid tally_type")
     // TODO not looking inside the value
     validateIdentifier(answer_total_votes_percentage, "invalid answer_total_votes_percentage")
     val answersOk = answers.map(_.validate())
+    val repeatedAnswers =  answers
+      .filter { x => answers.count(_.text == x.text) > 1 }
+      .map { x => x.text }
+    val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
+    assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
     this.copy(description = descriptionOk, answers = answersOk)
   }
