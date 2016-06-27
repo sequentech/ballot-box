@@ -54,6 +54,7 @@ object ElectionsApi extends Controller with Response {
 
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
+  val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
@@ -495,7 +496,7 @@ object ElectionsApi extends Controller with Response {
     val authData = getAuthData(auths)
     // add the callback and auth data fields to the original config
     val jsObject = configJson.as[JsObject]
-    val callback = "callback_url" -> JsString(apiUrl(routes.ElectionsApi.keydone(election.id).url))
+    val callback = "callback_url" -> JsString(apiSslUrl(routes.ElectionsApi.keydone(election.id).url))
     Logger.info("create callback is " + callback)
 
     val withCallback = (jsObject + callback)
@@ -596,7 +597,7 @@ object ElectionsApi extends Controller with Response {
     val votesHash = Datastore.hashVotes(electionId)
     Json.obj(
       "election_id" -> electionId,
-      "callback_url" -> apiUrl(routes.ElectionsApi.tallydone(electionId).url),
+      "callback_url" -> apiSslUrl(routes.ElectionsApi.tallydone(electionId).url),
       "extra" -> List[String](),
       "votes_url" -> Datastore.getCiphertextsUrl(electionId),
       "votes_hash" -> s"ni:///sha-256;$votesHash"
@@ -621,7 +622,7 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** gets our api url (for eo initiated callbacks) */
-  private def apiUrl(suffix: String) = {
-    s"$urlRoot" + suffix
+  private def apiSslUrl(suffix: String) = {
+    s"$urlSslRoot" + suffix
   }
 }
