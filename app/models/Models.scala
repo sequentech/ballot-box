@@ -188,7 +188,7 @@ case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, s
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
   questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String],
-  conditional_questions: Option[Array[ConditionalQuestion]])
+  conditional_questions: Array[ConditionalQuestion])
 {
 
   /**
@@ -328,10 +328,20 @@ case class QuestionExtra(
 case class ConditionalQuestion(
   question_id: Int,
   when_any: Array[QuestionCondition])
+{
+  def validate() =
+  {
+  }
+}
 
 case class QuestionCondition(
   question_id: Int,
   answer_id: Int)
+{
+  def validate() =
+  {
+  }
+}
 
 /** defines a possible answer for a question asked in an election */
 case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String) {
