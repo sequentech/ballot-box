@@ -187,7 +187,9 @@ case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, s
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String]) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String],
+  conditional_questions: Option[Array[ConditionalQuestion]])
+{
 
   /**
     * validates an election config, this does two things:
@@ -284,7 +286,22 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
 }
 
 /** defines question extra data in an election */
-case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String], restrict_choices_by_tag__name: Option[String], restrict_choices_by_tag__max: Option[String], restrict_choices_by_tag__max_error_msg: Option[String], accordion_folding_policy: Option[String], restrict_choices_by_no_tag__max: Option[String], force_allow_blank_vote: Option[String], recommended_preset__tag: Option[String], recommended_preset__title: Option[String], recommended_preset__accept_text: Option[String], recommended_preset__deny_text: Option[String]) {
+case class QuestionExtra(
+  group: Option[String],
+  next_button: Option[String],
+  shuffled_categories: Option[String],
+  shuffling_policy: Option[String],
+  restrict_choices_by_tag__name: Option[String],
+  restrict_choices_by_tag__max: Option[String],
+  restrict_choices_by_tag__max_error_msg: Option[String],
+  accordion_folding_policy: Option[String],
+  restrict_choices_by_no_tag__max: Option[String],
+  force_allow_blank_vote: Option[String],
+  recommended_preset__tag: Option[String],
+  recommended_preset__title: Option[String],
+  recommended_preset__accept_text: Option[String],
+  recommended_preset__deny_text: Option[String])
+{
 
   def validate() = {
     assert(!group.isDefined || group.get.length <= SHORT_STRING, "group too long")
@@ -306,6 +323,15 @@ case class QuestionExtra(group: Option[String], next_button: Option[String], shu
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
   }
 }
+
+/** Defines a possible list of conditions under which a question is shown */
+case class ConditionalQuestion(
+  question_id: Int,
+  when_any: Array[QuestionCondition])
+
+case class QuestionCondition(
+  question_id: Int,
+  answer_id: Int)
 
 /** defines a possible answer for a question asked in an election */
 case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String) {
