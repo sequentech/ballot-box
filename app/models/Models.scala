@@ -187,8 +187,7 @@ case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, s
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String],
-  conditional_questions: Option[Array[ConditionalQuestion]])
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String])
 {
 
   /**
@@ -363,8 +362,14 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
 }
 
 /** defines presentation options for an election */
-case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String, extra_options: Option[ElectionExtra]) {
-
+case class ElectionPresentation(
+  share_text: String,
+  theme: String,
+  urls: Array[Url],
+  theme_css: String,
+  extra_options: Option[ElectionExtra],
+  conditional_questions: Option[Array[ConditionalQuestion]])
+{
   def validate() = {
 
     validateStringLength(share_text, LONG_STRING, s"share_text too large $share_text")
