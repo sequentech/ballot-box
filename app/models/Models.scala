@@ -299,7 +299,8 @@ case class QuestionExtra(
   recommended_preset__tag: Option[String],
   recommended_preset__title: Option[String],
   recommended_preset__accept_text: Option[String],
-  recommended_preset__deny_text: Option[String])
+  recommended_preset__deny_text: Option[String],
+  default_selected_option_ids: Option[Array[Int]])
 {
 
   def validate() = {
