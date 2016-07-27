@@ -56,6 +56,7 @@ object ElectionsApi extends Controller with Response {
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
+  val pipesWhitelist = Play.current.configuration.getString("app.agoraResults.pipesWhitelist").getOrElse("")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
   val authorities = getAuthorityData
@@ -443,7 +444,10 @@ object ElectionsApi extends Controller with Response {
     val configPath = Datastore.writeResultsConfig(id, config)
     val tallyPath = Datastore.getTallyPath(id)
     val dirPath = Datastore.getDirPath(id)
-    val cmd = s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath"
+    val cmd = if (pipesWhitelist.length > 0)
+        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -p $pipesWhitelist"
+      else
+        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath"
 
     Logger.info(s"executing '$cmd'")
     val output = cmd.!!
