@@ -171,14 +171,14 @@ object ElectionsApi extends Controller with Response {
             // if no config is provided and one is available in the election
             // use that one
             val config =
-              if e.resultsConfig.isDefined
+              if (e.resultsConfig.isDefined)
                 e.resultsConfig.get
               else
                 request.body.toString
 
             if(
               (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
-              (e.virtual && e.state != RESULTS_PUB)
+              (e.virtual && e.state != Elections.RESULTS_PUB)
             ) {
               calcResults(id, config).flatMap( r => updateResults(e, r) )
             }
@@ -379,6 +379,7 @@ object ElectionsApi extends Controller with Response {
                     validated.start_date,
                     validated.end_date,
                     None,
+                    validated.resultsConfig,
                     None,
                     None,
                     validated.real,
