@@ -47,6 +47,12 @@ def main(argv):
     parser = argparse.ArgumentParser(description='batch admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('-c', '--command', help='command, <create|tally|results>', required=True)
     parser.add_argument('-d', '--directory', help='configurations directory', required=True)
+    parser.add_argument(
+        '--election-ids',
+        metavar='ID',
+        type=int,
+        nargs='*',
+        help='list of election ids to which the command should be applied')
     parser.add_argument('-s', '--start-id', help='start id', type=int, default=0)
     parser.add_argument('-e', '--end-id', help='end id', type=int, default=100000000000)
     args = parser.parse_args()
@@ -69,6 +75,43 @@ def main(argv):
                 cycle.wait_for_state(cfg['id'], 'created', 300)
                 cycle.start(cfg['id'])
                 cycle.wait_for_state(cfg['id'], 'started', 5)
+
+    if args.command == 'start':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+            print('next id %d' % cfg['id'])
+
+            cycle.start(cfg['id'])
+            cycle.wait_for_state(cfg['id'], 'started', 5)
+
+    if args.command == 'list-stop':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, stopping election' % cfg['id'])
+            ret = cycle.stop(cf)
+            cycle.wait_for_state(cfg['id'], ['stopped'], 4)
+
+    if args.command == 'list-tally':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, tallying' % cfg['id'])
+            cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 10000)
+
+    if args.command == 'list-results':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, calculating results' % cfg['id'])
+
+    if args.command == 'list-publish':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, publishing results' % cfg['id'])
+            cycle.publish_results(cfg['id'])
+            cycle.wait_for_state(cfg['id'], 'results_pub', 5)
 
     elif args.command == 'count':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
