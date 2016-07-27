@@ -46,7 +46,7 @@ def get_results_configs(dir, start_id, end_id):
 def main(argv):
     parser = argparse.ArgumentParser(description='batch admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('-c', '--command', help='command, <create|tally|results>', required=True)
-    parser.add_argument('-d', '--directory', help='configurations directory', required=True)
+    parser.add_argument('-d', '--directory', help='configurations directory')
     parser.add_argument(
         '--election-ids',
         metavar='ID',
@@ -57,7 +57,7 @@ def main(argv):
     parser.add_argument('-e', '--end-id', help='end id', type=int, default=100000000000)
     args = parser.parse_args()
 
-    if not os.path.isdir(args.directory):
+    if args.directory is not None and not os.path.isdir(args.directory):
         print("not a directory %s" % args.directory)
 
     if args.command == 'create':
@@ -76,7 +76,7 @@ def main(argv):
                 cycle.start(cfg['id'])
                 cycle.wait_for_state(cfg['id'], 'started', 5)
 
-    if args.command == 'start':
+    elif args.command == 'list-start':
         for eid in args.election_ids:
             cfg = dict(id=eid)
             print('next id %d' % cfg['id'])
@@ -84,28 +84,31 @@ def main(argv):
             cycle.start(cfg['id'])
             cycle.wait_for_state(cfg['id'], 'started', 5)
 
-    if args.command == 'list-stop':
+    elif args.command == 'list-stop':
         for eid in args.election_ids:
             cfg = dict(id=eid)
 
             print('next id %d, stopping election' % cfg['id'])
-            ret = cycle.stop(cf)
+            ret = cycle.stop(cfg['id'])
             cycle.wait_for_state(cfg['id'], ['stopped'], 4)
 
-    if args.command == 'list-tally':
+    elif args.command == 'list-tally':
         for eid in args.election_ids:
             cfg = dict(id=eid)
 
             print('next id %d, tallying' % cfg['id'])
+            cycle.tally(cfg['id'])
             cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 10000)
 
-    if args.command == 'list-results':
+    elif args.command == 'list-results':
         for eid in args.election_ids:
             cfg = dict(id=eid)
 
             print('next id %d, calculating results' % cfg['id'])
+            cycle.calculate_results(cfg['id'])
+            cycle.wait_for_state(cfg['id'], 'results_ok', 5)
 
-    if args.command == 'list-publish':
+    elif args.command == 'list-publish':
         for eid in args.election_ids:
             cfg = dict(id=eid)
 
