@@ -90,40 +90,92 @@ object Votes {
 }
 
 /** election object */
-case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean) {
+case class Election(
+  id: Long,
+  configuration: String,
+  state: String,
+  startDate: Timestamp,
+  endDate: Timestamp,
+  pks: Option[String],
+  resultsConfig: Option[String],
+  results: Option[String],
+  resultsUpdated: Option[Timestamp],
+  real: Boolean,
+  virtual: Boolean)
+{
 
-  def getDTO = {
+  def getDTO =
+  {
     var configJson = Json.parse(configuration)
     if (!configJson.as[JsObject].keys.contains("layout")) {
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
+
     if (!configJson.as[JsObject].keys.contains("real")) {
         configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
     }
+
+    if (!configJson.as[JsObject].keys.contains("virtual")) {
+        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(real))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
+        configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
+    }
+
     var config = configJson.validate[ElectionConfig].get
     var res = None: Option[String]
     var resUp = None: Option[Timestamp]
+
     if (state == Elections.RESULTS_PUB) {
         res = results
         resUp = resultsUpdated
     }
-    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real)
+
+    ElectionDTO(
+      id,
+      config,
+      state,
+      startDate,
+      endDate,
+      pks,
+      resultsConfig,
+      res,
+      resUp,
+      real,
+      virtual)
   }
 }
 
 /** relational representation of elections */
-class Elections(tag: Tag) extends Table[Election](tag, "election") {
+class Elections(tag: Tag)
+  extends Table[Election](tag, "election")
+{
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
   def state = column[String]("state", O.NotNull)
   def startDate = column[Timestamp]("start_date", O.NotNull)
   def endDate = column[Timestamp]("end_date", O.NotNull)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
+  def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
   def real = column[Boolean]("real")
-  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real) <> (Election.tupled, Election.unapply _)
+  def virtual = column[Boolean]("virtual")
+
+  def * = (
+    id,
+    configuration,
+    state,
+    startDate,
+    endDate,
+    pks.?,
+    resultsConfig.?,
+    results.?,
+    resultsUpdated.?,
+    real,
+    virtual
+  ) <> (Election.tupled, Election.unapply _)
 }
 
 /** data access object for elections */
@@ -182,12 +234,22 @@ case class StatDay(day: String, votes: Long)
 case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
-case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
+case class ElectionDTO(
+  id: Long,
+  configuration: ElectionConfig,
+  state: String,
+  startDate: Timestamp,
+  endDate: Timestamp,
+  pks: Option[String],
+  resultsConfig: Option[String],
+  results: Option[String],
+  resultsUpdated: Option[Timestamp],
+  real: Boolean,
+  virtual: Boolean)
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String])
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String])
 {
 
   /**

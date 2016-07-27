@@ -159,24 +159,48 @@ object ElectionsApi extends Controller with Response {
   }
 
   /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit")
+    .async(BodyParsers.parse.json)
+    {
+      request =>
+        Logger.info(s"calculating results for election $id")
 
-    val config = request.body.toString
-    Logger.info(s"calculating results for election $id")
+        val future = getElection(id).flatMap
+        {
+          e =>
+            // if no config is provided and one is available in the election
+            // use that one
+            val config =
+              if e.resultsConfig.isDefined
+                e.resultsConfig.get
+              else
+                request.body.toString
 
-    val future = getElection(id).flatMap { e =>
+            if(
+              (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
+              (e.virtual && e.state != RESULTS_PUB)
+            ) {
+              calcResults(id, config).flatMap( r => updateResults(e, r) )
+            }
+            else
+            {
+              Logger.warn(
+                s"Cannot calculate results for election $id in wrong state " +
+                s"${e.state}")
 
-      if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) {
-        calcResults(id, config).flatMap( r => updateResults(e, r) )
-      } else {
-        Logger.warn(s"Cannot calculate results for election $id in wrong state ${e.state}")
-        Future { BadRequest(error(s"Cannot calculate results for election $id in wrong state ${e.state}")) }
-      }
+              Future {
+                BadRequest(
+                  error(
+                    s"Cannot calculate results for election $id in wrong " +
+                    s"state ${e.state}"))
+              }
+            }
+        }
+        future.recover {
+          case e:NoSuchElementException =>
+            BadRequest(error(s"Election $id not found"))
+        }
     }
-    future.recover {
-      case e:NoSuchElementException => BadRequest(error(s"Election $id not found"))
-    }
-  }
 
   def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit").async {
 
@@ -307,11 +331,17 @@ object ElectionsApi extends Controller with Response {
   /*-------------------------------- privates  --------------------------------*/
 
   /** Future: inserts election into the db in the registered state */
-  private def registerElection(request: Request[JsValue], id: Long) = Future {
+  private def registerElection(request: Request[JsValue], id: Long) =
+  Future {
 
     var body = request.body.as[JsObject]
+
     if (!body.as[JsObject].keys.contains("real")) {
         body = body.as[JsObject] + ("real" -> Json.toJson(false))
+    }
+
+    if (!body.as[JsObject].keys.contains("virtual")) {
+        body = body.as[JsObject] + ("virtual" -> Json.toJson(false))
     }
 
     if (!body.as[JsObject].keys.contains("extra_data")) {
@@ -328,7 +358,6 @@ object ElectionsApi extends Controller with Response {
       },
 
       config => {
-
         try {
           val validated = config.validate(authorities, id)
           DB.withSession { implicit session =>
@@ -336,11 +365,26 @@ object ElectionsApi extends Controller with Response {
             val existing = DAL.elections.findByIdWithSession(validated.id)
             existing match {
 
-              case Some(_) => BadRequest(error(s"election with id ${config.id} already exists"))
+              case Some(_) =>
+                BadRequest(
+                  error(s"election with id ${config.id} already exists"))
 
-              case None => {
-                val result = DAL.elections.insert(Election(validated.id, validated.asString,
-                  Elections.REGISTERED, validated.start_date, validated.end_date, None, None, None, validated.real))
+              case None =>
+              {
+                val result = DAL.elections.insert(
+                  Election(
+                    validated.id,
+                    validated.asString,
+                    Elections.REGISTERED,
+                    validated.start_date,
+                    validated.end_date,
+                    None,
+                    None,
+                    None,
+                    validated.real,
+                    validated.virtual
+                  )
+                )
                 Ok(response(result))
               }
             }
