@@ -301,7 +301,7 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
     if (virtualSubelections.isDefined)
     {
       assert(
-        virtualSubelections.get.sorted == virtualSubelections,
+        virtualSubelections.get.sorted == virtualSubelections.get,
         "virtualSubelections must be sorted"
       )
     }

@@ -188,7 +188,11 @@ object ElectionsApi extends Controller with Response {
               errors =>
               {
                 Logger.warn(s"Invalid config json, $errors")
-                BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+                Future {
+                  BadRequest(
+                    error(s"Invalid config json " + JsError.toFlatJson(errors))
+                  )
+                }
               },
               configJson =>
               {
@@ -215,13 +219,15 @@ object ElectionsApi extends Controller with Response {
                       notTalliedSubelections match
                       {
                         case l if l.length > 0 =>
-                          BadRequest(
-                            error(
-                              s"election depends on some virtualSubelections that " +
-                              s"do not exist. The list of not tallied elections " +
-                              s"is: ${notTalliedSubelections}."
+                          Future {
+                            BadRequest(
+                              error(
+                                s"election depends on some virtualSubelections that " +
+                                s"do not exist. The list of not tallied elections " +
+                                s"is: ${notTalliedSubelections}."
+                              )
                             )
-                          )
+                          }
                         case _ =>
                           if(
                             (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
@@ -246,7 +252,9 @@ object ElectionsApi extends Controller with Response {
                   }
                 }
                 catch {
-                  case e: ValidationException => BadRequest(error(e.getMessage))
+                  case e: ValidationException => Future {
+                    BadRequest(error(e.getMessage))
+                  }
                 }
               }
             )
@@ -277,7 +285,9 @@ object ElectionsApi extends Controller with Response {
             errors =>
             {
               Logger.warn(s"Invalid config json, $errors")
-              BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+              Future {
+                BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+              }
             },
             config =>
             {
@@ -288,7 +298,9 @@ object ElectionsApi extends Controller with Response {
               }
               catch
               {
-                case e: ValidationException => BadRequest(error(e.getMessage))
+                case e: ValidationException => Future {
+                  BadRequest(error(e.getMessage))
+                }
               }
             }
           )
