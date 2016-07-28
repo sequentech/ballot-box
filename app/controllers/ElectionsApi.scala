@@ -178,9 +178,9 @@ object ElectionsApi extends Controller with Response {
                 request.body.toString
 
             val electionConfigStr = e.configuration
-            if (!electionConfigStr.as[JsObject].keys.contains("virtualSubElections"))
+            if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
             {
-                electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubElections" -> Json.toJson("[]"))
+                electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
             }
             val electionConfig = electionConfigStr.as[JsObject].validate[ElectionConfig]
 
@@ -199,8 +199,9 @@ object ElectionsApi extends Controller with Response {
                   {
                     implicit session =>
                       // check that related subelections exist and have a tally
-                      val notTalliedSubElections = validated.virtualSubElections.get.filter(
+                      val notTalliedSubelections = validated.virtualSubelections.get.filter(
                         (eid) =>
+                        {
                           val el = DAL.elections.findByIdWithSession(eid)
 
                           (
@@ -208,15 +209,16 @@ object ElectionsApi extends Controller with Response {
                             el.state == Elections.RESULTS_OK
                           ) &&
                           el.isDefined
+                        }
                       )
-                      notTalliedSubElections match
+                      notTalliedSubelections match
                       {
                         case _ > 0 =>
                           BadRequest(
                             error(
                               s"election depends on some virtualSubelections that " +
                               s"do not exist. The list of not tallied elections " +
-                              s"is: ${notTalliedSubElections}."
+                              s"is: ${notTalliedSubelections}."
                             )
                           )
                         case _ =>
@@ -224,7 +226,7 @@ object ElectionsApi extends Controller with Response {
                             (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
                             (e.virtual && e.state != Elections.RESULTS_PUB)
                           ) {
-                            calcResults(id, config, validated.virtualSubElections.get).flatMap( r => updateResults(e, r) )
+                            calcResults(id, config, validated.virtualSubelections.get).flatMap( r => updateResults(e, r) )
                           }
                           else
                           {
@@ -264,9 +266,9 @@ object ElectionsApi extends Controller with Response {
         if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK)
         {
           val electionConfigStr = e.configuration
-          if (!electionConfigStr.as[JsObject].keys.contains("virtualSubElections"))
+          if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
           {
-              electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubElections" -> Json.toJson("[]"))
+              electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
           }
           val electionConfig = electionConfigStr.as[JsObject].validate[ElectionConfig]
 
@@ -281,12 +283,13 @@ object ElectionsApi extends Controller with Response {
               try
               {
                 val validated = config.validate(authorities, id)
-                pubResults(id, e.results, validated.virtualSubElections.get)
+                pubResults(id, e.results, validated.virtualSubelections.get)
               }
               catch
               {
                 case e: ValidationException => BadRequest(error(e.getMessage))
               }
+            }
           )
         }
         else {
@@ -422,8 +425,8 @@ object ElectionsApi extends Controller with Response {
         body = body.as[JsObject] + ("virtual" -> Json.toJson(false))
     }
 
-    if (!body.as[JsObject].keys.contains("virtualSubElections")) {
-        body = body.as[JsObject] + ("virtualSubElections" -> Json.toJson("[]"))
+    if (!body.as[JsObject].keys.contains("virtualSubelections")) {
+        body = body.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
     }
 
     if (!body.as[JsObject].keys.contains("extra_data")) {
@@ -446,18 +449,18 @@ object ElectionsApi extends Controller with Response {
           {
             implicit session =>
               // check that related subelections exist
-              val notExistingSubElections = validated.virtualSubElections.get.filter(
+              val notExistingSubelections = validated.virtualSubelections.get.filter(
                 (eid) =>
                   !DAL.elections.findByIdWithSession(eid).isDefined
               )
-              notExistingSubElections match
+              notExistingSubelections match
               {
                 case _ > 0 =>
                   BadRequest(
                     error(
                       s"election depends on some virtualSubelections that " +
                       s"do not exist. The list of not existing elections " +
-                      s"is: ${notExistingSubElections}."
+                      s"is: ${notExistingSubelections}."
                     )
                   )
                 case _ =>
