@@ -177,25 +177,76 @@ object ElectionsApi extends Controller with Response {
               else
                 request.body.toString
 
-            if(
-              (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
-              (e.virtual && e.state != Elections.RESULTS_PUB)
-            ) {
-              calcResults(id, config).flatMap( r => updateResults(e, r) )
-            }
-            else
+            val electionConfigStr = e.configuration
+            if (!electionConfigStr.as[JsObject].keys.contains("virtualSubElections"))
             {
-              Logger.warn(
-                s"Cannot calculate results for election $id in wrong state " +
-                s"${e.state}")
-
-              Future {
-                BadRequest(
-                  error(
-                    s"Cannot calculate results for election $id in wrong " +
-                    s"state ${e.state}"))
-              }
+                electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubElections" -> Json.toJson("[]"))
             }
+            val electionConfig = electionConfigStr.as[JsObject].validate[ElectionConfig]
+
+            electionConfig.fold(
+              errors =>
+              {
+                Logger.warn(s"Invalid config json, $errors")
+                BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+              },
+              config =>
+              {
+                try
+                {
+                  val validated = config.validate(authorities, id)
+                  DB.withSession
+                  {
+                    implicit session =>
+                      // check that related subelections exist and have a tally
+                      val notTalliedSubElections = validated.virtualSubElections.get.filter(
+                        (eid) =>
+                          val el = DAL.elections.findByIdWithSession(eid)
+
+                          (
+                            el.state == Elections.TALLY_OK ||
+                            el.state == Elections.RESULTS_OK
+                          ) &&
+                          el.isDefined
+                      )
+                      notTalliedSubElections match
+                      {
+                        case _ > 0 =>
+                          BadRequest(
+                            error(
+                              s"election depends on some virtualSubelections that " +
+                              s"do not exist. The list of not tallied elections " +
+                              s"is: ${notTalliedSubElections}."
+                            )
+                          )
+                        case _ =>
+                          if(
+                            (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
+                            (e.virtual && e.state != Elections.RESULTS_PUB)
+                          ) {
+                            calcResults(id, config, validated.virtualSubElections.get).flatMap( r => updateResults(e, r) )
+                          }
+                          else
+                          {
+                            Logger.warn(
+                              s"Cannot calculate results for election $id in wrong state " +
+                              s"${e.state}")
+
+                            Future {
+                              BadRequest(
+                                error(
+                                  s"Cannot calculate results for election $id in wrong " +
+                                  s"state ${e.state}"))
+                            }
+                          }
+                      }
+                  }
+                }
+                catch {
+                  case e: ValidationException => BadRequest(error(e.getMessage))
+                }
+              }
+            )
         }
         future.recover {
           case e:NoSuchElementException =>
@@ -207,15 +258,41 @@ object ElectionsApi extends Controller with Response {
 
     Logger.info(s"publishing results for election $id")
 
-    val future = getElection(id).flatMap { e =>
+    val future = getElection(id).flatMap
+    {
+      e =>
+        if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK)
+        {
+          val electionConfigStr = e.configuration
+          if (!electionConfigStr.as[JsObject].keys.contains("virtualSubElections"))
+          {
+              electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubElections" -> Json.toJson("[]"))
+          }
+          val electionConfig = electionConfigStr.as[JsObject].validate[ElectionConfig]
 
-      if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) {
-        pubResults(id, e.results)
-      }
-      else {
-        Logger.warn(s"cannot calculate results for election $id in unexpected state ${e.state}")
-        Future { BadRequest(error(s"cannot calculate results for election $id in unexpected state ${e.state}")) }
-      }
+          electionConfig.fold(
+            errors =>
+            {
+              Logger.warn(s"Invalid config json, $errors")
+              BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
+            },
+            config =>
+            {
+              try
+              {
+                val validated = config.validate(authorities, id)
+                pubResults(id, e.results, validated.virtualSubElections.get)
+              }
+              catch
+              {
+                case e: ValidationException => BadRequest(error(e.getMessage))
+              }
+          )
+        }
+        else {
+          Logger.warn(s"cannot calculate results for election $id in unexpected state ${e.state}")
+          Future { BadRequest(error(s"cannot calculate results for election $id in unexpected state ${e.state}")) }
+        }
     }
     future.recover {
       case e:NoSuchElementException => BadRequest(error(s"Election $id not found"))
@@ -345,6 +422,10 @@ object ElectionsApi extends Controller with Response {
         body = body.as[JsObject] + ("virtual" -> Json.toJson(false))
     }
 
+    if (!body.as[JsObject].keys.contains("virtualSubElections")) {
+        body = body.as[JsObject] + ("virtualSubElections" -> Json.toJson("[]"))
+    }
+
     if (!body.as[JsObject].keys.contains("extra_data")) {
         body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
     }
@@ -352,44 +433,62 @@ object ElectionsApi extends Controller with Response {
     val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
-
-      errors => {
+      errors =>
+      {
         Logger.warn(s"Invalid config json, $errors")
         BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
       },
-
-      config => {
+      config =>
+      {
         try {
           val validated = config.validate(authorities, id)
-          DB.withSession { implicit session =>
-
-            val existing = DAL.elections.findByIdWithSession(validated.id)
-            existing match {
-
-              case Some(_) =>
-                BadRequest(
-                  error(s"election with id ${config.id} already exists"))
-
-              case None =>
+          DB.withSession
+          {
+            implicit session =>
+              // check that related subelections exist
+              val notExistingSubElections = validated.virtualSubElections.get.filter(
+                (eid) =>
+                  !DAL.elections.findByIdWithSession(eid).isDefined
+              )
+              notExistingSubElections match
               {
-                val result = DAL.elections.insert(
-                  Election(
-                    validated.id,
-                    validated.asString,
-                    Elections.REGISTERED,
-                    validated.start_date,
-                    validated.end_date,
-                    None,
-                    validated.resultsConfig,
-                    None,
-                    None,
-                    validated.real,
-                    validated.virtual
+                case _ > 0 =>
+                  BadRequest(
+                    error(
+                      s"election depends on some virtualSubelections that " +
+                      s"do not exist. The list of not existing elections " +
+                      s"is: ${notExistingSubElections}."
+                    )
                   )
-                )
-                Ok(response(result))
+                case _ =>
+                  val existing = DAL.elections.findByIdWithSession(validated.id)
+                  existing match
+                  {
+                    case Some(_) =>
+                      BadRequest(
+                        error(s"election with id ${config.id} already exists"))
+
+                    case None =>
+                    {
+                      val result = DAL.elections.insert(
+                        Election(
+                          validated.id,
+                          validated.asString,
+                          Elections.REGISTERED,
+                          validated.start_date,
+                          validated.end_date,
+                          None,
+                          validated.resultsConfig,
+                          None,
+                          None,
+                          validated.real,
+                          validated.virtual
+                        )
+                      )
+                      Ok(response(result))
+                    }
+                  }
               }
-            }
           }
         } catch {
           case e: ValidationException => BadRequest(error(e.getMessage))
@@ -430,24 +529,42 @@ object ElectionsApi extends Controller with Response {
   }(slickExecutionContext)
 
   /** Future: links tally and copies results into public datastore */
-  private def pubResults(id: Long, results: Option[String]) = Future {
-
-    Datastore.publishResults(id, results)
+  private def pubResults(
+    id: Long,
+    results: Option[String], subtallies: Array[Long]) = Future
+  {
+    Datastore.publishResults(id, results, subtallies)
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
     Ok(response("ok"))
 
   }(slickExecutionContext)
 
   /** Future: calculates an election's results using agora-results */
-  private def calcResults(id: Long, config: String) = Future {
+  private def calcResults(
+    id: Long,
+    config: String,
+    subelections: Array[Long]
+  ) = Future
+  {
 
     val configPath = Datastore.writeResultsConfig(id, config)
-    val tallyPath = Datastore.getTallyPath(id)
+    // if there is a list of subelections, instead of the path to the tally of
+    // this election, we use the path to the tallies of the subelections
+    val tallyPath = subelections match
+    {
+      case subelList if (subelList.length == 0) =>
+        Datastore.getTallyPath(id)
+      case _ =>
+        subelections.map(
+          (subElectionId) =>
+            Datastore.getTallyPath(subElectionId)
+        ).mkString(" ")
+    }
     val dirPath = Datastore.getDirPath(id)
     val cmd = if (pipesWhitelist.length > 0)
-        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -p $pipesWhitelist"
+        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id -p $pipesWhitelist"
       else
-        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath"
+        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id"
 
     Logger.info(s"executing '$cmd'")
     val output = cmd.!!

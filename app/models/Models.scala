@@ -245,11 +245,12 @@ case class ElectionDTO(
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   real: Boolean,
-  virtual: Boolean)
+  virtual: Boolean
+)
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean)
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]])
 {
 
   /**
@@ -296,6 +297,14 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
     // end_date
 
     val presentationOk = presentation.validate()
+
+    if (virtualSubelections.isDefined)
+    {
+      assert(
+        virtualSubelections.sorted == virtualSubelections,
+        "virtualSubelections must be sorted"
+      )
+    }
 
     this.copy(description = descriptionOk, questions = questionsOk, presentation = presentationOk)
   }

@@ -130,7 +130,11 @@ object Datastore {
   }
 
   /** makes results public: creates a symbolic link to the tally, and creates a file with the results */
-  def publishResults(electionId: Long, results: Option[String]) = {
+  def publishResults(
+    electionId: Long,
+    results: Option[String],
+    subtallies: Array[Long]
+  ) = {
     val tarLink = getPath(electionId, s"$electionId.tar", true)
     val tarTarget = getPath(electionId, s"$electionId.tar", false)
     val tallyLink = getPath(electionId, TALLY, true)
