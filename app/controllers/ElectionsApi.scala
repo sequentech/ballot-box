@@ -177,12 +177,12 @@ object ElectionsApi extends Controller with Response {
               else
                 request.body.toString
 
-            val electionConfigStr = e.configuration
+            var electionConfigStr = Json.parse(e.configuration).as[JsObject]
             if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
             {
                 electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
             }
-            val electionConfig = electionConfigStr.as[JsObject].validate[ElectionConfig]
+            val electionConfig = electionConfigStr.validate[ElectionConfig]
 
             electionConfig.fold(
               errors =>
@@ -190,11 +190,11 @@ object ElectionsApi extends Controller with Response {
                 Logger.warn(s"Invalid config json, $errors")
                 BadRequest(error(s"Invalid config json " + JsError.toFlatJson(errors)))
               },
-              config =>
+              configJson =>
               {
                 try
                 {
-                  val validated = config.validate(authorities, id)
+                  val validated = configJson.validate(authorities, id)
                   DB.withSession
                   {
                     implicit session =>
@@ -204,16 +204,17 @@ object ElectionsApi extends Controller with Response {
                         {
                           val el = DAL.elections.findByIdWithSession(eid)
 
+                          el.isDefined &&
                           (
-                            el.state == Elections.TALLY_OK ||
-                            el.state == Elections.RESULTS_OK
-                          ) &&
-                          el.isDefined
+                            el.get.state == Elections.TALLY_OK ||
+                            el.get.state == Elections.RESULTS_OK
+                          )
+
                         }
                       )
                       notTalliedSubelections match
                       {
-                        case _ > 0 =>
+                        case l if l.length > 0 =>
                           BadRequest(
                             error(
                               s"election depends on some virtualSubelections that " +
@@ -265,12 +266,12 @@ object ElectionsApi extends Controller with Response {
       e =>
         if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK)
         {
-          val electionConfigStr = e.configuration
+          var electionConfigStr = Json.parse(e.configuration).as[JsObject]
           if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
           {
               electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
           }
-          val electionConfig = electionConfigStr.as[JsObject].validate[ElectionConfig]
+          val electionConfig = electionConfigStr.validate[ElectionConfig]
 
           electionConfig.fold(
             errors =>
@@ -455,7 +456,7 @@ object ElectionsApi extends Controller with Response {
               )
               notExistingSubelections match
               {
-                case _ > 0 =>
+                case l if l.length > 0 =>
                   BadRequest(
                     error(
                       s"election depends on some virtualSubelections that " +
