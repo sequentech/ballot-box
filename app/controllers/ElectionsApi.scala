@@ -180,7 +180,7 @@ object ElectionsApi extends Controller with Response {
             var electionConfigStr = Json.parse(e.configuration).as[JsObject]
             if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
             {
-                electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
+                electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> JsArray())
             }
             val electionConfig = electionConfigStr.validate[ElectionConfig]
 
@@ -277,7 +277,7 @@ object ElectionsApi extends Controller with Response {
           var electionConfigStr = Json.parse(e.configuration).as[JsObject]
           if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
           {
-              electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
+              electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> JsArray())
           }
           val electionConfig = electionConfigStr.validate[ElectionConfig]
 
@@ -439,7 +439,7 @@ object ElectionsApi extends Controller with Response {
     }
 
     if (!body.as[JsObject].keys.contains("virtualSubelections")) {
-        body = body.as[JsObject] + ("virtualSubelections" -> Json.toJson("[]"))
+        body = body.as[JsObject] + ("virtualSubelections" -> JsArray())
     }
 
     if (!body.as[JsObject].keys.contains("extra_data")) {
