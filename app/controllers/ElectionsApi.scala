@@ -208,10 +208,11 @@ object ElectionsApi extends Controller with Response {
                         {
                           val el = DAL.elections.findByIdWithSession(eid)
 
-                          el.isDefined &&
+                          !el.isDefined ||
                           (
-                            el.get.state == Elections.TALLY_OK ||
-                            el.get.state == Elections.RESULTS_OK
+                            el.get.state != Elections.TALLY_OK &&
+                            el.get.state != Elections.RESULTS_OK &&
+                            el.get.state != Elections.RESULTS_PUB
                           )
 
                         }
