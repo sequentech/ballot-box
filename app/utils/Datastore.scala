@@ -46,6 +46,7 @@ object Datastore {
   val TALLY = "tally.tar.gz"
   val CONFIG = "config.json"
   val RESULTS = "results.json"
+  val RESULTS_DIR_PREFIX = "results-"
 
   /** writes a file to an election's datastore */
   def writeFile(electionId: Long, fileName: String, content: String, public: Boolean = false, append: Boolean = false) = {

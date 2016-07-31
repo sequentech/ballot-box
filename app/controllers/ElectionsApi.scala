@@ -36,6 +36,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.sys.process._
 
+import java.nio.file.{Paths, Files}
+
 /**
   * Elections api
   *
@@ -564,19 +566,19 @@ object ElectionsApi extends Controller with Response {
   ) = Future
   {
     // remove previous public results directory, before the execution
-    var oldResultsDirsRX = Paths.get(
-      Datastore.getDirPath(id, /*isPublic?*/true),
-      Datastore.RESULTS_DIR_PREFIX + "\\.*").r
-    )
+    val oldResultsDirsRX = Paths.get(
+      Datastore.getDirPath(id, /*isPublic?*/true).toString,
+      Datastore.RESULTS_DIR_PREFIX + "\\.*"
+    ).toString.r
     new java.io.File(
-      Datastore.getDirPath(id, /*isPublic?*/true)
+      Datastore.getDirPath(id, /*isPublic?*/true).toString
     ).listFiles
       .filter(
         file =>
           oldResultsDirsRX.findFirstIn(file.getName).isDefined &&
           file.isSymbolicLink
       )
-      .each(
+      .map(
         file => {
           // remove
           file.delete
@@ -608,12 +610,12 @@ object ElectionsApi extends Controller with Response {
 
     // create the public symbolic link to the new results dir
     var newResultsDirRX = Paths.get(
-      Datastore.getDirPath(id, /*isPublic?*/false),
-      Datastore.RESULTS_DIR_PREFIX + "\\.*").r
-    )
+      Datastore.getDirPath(id, /*isPublic?*/false).toString,
+      Datastore.RESULTS_DIR_PREFIX + "\\.*"
+    ).toString.r
 
     var resultsDirs = new java.io.File(
-      Datastore.getDirPath(id, /*isPublic?*/false)
+      Datastore.getDirPath(id, /*isPublic?*/false).toString
     ).listFiles
       .filter(
         file =>
@@ -621,13 +623,13 @@ object ElectionsApi extends Controller with Response {
           file.isDirectory
       )
 
-    if (resultsDir.length == 1) {
-      File.createSymbolicLink(
+    if (resultsDirs.length == 1) {
+      Files.createSymbolicLink(
         Paths.get(
-          Datastore.getDirPath(id, /*isPublic?*/true),
-          resultsDir(0).getName
+          Datastore.getDirPath(id, /*isPublic?*/true).toString,
+          resultsDirs(0).getName
         ),
-        resultsDir(0)
+        resultsDirs(0).toPath
       )
     }
 
