@@ -568,22 +568,28 @@ object ElectionsApi extends Controller with Response {
     // remove previous public results directory, before the execution
     val oldResultsDirsRX = Paths.get(
       Datastore.getDirPath(id, /*isPublic?*/true).toString,
-      Datastore.RESULTS_DIR_PREFIX + "\\.*"
+      Datastore.RESULTS_DIR_PREFIX + ".*"
     ).toString.r
-    new java.io.File(
+    val electionPublicPath = new java.io.File(
       Datastore.getDirPath(id, /*isPublic?*/true).toString
-    ).listFiles
-      .filter(
-        file =>
-          oldResultsDirsRX.findFirstIn(file.getName).isDefined &&
-          Files.isSymbolicLink(file.toPath)
-      )
-      .map(
-        file => {
-          // remove
-          file.delete
-        }
-      )
+    )
+
+    if (electionPublicPath.isDirectory())
+    {
+      electionPublicPath.listFiles
+        .filter(
+          file => {
+            oldResultsDirsRX.findFirstIn(file.getAbsolutePath).isDefined &&
+            Files.isSymbolicLink(file.toPath)
+          }
+        )
+        .map(
+          file => {
+            // remove
+            file.delete
+          }
+        )
+    }
 
     val configPath = Datastore.writeResultsConfig(id, config)
     // if there is a list of subelections, instead of the path to the tally of
@@ -611,28 +617,26 @@ object ElectionsApi extends Controller with Response {
     // create the public symbolic link to the new results dir
     var newResultsDirRX = Paths.get(
       Datastore.getDirPath(id, /*isPublic?*/false).toString,
-      Datastore.RESULTS_DIR_PREFIX + "\\.*"
+      Datastore.RESULTS_DIR_PREFIX + ".*"
     ).toString.r
 
     var resultsDirs = new java.io.File(
       Datastore.getDirPath(id, /*isPublic?*/false).toString
     ).listFiles
       .filter(
-        file =>
-          oldResultsDirsRX.findFirstIn(file.getName).isDefined &&
+        file => {
+          newResultsDirRX.findFirstIn(file.getAbsolutePath).isDefined &&
           file.isDirectory
+        }
       )
 
     if (resultsDirs.length == 1) {
       Files.createSymbolicLink(
-        Paths.get(
-          Datastore.getDirPath(id, /*isPublic?*/true).toString,
-          resultsDirs(0).getName
-        ),
+        Datastore
+          .getPath(id, resultsDirs(0).getName, /*isPublic?*/true),
         resultsDirs(0).toPath
       )
     }
-
 
     output
   }
