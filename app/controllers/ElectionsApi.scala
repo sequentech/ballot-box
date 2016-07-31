@@ -576,7 +576,7 @@ object ElectionsApi extends Controller with Response {
       .filter(
         file =>
           oldResultsDirsRX.findFirstIn(file.getName).isDefined &&
-          file.isSymbolicLink
+          Files.isSymbolicLink(file.toPath)
       )
       .map(
         file => {
