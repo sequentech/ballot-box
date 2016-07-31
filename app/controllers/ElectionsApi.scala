@@ -563,6 +563,25 @@ object ElectionsApi extends Controller with Response {
     subelections: Array[Long]
   ) = Future
   {
+    // remove previous public results directory, before the execution
+    var oldResultsDirsRX = Paths.get(
+      Datastore.getDirPath(id, /*isPublic?*/true),
+      Datastore.RESULTS_DIR_PREFIX + "\\.*").r
+    )
+    new java.io.File(
+      Datastore.getDirPath(id, /*isPublic?*/true)
+    ).listFiles
+      .filter(
+        file =>
+          oldResultsDirsRX.findFirstIn(file.getName).isDefined &&
+          file.isSymbolicLink
+      )
+      .each(
+        file => {
+          // remove
+          file.delete
+        }
+      )
 
     val configPath = Datastore.writeResultsConfig(id, config)
     // if there is a list of subelections, instead of the path to the tally of
@@ -586,6 +605,32 @@ object ElectionsApi extends Controller with Response {
     Logger.info(s"executing '$cmd'")
     val output = cmd.!!
     Logger.info(s"command returns\n$output")
+
+    // create the public symbolic link to the new results dir
+    var newResultsDirRX = Paths.get(
+      Datastore.getDirPath(id, /*isPublic?*/false),
+      Datastore.RESULTS_DIR_PREFIX + "\\.*").r
+    )
+
+    var resultsDirs = new java.io.File(
+      Datastore.getDirPath(id, /*isPublic?*/false)
+    ).listFiles
+      .filter(
+        file =>
+          oldResultsDirsRX.findFirstIn(file.getName).isDefined &&
+          file.isDirectory
+      )
+
+    if (resultsDir.length == 1) {
+      File.createSymbolicLink(
+        Paths.get(
+          Datastore.getDirPath(id, /*isPublic?*/true),
+          resultsDir(0).getName
+        ),
+        resultsDir(0)
+      )
+    }
+
 
     output
   }
