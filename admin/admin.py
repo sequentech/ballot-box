@@ -389,18 +389,20 @@ def tally_no_dump(cfg, args):
 
 def calculate_results(cfg, args):
     path = args.results_config
+    jconfig = None
     if path != None and os.path.isfile(path):
         with open(path) as config_file:
             config = json.load(config_file)
-
-            auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
-            host,port = get_local_hostport()
-            headers = {'Authorization': auth, 'content-type': 'application/json'}
-            url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
-            r = requests.post(url, headers=headers, data=json.dumps(config))
-            print(r.status_code, r.text)
+            jconfig = json.dumps(config)
     else:
-        print("no config file %s" % path)
+        print("continuing with no config file %s" % path)
+
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth, 'content-type': 'application/json'}
+    url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers, data=jconfig)
+    print(r.status_code, r.text)
 
 def publish_results(cfg, args):
 

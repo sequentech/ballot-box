@@ -90,40 +90,92 @@ object Votes {
 }
 
 /** election object */
-case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean) {
+case class Election(
+  id: Long,
+  configuration: String,
+  state: String,
+  startDate: Timestamp,
+  endDate: Timestamp,
+  pks: Option[String],
+  resultsConfig: Option[String],
+  results: Option[String],
+  resultsUpdated: Option[Timestamp],
+  real: Boolean,
+  virtual: Boolean)
+{
 
-  def getDTO = {
+  def getDTO =
+  {
     var configJson = Json.parse(configuration)
     if (!configJson.as[JsObject].keys.contains("layout")) {
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
+
     if (!configJson.as[JsObject].keys.contains("real")) {
         configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
     }
+
+    if (!configJson.as[JsObject].keys.contains("virtual")) {
+        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(real))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
+        configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
+    }
+
     var config = configJson.validate[ElectionConfig].get
     var res = None: Option[String]
     var resUp = None: Option[Timestamp]
+
     if (state == Elections.RESULTS_PUB) {
         res = results
         resUp = resultsUpdated
     }
-    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real)
+
+    ElectionDTO(
+      id,
+      config,
+      state,
+      startDate,
+      endDate,
+      pks,
+      resultsConfig,
+      res,
+      resUp,
+      real,
+      virtual)
   }
 }
 
 /** relational representation of elections */
-class Elections(tag: Tag) extends Table[Election](tag, "election") {
+class Elections(tag: Tag)
+  extends Table[Election](tag, "election")
+{
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
   def state = column[String]("state", O.NotNull)
   def startDate = column[Timestamp]("start_date", O.NotNull)
   def endDate = column[Timestamp]("end_date", O.NotNull)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
+  def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
   def real = column[Boolean]("real")
-  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real) <> (Election.tupled, Election.unapply _)
+  def virtual = column[Boolean]("virtual")
+
+  def * = (
+    id,
+    configuration,
+    state,
+    startDate,
+    endDate,
+    pks.?,
+    resultsConfig.?,
+    results.?,
+    resultsUpdated.?,
+    real,
+    virtual
+  ) <> (Election.tupled, Election.unapply _)
 }
 
 /** data access object for elections */
@@ -182,12 +234,24 @@ case class StatDay(day: String, votes: Long)
 case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
-case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
+case class ElectionDTO(
+  id: Long,
+  configuration: ElectionConfig,
+  state: String,
+  startDate: Timestamp,
+  endDate: Timestamp,
+  pks: Option[String],
+  resultsConfig: Option[String],
+  results: Option[String],
+  resultsUpdated: Option[Timestamp],
+  real: Boolean,
+  virtual: Boolean
+)
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String]) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]])
+{
 
   /**
     * validates an election config, this does two things:
@@ -233,6 +297,38 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
     // end_date
 
     val presentationOk = presentation.validate()
+
+    // virtualSubelections setting only makes sense currently in dedicated
+    // installations because we do not check the admin ownership of those,
+    // and that's why support for subelections can be disabled via a config
+    // setting
+    val virtualElectionsAllowed = Play.current.configuration
+      .getBoolean("election.virtualElectionsAllowed")
+      .getOrElse(false)
+
+    assert(
+      !virtual || virtualElectionsAllowed,
+      "virtual elections are not allowed"
+    )
+
+    assert(
+      (
+        !virtual &&
+        (!virtualSubelections.isDefined || virtualSubelections.get.size == 0)
+      ) ||
+      (
+        virtual &&
+        virtualSubelections.isDefined &&
+        virtualSubelections.get.size > 0
+      ),
+      "inconsistent virtuality configuration of the election"
+    )
+
+    assert(
+      !virtualSubelections.isDefined ||
+      (virtualSubelections.get.sorted.deep == virtualSubelections.get.deep),
+      "subelections must be sorted"
+    )
 
     this.copy(description = descriptionOk, questions = questionsOk, presentation = presentationOk)
   }
@@ -284,7 +380,23 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
 }
 
 /** defines question extra data in an election */
-case class QuestionExtra(group: Option[String], next_button: Option[String], shuffled_categories: Option[String], shuffling_policy: Option[String], restrict_choices_by_tag__name: Option[String], restrict_choices_by_tag__max: Option[String], restrict_choices_by_tag__max_error_msg: Option[String], accordion_folding_policy: Option[String], restrict_choices_by_no_tag__max: Option[String], force_allow_blank_vote: Option[String], recommended_preset__tag: Option[String], recommended_preset__title: Option[String], recommended_preset__accept_text: Option[String], recommended_preset__deny_text: Option[String]) {
+case class QuestionExtra(
+  group: Option[String],
+  next_button: Option[String],
+  shuffled_categories: Option[String],
+  shuffling_policy: Option[String],
+  restrict_choices_by_tag__name: Option[String],
+  restrict_choices_by_tag__max: Option[String],
+  restrict_choices_by_tag__max_error_msg: Option[String],
+  accordion_folding_policy: Option[String],
+  restrict_choices_by_no_tag__max: Option[String],
+  force_allow_blank_vote: Option[String],
+  recommended_preset__tag: Option[String],
+  recommended_preset__title: Option[String],
+  recommended_preset__accept_text: Option[String],
+  recommended_preset__deny_text: Option[String],
+  default_selected_option_ids: Option[Array[Int]])
+{
 
   def validate() = {
     assert(!group.isDefined || group.get.length <= SHORT_STRING, "group too long")
@@ -304,6 +416,25 @@ case class QuestionExtra(group: Option[String], next_button: Option[String], shu
     assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
+  }
+}
+
+/** Defines a possible list of conditions under which a question is shown */
+case class ConditionalQuestion(
+  question_id: Int,
+  when_any: Array[QuestionCondition])
+{
+  def validate() =
+  {
+  }
+}
+
+case class QuestionCondition(
+  question_id: Int,
+  answer_id: Int)
+{
+  def validate() =
+  {
   }
 }
 
@@ -327,8 +458,14 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
 }
 
 /** defines presentation options for an election */
-case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String, extra_options: Option[ElectionExtra]) {
-
+case class ElectionPresentation(
+  share_text: String,
+  theme: String,
+  urls: Array[Url],
+  theme_css: String,
+  extra_options: Option[ElectionExtra],
+  conditional_questions: Option[Array[ConditionalQuestion]])
+{
   def validate() = {
 
     validateStringLength(share_text, LONG_STRING, s"share_text too large $share_text")
