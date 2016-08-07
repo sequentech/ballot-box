@@ -298,13 +298,37 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 
     val presentationOk = presentation.validate()
 
-    if (virtualSubelections.isDefined)
-    {
-      assert(
-        virtualSubelections.get.sorted.deep == virtualSubelections.get.deep,
-        "virtualSubelections must be sorted"
-      )
-    }
+    // virtualSubelections setting only makes sense currently in dedicated
+    // installations because we do not check the admin ownership of those,
+    // and that's why support for subelections can be disabled via a config
+    // setting
+    val virtualElectionsAllowed = Play.current.configuration
+      .getBoolean("election.virtualElectionsAllowed")
+      .getOrElse(false)
+
+    assert(
+      !virtual || virtualElectionsAllowed,
+      "virtual elections are not allowed"
+    )
+
+    assert(
+      (
+        !virtual &&
+        (!virtualSubelections.isDefined || virtualSubelections.get.size == 0)
+      ) ||
+      (
+        virtual &&
+        virtualSubelections.isDefined &&
+        virtualSubelections.get.size > 0
+      ),
+      "inconsistent virtuality configuration of the election"
+    )
+
+    assert(
+      !virtualSubelections.isDefined ||
+      (virtualSubelections.get.sorted.deep == virtualSubelections.get.deep),
+      "subelections must be sorted"
+    )
 
     this.copy(description = descriptionOk, questions = questionsOk, presentation = presentationOk)
   }
