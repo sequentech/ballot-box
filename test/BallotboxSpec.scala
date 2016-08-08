@@ -65,7 +65,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
       DB.withSession { implicit session =>
         val cfg = TestData.config.validate[ElectionConfig].get
-        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None))
+        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None, None))
 
         // for validation to work we need to set the pk for the election manually (for election 1020)
         Elections.setPublicKeys(1, pks1020)
@@ -87,7 +87,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
       DB.withSession { implicit session =>
         val cfg = TestData.config.validate[ElectionConfig].get
-        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None))
+        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None, None))
 
         // for validation to work we need to set the pk for the election manually (for election 1020)
         Elections.setPublicKeys(1, pks1020)
