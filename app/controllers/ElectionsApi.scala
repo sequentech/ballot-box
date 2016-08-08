@@ -449,6 +449,10 @@ object ElectionsApi extends Controller with Response {
         body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
     }
 
+    if (!body.as[JsObject].keys.contains("logo_url")) {
+        body = body.as[JsObject] + ("logo_url" -> Json.toJson(""))
+    }
+
     val electionConfig = body.validate[ElectionConfig]
 
     electionConfig.fold(
@@ -501,7 +505,8 @@ object ElectionsApi extends Controller with Response {
                           None,
                           None,
                           validated.real,
-                          validated.virtual
+                          validated.virtual,
+                          validated.logo_url
                         )
                       )
                       Ok(response(result))
