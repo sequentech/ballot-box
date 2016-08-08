@@ -51,6 +51,9 @@ db_name = 'agora_elections'
 db_port = 5432
 app_host = 'localhost'
 app_port = 9000
+authapi_port = 10081
+authapi_credentials = dict()
+authapi_admin_eid = 1
 node = '/usr/local/bin/node'
 
 def get_local_hostport():
@@ -401,7 +404,7 @@ def calculate_results(cfg, args):
     host,port = get_local_hostport()
     headers = {'Authorization': auth, 'content-type': 'application/json'}
     url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers, data=jconfig)
+    r = request_post(url, headers=headers, data=jconfig)
     print(r.status_code, r.text)
 
 def publish_results(cfg, args):
@@ -410,8 +413,48 @@ def publish_results(cfg, args):
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/publish-results' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers)
-    print(r.status_code, r.text)
+    r = request_post(url, headers=headers)
+
+def request_post(url, *args, **kwargs):
+    print("POST %s" % url)
+    kwargs['verify'] = False
+    req = requests.post(url, *args, **kwargs)
+    print(req.status_code, req.text)
+    return req
+
+def get_authapi_auth_headers():
+    '''
+    Returns logged in headers
+    '''
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    event_id = authapi_admin_eid
+    req = request_post(
+        base_url + 'auth-event/%d/authenticate/' % event_id,
+        data=json.dumps(authapi_credentials)
+    )
+    if req.status_code != 200:
+        raise Exception("authapi login failed")
+
+    auth_token = req.json()['auth-token']
+    return {'AUTH': auth_token}
+
+def send_codes(eid, payload):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/census/send_auth/' % eid
+    r = request_post(url, headers=headers, data=payload)
+
+def auth_start(eid):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/started/' % eid
+    r = request_post(url, headers=headers)
+
+def auth_stop(eid):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/stopped/' % eid
+    r = request_post(url, headers=headers)
 
 def list_votes(cfg, args):
     conn = get_db_connection()

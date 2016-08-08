@@ -47,6 +47,8 @@ def main(argv):
     parser = argparse.ArgumentParser(description='batch admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('-c', '--command', help='command, <create|tally|results>', required=True)
     parser.add_argument('-d', '--directory', help='configurations directory')
+    parser.add_argument('-mb', '--message-body', help='send message body')
+    parser.add_argument('-ms', '--message-subject', help='send message subject')
     parser.add_argument(
         '--election-ids',
         metavar='ID',
@@ -107,6 +109,29 @@ def main(argv):
             print('next id %d, calculating results' % cfg['id'])
             cycle.calculate_results(cfg['id'])
             cycle.wait_for_state(cfg['id'], 'results_ok', 5)
+
+    elif args.command == 'list-auth-message':
+        for eid in args.election_ids:
+            print('next id %d, sending message' % eid)
+            payload = {
+              "msg":args.message_body,
+              "user-ids": None
+            }
+            if args.message_subject:
+                payload['subject'] = args.message_subject
+            print('> sending message..')
+            print('payload = %s' % json.dumps(payload))
+            admin.send_codes(eid, json.dumps(payload))
+
+    elif args.command == 'list-auth-start':
+        for eid in args.election_ids:
+            print('next id %d, starting auth event' % eid)
+            admin.auth_start(eid)
+
+    elif args.command == 'list-auth-stop':
+        for eid in args.election_ids:
+            print('next id %d, stopping auth event' % eid)
+            admin.auth_stop(eid)
 
     elif args.command == 'list-publish':
         for eid in args.election_ids:
