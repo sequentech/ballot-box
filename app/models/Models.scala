@@ -101,7 +101,8 @@ case class Election(
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   real: Boolean,
-  virtual: Boolean)
+  virtual: Boolean,
+  logo_url: Option[String])
 {
 
   def getDTO =
@@ -121,6 +122,10 @@ case class Election(
 
     if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
         configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("logo_url")) {
+        configJson = configJson.as[JsObject] + ("logo_url" -> Json.toJson(logo_url))
     }
 
     var config = configJson.validate[ElectionConfig].get
@@ -143,7 +148,8 @@ case class Election(
       res,
       resUp,
       real,
-      virtual)
+      virtual,
+      logo_url)
   }
 }
 
@@ -162,6 +168,7 @@ class Elections(tag: Tag)
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
   def real = column[Boolean]("real")
   def virtual = column[Boolean]("virtual")
+  def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
 
   def * = (
     id,
@@ -174,7 +181,8 @@ class Elections(tag: Tag)
     results.?,
     resultsUpdated.?,
     real,
-    virtual
+    virtual,
+    logo_url.?
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -245,12 +253,13 @@ case class ElectionDTO(
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   real: Boolean,
-  virtual: Boolean
+  virtual: Boolean,
+  logo_url: Option[String]
 )
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]])
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
 {
 
   /**
