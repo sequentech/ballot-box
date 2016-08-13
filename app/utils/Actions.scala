@@ -74,10 +74,13 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       val diff = now - rcvTime
 
       val compareOk = PlayCrypto.constantTimeEquals(Crypto.hmac(boothSecret, message), hash)
+      val permsOk = !perm.split("|").toSet
+        .intersect(rcvPerm.split("|").toSet)
+        .isEmpty
 
       // Logger.info(Crypto.hmac(boothSecret, message))
       // Logger.info(hash)
-      // Logger.info(compareOk + " " + (diff < expiry) + " " + (rcvUserId == userId) + " " + (rcvObjType == objType) + " " + (rcvObjId == objId) + " " + (rcvPerm == perm))
+      // Logger.info(compareOk + " " + (diff < expiry) + " " + (rcvUserId == userId) + " " + (rcvObjType == objType) + " " + (rcvObjId == objId) + " " + permsOk)
 
       // if the userId is the empty string we don't mind the user
       val userOk = (rcvUserId == userId || userId == "")
@@ -85,8 +88,8 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       // note that we can compare without doing contant time comparison received
       // strings because that's not critical for security, only hmac is
       if(compareOk && (diff < expiry) && userOk && (rcvObjType == objType) &&
-        (rcvObjId == objId) && (perm.split("|").contains(rcvPerm))) {
-
+        (rcvObjId == objId) && permsOk)
+      {
         return true
       }
 
