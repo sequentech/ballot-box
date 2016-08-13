@@ -74,8 +74,8 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       val diff = now - rcvTime
 
       val compareOk = PlayCrypto.constantTimeEquals(Crypto.hmac(boothSecret, message), hash)
-      val permsOk = !perm.split("|").toSet
-        .intersect(rcvPerm.split("|").toSet)
+      val permsOk = !perm.split('|').toSet
+        .intersect(rcvPerm.split('|').toSet)
         .isEmpty
 
       // Logger.info(Crypto.hmac(boothSecret, message))
