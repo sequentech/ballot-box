@@ -336,7 +336,7 @@ object ElectionsApi extends Controller with Response {
     }
   }
 
-  def getElectionStats(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+  def getElectionStats(id: Long) = HAction("", "AuthEvent", id, "edit|view").async { request =>
     getStats(id).map { s =>
         Ok(response(Json.toJson( s )))
     }

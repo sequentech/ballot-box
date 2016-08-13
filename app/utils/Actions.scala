@@ -85,7 +85,7 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
       // note that we can compare without doing contant time comparison received
       // strings because that's not critical for security, only hmac is
       if(compareOk && (diff < expiry) && userOk && (rcvObjType == objType) &&
-        (rcvObjId == objId) && (rcvPerm == perm)) {
+        (rcvObjId == objId) && (perm.split("|").contains(rcvPerm))) {
 
         return true
       }
