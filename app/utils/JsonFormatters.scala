@@ -65,6 +65,7 @@ object JsonFormatters {
   implicit val answerF = Json.format[Answer]
   implicit val questionExtraF = Json.format[QuestionExtra]
   implicit val questionF = Json.format[Question]
+  implicit val ShareTextItemF = Json.format[ShareTextItem]
 
   implicit val presentationF = Json.format[ElectionPresentation]
   implicit val configF = Json.format[ElectionConfig]

@@ -466,9 +466,22 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
   }
 }
 
+case class ShareTextItem(
+    name: String,
+    network: String,
+    button_text: String,
+    social_message: String,
+    active: Boolean
+)
+{
+  def validate = {
+    this
+  }
+}
+
 /** defines presentation options for an election */
 case class ElectionPresentation(
-  share_text: String,
+  share_text: Option[Array[ShareTextItem]],
   theme: String,
   urls: Array[Url],
   theme_css: String,
@@ -477,7 +490,6 @@ case class ElectionPresentation(
 {
   def validate() = {
 
-    validateStringLength(share_text, LONG_STRING, s"share_text too large $share_text")
     validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
     validateIdentifier(theme_css, "invalid theme_css")
