@@ -470,8 +470,7 @@ case class ShareTextItem(
     name: String,
     network: String,
     button_text: String,
-    social_message: String,
-    active: Boolean
+    social_message: String
 )
 {
   def validate = {
