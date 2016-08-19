@@ -467,10 +467,9 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
 }
 
 case class ShareTextItem(
-    name: String,
-    network: String,
-    button_text: String,
-    social_message: String
+  network: String,
+  button_text: String,
+  social_message: String
 )
 {
   def validate = {
