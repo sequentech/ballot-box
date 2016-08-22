@@ -102,6 +102,27 @@ def main(argv):
             cycle.tally(cfg['id'])
             cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 10000)
 
+    elif args.command == 'list-tally-with-ids':
+        for eid in args.election_ids:
+            print('next id %d, dumping votes with matching ids (in private datastore)' % eid)
+            ret = cycle.dump_votes_with_ids(eid)
+            if ret in [400, 500]:
+                  print("dump_votes_with_ids returned %d, continuing without it" % ret)
+                  continue
+
+            print('next id %d, stopping election' % eid)
+            ret = cycle.stop(eid)
+            if ret in [400, 500]:
+                  print("stop returned %d, continuing without it" % ret)
+                  continue
+
+            print('next id %d, tallying' % eid)
+            ret = cycle.tally_no_dump(eid)
+            cycle.wait_for_state(eid, ['tally_ok', 'results_ok'], 10000)
+            if ret in [400, 500]:
+                  print("tally_no_dump ids returned %d, continuing without it" % ret)
+                  continue
+
     elif args.command == 'list-results':
         for eid in args.election_ids:
             cfg = dict(id=eid)
