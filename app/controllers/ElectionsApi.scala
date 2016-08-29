@@ -548,22 +548,27 @@ object ElectionsApi
   {
     val promise = Promise[Result]
     Future {
-      var shareText = request.body.validate[Option[Array[ShareTextItem]]]
+      val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
+      if(allow_edit) {
+        var shareText = request.body.validate[Option[Array[ShareTextItem]]]
 
-      shareText match {
-        case e: JsError =>
-          promise.success(BadRequest(response(JsError.toFlatJson(e))))
-        case jST: JsSuccess[Option[Array[ShareTextItem]]] =>
-          val future = getElection(id) map { election =>
-            val oldConfig = election.getDTO.configuration
-            val config = oldConfig.copy(presentation = oldConfig.presentation.copy(share_text = jST.get))
-            val validated = config.validate(authorities, id)
-            val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
-            Ok(response(result))
-          } recover { case err =>
-            BadRequest(response(getMessageFromThrowable(err)))
-          }
-          promise.completeWith(future)
+        shareText match {
+          case e: JsError =>
+            promise.success(BadRequest(response(JsError.toFlatJson(e))))
+          case jST: JsSuccess[Option[Array[ShareTextItem]]] =>
+            val future = getElection(id) map { election =>
+              val oldConfig = election.getDTO.configuration
+              val config = oldConfig.copy(presentation = oldConfig.presentation.copy(share_text = jST.get))
+              val validated = config.validate(authorities, id)
+              val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
+              Ok(response(result))
+            } recover { case err =>
+              BadRequest(response(getMessageFromThrowable(err)))
+            }
+            promise.completeWith(future)
+        }
+      } else {
+        promise.success(BadRequest(response("Access Denied: Social share configuration modifications are not allowed")))
       }
     } (slickExecutionContext) recover { case err =>
       promise.success(BadRequest(response(getMessageFromThrowable(err))))

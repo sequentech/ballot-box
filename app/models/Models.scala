@@ -486,13 +486,27 @@ case class ElectionPresentation(
   extra_options: Option[ElectionExtra],
   conditional_questions: Option[Array[ConditionalQuestion]])
 {
+  def shareTextConfig() : Option[Array[ShareTextItem]]  = {
+    val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
+    if (allow_edit) {
+      share_text
+    } else {
+      Play.current.configuration.getConfigSeq("share_social.default") map { seq =>
+        (seq map { item =>
+            ShareTextItem ( item.getString("network").get, item.getString("button_text").get, item.getString("social_message").get )
+        }).toArray
+      }
+    }
+  }
+
   def validate() = {
 
     validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
     validateIdentifier(theme_css, "invalid theme_css")
+    val shareText = shareTextConfig()
 
-    this.copy(urls = urlsOk)
+    this.copy(urls = urlsOk, share_text = shareText)
   }
 }
 
