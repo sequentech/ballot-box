@@ -583,9 +583,9 @@ def change_social(cfg, args):
 
         session = requests.sessions.Session()
         session.mount('http://', RejectAdapter())
-        elections = [cfg['election_id']]
 
-        for electionId in elections:
+        for election in cfg['election_id']:
+            electionId = int(election)
             auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
             host,port = get_ssl_hostport()
             headers = {'Authorization': auth, 'content-type': 'application/json'}
