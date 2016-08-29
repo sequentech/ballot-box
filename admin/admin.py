@@ -571,6 +571,7 @@ def encrypt(cfg, args):
         exit(1)
 
 def change_social(cfg, args):
+
     if args.share_config != None and os.path.isfile(args.share_config):
         from reject_adapter import RejectAdapter
         with open(args.share_config) as share_config_file:
@@ -582,14 +583,16 @@ def change_social(cfg, args):
 
         session = requests.sessions.Session()
         session.mount('http://', RejectAdapter())
-        electionId = cfg['election_id'] 
-        auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
-        host,port = get_ssl_hostport()
-        headers = {'Authorization': auth, 'content-type': 'application/json'}
-        url = 'https://%s:%d/api/election/%d/update-share' % (host, port, electionId)
-        r = session.request('post', url, data=json.dumps(share_config), headers=headers,
-                            verify=ssl_calist_path, cert=(ssl_cert_path, ssl_key_path))
-        print(r.status_code, r.text)
+        elections = [cfg['election_id']]
+
+        for electionId in elections:
+            auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
+            host,port = get_ssl_hostport()
+            headers = {'Authorization': auth, 'content-type': 'application/json'}
+            url = 'https://%s:%d/api/election/%d/update-share' % (host, port, electionId)
+            r = session.request('post', url, data=json.dumps(share_config), headers=headers,
+                                verify=ssl_calist_path, cert=(ssl_cert_path, ssl_key_path))
+            print(r.status_code, r.text)
     else:
         print("no valid share-config file %s" % args.share_config)
         return 400
@@ -633,7 +636,7 @@ dump_pks <election_id>: dumps pks for an election (public datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 dump_votes <election_id>: dumps votes for an election (private datastore)
-change_social <election_id>:
+change_social <election_id>: changes the social netoworks share buttons configuration
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
@@ -654,7 +657,7 @@ change_social <election_id>:
 
         # commands that use an election id
         if len(args.command) == 2:
-            if command in ['count_votes', 'dump_ids']:
+            if command in ['count_votes', 'dump_ids', 'change_social']:
                 if is_int(args.command[1]) or ',' in args.command[1]:
                     config['election_id'] = args.command[1].split(',')
                 else:
