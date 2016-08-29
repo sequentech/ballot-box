@@ -567,6 +567,7 @@ def encrypt(cfg, args):
 
 def change_social(cfg, args):
     if args.share_config != None and os.path.isfile(args.share_config):
+        from reject_adapter import RejectAdapter
         with open(args.share_config) as share_config_file:
             share_config = json.load(share_config_file)
 

@@ -1,7 +1,7 @@
 SQLAlchemy==0.9.8
 argparse==1.2.1
 prettytable==0.7.2
-requests==2.5.0
+git+https://github.com/agoravoting/requests.git@agora#egg=requests
 wsgiref==0.1.2
 psycopg2==2.6
 geoip2==2.1.0
