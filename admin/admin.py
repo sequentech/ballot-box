@@ -55,9 +55,14 @@ authapi_port = 10081
 authapi_credentials = dict()
 authapi_admin_eid = 1
 node = '/usr/local/bin/node'
+ssl_host = 'agora'
+ssl_port = 14453
 
 def get_local_hostport():
     return app_host, app_port
+
+def get_ssl_hostport():
+    return ssl_host, ssl_port
 
 def votes_table():
     metadata = MetaData()
@@ -579,10 +584,10 @@ def change_social(cfg, args):
         session.mount('http://', RejectAdapter())
         electionId = cfg['election_id'] 
         auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
-        host,port = get_local_hostport()
+        host,port = get_ssl_hostport()
         headers = {'Authorization': auth, 'content-type': 'application/json'}
         url = 'https://%s:%d/api/election/%d/update-share' % (host, port, electionId)
-        r = session.request('post', data=json.dumps(share_config), headers={'content-type': 'application/json'},
+        r = session.request('post', url, data=json.dumps(share_config), headers=headers,
                             verify=ssl_calist_path, cert=(ssl_cert_path, ssl_key_path))
         print(r.status_code, r.text)
     else:
