@@ -16,9 +16,7 @@ SELECT concat('{', string_agg(to_json("key") || ':' || "value", ','), '}')::json
          WHERE "key" <> "key_to_set"
          UNION ALL
         SELECT "key_to_set", to_json("value_to_set")) AS "fields"
-$function$;
-
-
+$function$;;
 
 CREATE OR REPLACE FUNCTION "json_object_set_path"(
   "json"          json,
@@ -45,7 +43,7 @@ SELECT CASE COALESCE(array_length("key_path", 1), 0)
        END
   FROM array_lower("key_path", 1) l,
        array_upper("key_path", 1) u
-$function$;
+$function$;;
 
 UPDATE election SET configuration=json_object_set_path(configuration::json,'{presentation,share_text}',cast(concat('[{"network":"Twitter","button_text":"","social_message":"', configuration::json->'presentation'->>'share_text', '"}]') AS json));
 
@@ -67,7 +65,7 @@ SELECT concat('{', string_agg(to_json("key") || ':' || "value", ','), '}')::json
          WHERE "key" <> "key_to_set"
          UNION ALL
         SELECT "key_to_set", to_json("value_to_set")) AS "fields"
-$function$;
+$function$;;
 
 CREATE OR REPLACE FUNCTION "json_object_set_path"(
   "json"          json,
@@ -94,6 +92,6 @@ SELECT CASE COALESCE(array_length("key_path", 1), 0)
        END
   FROM array_lower("key_path", 1) l,
        array_upper("key_path", 1) u
-$function$;
+$function$;;
 
 UPDATE election SET configuration=json_object_set_path(configuration::json,'{presentation,share_text}',cast(configuration::json#>'{presentation,share_text,0,social_message}' AS json));
