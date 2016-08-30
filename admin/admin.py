@@ -55,14 +55,9 @@ authapi_port = 10081
 authapi_credentials = dict()
 authapi_admin_eid = 1
 node = '/usr/local/bin/node'
-ssl_host = 'agora'
-ssl_port = 14453
 
 def get_local_hostport():
     return app_host, app_port
-
-def get_ssl_hostport():
-    return ssl_host, ssl_port
 
 def votes_table():
     metadata = MetaData()
@@ -573,28 +568,19 @@ def encrypt(cfg, args):
 def change_social(cfg, args):
 
     if args.share_config != None and os.path.isfile(args.share_config):
-        from reject_adapter import RejectAdapter
         with open(args.share_config) as share_config_file:
             share_config = json.load(share_config_file)
-
-        ssl_calist_path = '/srv/certs/selfsigned/calist'
-        ssl_cert_path = '/srv/certs/selfsigned/cert.pem'
-        ssl_key_path = '/srv/certs/selfsigned/key-nopass.pem'
-
-        session = requests.sessions.Session()
-        session.mount('http://', RejectAdapter())
 
         for election in cfg['election_id']:
             electionId = int(election)
             auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
-            host,port = get_ssl_hostport()
+            host,port = get_local_hostport()
             headers = {'Authorization': auth, 'content-type': 'application/json'}
-            url = 'https://%s:%d/api/election/%d/update-share' % (host, port, electionId)
-            r = session.request('post', url, data=json.dumps(share_config), headers=headers,
-                                verify=ssl_calist_path, cert=(ssl_cert_path, ssl_key_path))
+            url = 'http://%s:%d/api/election/%d/update-share' % (host, port, electionId)
+            r = requests.post(url, data=json.dumps(share_config), headers=headers)
             print(r.status_code, r.text)
     else:
-        print("no valid share-config file %s" % args.share_config)
+        print("invalid share-config file %s" % args.share_config)
         return 400
 
 def get_hmac(cfg, userId, objType, objId, perm):
