@@ -140,11 +140,14 @@ object Datastore {
     val tarTarget = getPath(electionId, s"$electionId.tar", false)
     val tallyLink = getPath(electionId, TALLY, true)
     val tallyTarget = getPath(electionId, TALLY, false)
-    if(Files.exists(tallyTarget)) {
+
+    if(Files.exists(tallyTarget))
+    {
       Files.deleteIfExists(tallyLink)
       Files.createSymbolicLink(tallyLink, tallyTarget)
     }
-    else {
+    else if (subtallies.size == 0)
+    {
       Logger.warn(s"publishResults: tally does not exist for $electionId")
       throw new java.io.FileNotFoundException("tally does not exist")
     }
