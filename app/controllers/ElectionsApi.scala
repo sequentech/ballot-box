@@ -121,7 +121,7 @@ object ElectionsApi
   }
 
   /** sets election in started state, votes will be accepted */
-  def start(id: Long) = HAction("", "AuthEvent", id, "edit").async { request => Future {
+  def start(id: Long) = HAction("", "AuthEvent", id, "edit|start").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Ok(response(ret))
@@ -129,7 +129,7 @@ object ElectionsApi
   }(slickExecutionContext)}
 
   /** sets election in stopped state, votes will not be accepted */
-  def stop(id: Long) = HAction("", "AuthEvent", id, "edit").async { request => Future {
+  def stop(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STOPPED)
     Ok(response(ret))
@@ -137,7 +137,7 @@ object ElectionsApi
   }(slickExecutionContext)}
 
   /** request a tally, dumps votes to the private ds */
-  def tally(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+  def tally(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async { request =>
 
     val tally = getElection(id).flatMap { e =>
       if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
@@ -152,7 +152,7 @@ object ElectionsApi
   }
 
   /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
-  def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+  def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async(BodyParsers.parse.json) { request =>
 
     val validIds = request.body.asOpt[List[String]].map(_.toSet)
 
@@ -169,7 +169,7 @@ object ElectionsApi
   }
 
   /** request a tally, but do not dump votes, use those in the private ds */
-  def tallyNoDump(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+  def tallyNoDump(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async { request =>
 
     val tally = getElection(id).flatMap { e =>
       if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
@@ -184,7 +184,7 @@ object ElectionsApi
   }
 
   /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit")
+  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results")
     .async(BodyParsers.parse.json)
     {
       request =>
@@ -290,7 +290,7 @@ object ElectionsApi
         }
     }
 
-  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit").async {
+  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit|publish-results").async {
 
     Logger.info(s"publishing results for election $id")
 
