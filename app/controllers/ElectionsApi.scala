@@ -342,7 +342,7 @@ object ElectionsApi
     }
   }
 
-  def getResults(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+  def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view").async { request =>
 
     val future = getElection(id).map { election =>
       Ok(response(election.results))
