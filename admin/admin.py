@@ -565,6 +565,24 @@ def encrypt(cfg, args):
         print("No public key or votes file, exiting..")
         exit(1)
 
+def change_social(cfg, args):
+
+    if args.share_config != None and os.path.isfile(args.share_config):
+        with open(args.share_config) as share_config_file:
+            share_config = json.load(share_config_file)
+
+        for election in cfg['election_id']:
+            electionId = int(election)
+            auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
+            host,port = get_local_hostport()
+            headers = {'Authorization': auth, 'content-type': 'application/json'}
+            url = 'http://%s:%d/api/election/%d/update-share' % (host, port, electionId)
+            r = requests.post(url, data=json.dumps(share_config), headers=headers)
+            print(r.status_code, r.text)
+    else:
+        print("invalid share-config file %s" % args.share_config)
+        return 400
+
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
 
@@ -604,6 +622,7 @@ dump_pks <election_id>: dumps pks for an election (public datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 dump_votes <election_id>: dumps votes for an election (private datastore)
+change_social <election_id>: changes the social netoworks share buttons configuration
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
@@ -612,6 +631,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('--ips-log', help='')
+    parser.add_argument('--share-config', help='json file with the social netoworks share buttons configuration')
     # remove
     parser.add_argument('--elections-file', help='file with grouped elections')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
@@ -623,7 +643,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
 
         # commands that use an election id
         if len(args.command) == 2:
-            if command in ['count_votes', 'dump_ids']:
+            if command in ['count_votes', 'dump_ids', 'change_social']:
                 if is_int(args.command[1]) or ',' in args.command[1]:
                     config['election_id'] = args.command[1].split(',')
                 else:

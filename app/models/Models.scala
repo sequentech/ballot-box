@@ -466,23 +466,47 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
   }
 }
 
+case class ShareTextItem(
+  network: String,
+  button_text: String,
+  social_message: String
+)
+{
+  def validate = {
+    this
+  }
+}
+
 /** defines presentation options for an election */
 case class ElectionPresentation(
-  share_text: String,
+  share_text: Option[Array[ShareTextItem]],
   theme: String,
   urls: Array[Url],
   theme_css: String,
   extra_options: Option[ElectionExtra],
   conditional_questions: Option[Array[ConditionalQuestion]])
 {
+  def shareTextConfig() : Option[Array[ShareTextItem]]  = {
+    val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
+    if (allow_edit) {
+      share_text
+    } else {
+      Play.current.configuration.getConfigSeq("share_social.default") map { seq =>
+        (seq map { item =>
+            ShareTextItem ( item.getString("network").get, item.getString("button_text").get, item.getString("social_message").get )
+        }).toArray
+      }
+    }
+  }
+
   def validate() = {
 
-    validateStringLength(share_text, LONG_STRING, s"share_text too large $share_text")
     validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
     validateIdentifier(theme_css, "invalid theme_css")
+    val shareText = shareTextConfig()
 
-    this.copy(urls = urlsOk)
+    this.copy(urls = urlsOk, share_text = shareText)
   }
 }
 

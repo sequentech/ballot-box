@@ -52,7 +52,24 @@ import java.nio.file.{Paths, Files}
   * implicit val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   *
   */
-object ElectionsApi extends Controller with Response {
+
+trait ErrorProcessing {
+  /**
+   * Get the message safely from a `Throwable`
+   */
+  def getMessageFromThrowable(t: Throwable): String = {
+    if (null == t.getCause) {
+        t.toString
+     } else {
+        t.getCause.getMessage
+     }
+  }
+}
+
+object ElectionsApi 
+  extends Controller
+  with Response
+  with ErrorProcessing {
 
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
@@ -71,6 +88,11 @@ object ElectionsApi extends Controller with Response {
   /** updates an election's config */
   def update(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
     updateElection(id, request)
+  }  
+  
+  /** updates an election's social share buttons config */
+  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+    updateShareElection(id, request)
   }
 
   /** gets an election */
@@ -520,6 +542,39 @@ object ElectionsApi extends Controller with Response {
       }
     )
   }(slickExecutionContext)
+
+  /** Future: updates an election's share buttons config */
+  private def updateShareElection(id: Long, request: Request[JsValue]) : Future[Result] = 
+  {
+    val promise = Promise[Result]
+    Future {
+      val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
+      if(allow_edit) {
+        var shareText = request.body.validate[Option[Array[ShareTextItem]]]
+
+        shareText match {
+          case e: JsError =>
+            promise.success(BadRequest(response(JsError.toFlatJson(e))))
+          case jST: JsSuccess[Option[Array[ShareTextItem]]] =>
+            val future = getElection(id) map { election =>
+              val oldConfig = election.getDTO.configuration
+              val config = oldConfig.copy(presentation = oldConfig.presentation.copy(share_text = jST.get))
+              val validated = config.validate(authorities, id)
+              val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
+              Ok(response(result))
+            } recover { case err =>
+              BadRequest(response(getMessageFromThrowable(err)))
+            }
+            promise.completeWith(future)
+        }
+      } else {
+        promise.success(BadRequest(response("Access Denied: Social share configuration modifications are not allowed")))
+      }
+    } (slickExecutionContext) recover { case err =>
+      promise.success(BadRequest(response(getMessageFromThrowable(err))))
+    }
+    promise.future
+  }
 
   /** Future: updates an election's config */
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
