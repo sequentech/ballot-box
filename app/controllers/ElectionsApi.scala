@@ -342,7 +342,7 @@ object ElectionsApi
     }
   }
 
-  def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view").async { request =>
+  def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view-results").async { request =>
 
     val future = getElection(id).map { election =>
       Ok(response(election.results))
@@ -352,13 +352,13 @@ object ElectionsApi
     }
   }
 
-  def getElectionVoters(id: Long) = HAction("", "AuthEvent", id, "edit|view").async { request =>
+  def getElectionVoters(id: Long) = HAction("", "AuthEvent", id, "edit|view-voters").async { request =>
     getVoters(id).map { voters =>
         Ok(response(Json.toJson( voters.map(v => v.voter_id) )))
     }
   }
 
-  def getElectionStats(id: Long) = HAction("", "AuthEvent", id, "edit|view").async { request =>
+  def getElectionStats(id: Long) = HAction("", "AuthEvent", id, "edit|view-stats").async { request =>
     getStats(id).map { s =>
         Ok(response(Json.toJson( s )))
     }
