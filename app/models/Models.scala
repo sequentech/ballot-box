@@ -520,7 +520,7 @@ case class Url(title: String, url: String) {
 
   def validate() = {
     validateStringLength(title, SHORT_STRING, s"invalid url title $title")
-    validateUrl(url, s"invalid url $url")
+    validateStringLength(url, SHORT_STRING, s"too long url $url")
 
     this
   }
