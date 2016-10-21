@@ -54,6 +54,10 @@ app_port = 9000
 authapi_port = 10081
 authapi_credentials = dict()
 authapi_admin_eid = 1
+authapi_db_user = 'authapi'
+authapi_db_password = 'authapi'
+authapi_db_name = 'authapi'
+authapi_db_port = 5432
 node = '/usr/local/bin/node'
 
 def get_local_hostport():
@@ -82,6 +86,18 @@ def elections_table():
         Column('pks', String),
         Column('results', String),
         Column('results_updated', String)
+    )
+    return elections
+
+def acls_table():
+    metadata = MetaData()
+    elections = Table('api_acl', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('perm', String),
+        Column('user_id', Integer),
+        Column('object_id', String),
+        Column('object_type', String),
+        Column('created', TIMESTAMP)
     )
     return elections
 
@@ -132,6 +148,43 @@ def get_db_connection():
     conn = engine.connect()
 
     return conn
+
+def get_authapi_db_connection():
+    engine = create_engine(
+        'postgresql+psycopg2://%s:%s@localhost:%d/%s' % (
+            authapi_db_user,
+            authapi_db_password,
+            authapi_db_port,
+            authapi_db_name
+        )
+    )
+    conn = engine.connect()
+
+    return conn
+
+def authapi_ensure_acls(cfg, args):
+    conn = get_authapi_db_connection()
+    acls = []
+    with codecs.open(args.acls_path, encoding='utf-8', mode='w+') as f:
+        acls = [line.split(',') for line in f.read().splitlines()]
+
+    '(email|tlf),(email@example.com|+34666777888),permission_name,object_type,object_id,user_election_id'
+
+    # TODO: do an UPSERT
+    for (user_type, user_id, perm_name, obj_type, obj_id, user_eid) in acls:
+        if user_type == tlf:
+            q_uid = '''SELECT'''
+        else:
+            q = '''
+            '''
+        q_insert = '''
+        INSERT INTO api_acl(perm,user_id,object_id,object_type)
+        SELECT ('%s',%s,%s,'%s')
+        ''' % (
+            perm, user_id,object_id,object_type
+        )
+        conn.execute(q_insert)
+
 
 # writes the votes in the format expected by eo
 def write_node_votes(votesData, filePath):
@@ -623,8 +676,10 @@ encrypt <election_id>: encrypts votes using scala (public key must be in datasto
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 dump_votes <election_id>: dumps votes for an election (private datastore)
 change_social <election_id>: changes the social netoworks share buttons configuration
+authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist.
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
+    parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--filter-config', help='file with filter configuration', default = None)
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)

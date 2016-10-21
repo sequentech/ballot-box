@@ -394,6 +394,7 @@ case class QuestionExtra(
   next_button: Option[String],
   shuffled_categories: Option[String],
   shuffling_policy: Option[String],
+  ballot_parity_criteria: Option[String],
   restrict_choices_by_tag__name: Option[String],
   restrict_choices_by_tag__max: Option[String],
   restrict_choices_by_tag__max_error_msg: Option[String],
@@ -412,6 +413,7 @@ case class QuestionExtra(
     assert(!next_button.isDefined || next_button.get.length <= SHORT_STRING, "next_button too long")
     assert(!shuffled_categories.isDefined || shuffled_categories.get.length <= LONG_STRING, "shuffled_categories too long")
     assert(!shuffling_policy.isDefined || shuffling_policy.get.length <= SHORT_STRING, "shuffling_policy too long")
+    assert(!ballot_parity_criteria.isDefined || ballot_parity_criteria.get.length <= SHORT_STRING, "ballot_parity_criteria too long")
 
     assert(!restrict_choices_by_tag__name.isDefined || restrict_choices_by_tag__name.get.length <= SHORT_STRING, "restrict_choices_by_tag__name too long")
     assert(!restrict_choices_by_tag__max.isDefined || restrict_choices_by_tag__max.get.toInt >= 1, "invalid restrict_choices_by_tag__max")
