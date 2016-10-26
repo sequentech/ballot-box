@@ -350,7 +350,7 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 
 /** defines a question asked in an election */
 case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
-  randomize_answer_order: Boolean, tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
+  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
 
   def validate() = {
 
@@ -405,6 +405,9 @@ case class QuestionExtra(
   recommended_preset__title: Option[String],
   recommended_preset__accept_text: Option[String],
   recommended_preset__deny_text: Option[String],
+  shuffle_categories: Option[Boolean],
+  shuffle_all_options: Option[Boolean],
+  shuffle_category_list: Option[Array[String]],
   default_selected_option_ids: Option[Array[Int]])
 {
 
