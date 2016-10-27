@@ -408,6 +408,7 @@ case class QuestionExtra(
   shuffle_categories: Option[Boolean],
   shuffle_all_options: Option[Boolean],
   shuffle_category_list: Option[Array[String]],
+  show_points: Option[Boolean],
   default_selected_option_ids: Option[Array[Int]])
 {
 
