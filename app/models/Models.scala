@@ -384,6 +384,19 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
+    // validate shuffle categories
+    if (extra_options.isDefined && 
+        extra_options.get.shuffle_category_list.isDefined &&
+        extra_options.get.shuffle_category_list.get.size > 0) {
+      val categories = answers.flatMap( x =>
+        x.category
+      ).toSet
+
+      extra_options.get.shuffle_category_list.get.map( x =>
+        assert(categories.contains(x), s"category $x in shuffle_category_list not found is invalid")
+      )
+    }
+
     this.copy(description = descriptionOk, answers = answersOk)
   }
 }
@@ -431,6 +444,10 @@ case class QuestionExtra(
     assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
+
+    assert(!(shuffle_all_options.isDefined && shuffle_category_list.isDefined &&
+           shuffle_all_options.get) || 0 == shuffle_category_list.get.size,
+           "shuffle_all_options is true but shuffle_category_list is not empty")
   }
 }
 
