@@ -388,13 +388,11 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     if (extra_options.isDefined && 
         extra_options.get.shuffle_category_list.isDefined &&
         extra_options.get.shuffle_category_list.get.size > 0) {
-      val categories = answers.flatMap( x =>
-        x.category
-      ).toSet
+      val categories = answers.map{ x => x.category } toSet
 
-      extra_options.get.shuffle_category_list.get.map( x =>
+      extra_options.get.shuffle_category_list.get.map { x =>
         assert(categories.contains(x), s"category $x in shuffle_category_list not found is invalid")
-      )
+      }
     }
 
     this.copy(description = descriptionOk, answers = answersOk)
