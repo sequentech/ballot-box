@@ -350,7 +350,7 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 
 /** defines a question asked in an election */
 case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
-  randomize_answer_order: Boolean, tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
+  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
 
   def validate() = {
 
@@ -384,6 +384,17 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
+    // validate shuffle categories
+    if (extra_options.isDefined && 
+        extra_options.get.shuffle_category_list.isDefined &&
+        extra_options.get.shuffle_category_list.get.size > 0) {
+      val categories = answers.map{ x => x.category } toSet
+
+      extra_options.get.shuffle_category_list.get.map { x =>
+        assert(categories.contains(x), s"category $x in shuffle_category_list not found is invalid")
+      }
+    }
+
     this.copy(description = descriptionOk, answers = answersOk)
   }
 }
@@ -405,6 +416,10 @@ case class QuestionExtra(
   recommended_preset__title: Option[String],
   recommended_preset__accept_text: Option[String],
   recommended_preset__deny_text: Option[String],
+  shuffle_categories: Option[Boolean],
+  shuffle_all_options: Option[Boolean],
+  shuffle_category_list: Option[Array[String]],
+  show_points: Option[Boolean],
   default_selected_option_ids: Option[Array[Int]])
 {
 
@@ -427,6 +442,10 @@ case class QuestionExtra(
     assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
+
+    assert(!(shuffle_all_options.isDefined && shuffle_category_list.isDefined &&
+           shuffle_all_options.get) || 0 == shuffle_category_list.get.size,
+           "shuffle_all_options is true but shuffle_category_list is not empty")
   }
 }
 
@@ -520,7 +539,7 @@ case class Url(title: String, url: String) {
 
   def validate() = {
     validateStringLength(title, SHORT_STRING, s"invalid url title $title")
-    validateUrl(url, s"invalid url $url")
+    validateStringLength(url, SHORT_STRING, s"too long url $url")
 
     this
   }
