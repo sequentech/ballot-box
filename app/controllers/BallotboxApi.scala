@@ -87,12 +87,17 @@ object BallotboxApi extends Controller with Response {
 
                     val validated = vote.validate(pks, true, electionId, voterId)
                     val result = DAL.votes.insertWithSession(validated)
-                    val callbackUrl = voteCallbackUrl
-                        .replace("${eid}", electionId+"")
-                        .replace("${uid}", voterId)
                     val now = new java.util.Date().getTime / 1000
                     val message = "$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
-                    callbackUrl.map { url => postVoteCallback(url, message) }
+                    callbackUrl.map {
+                      url => postVoteCallback(
+                        voteCallbackUrl
+                          .replace("${eid}", electionId+"")
+                          .replace("${uid}", voterId)
+                        ,
+                        message
+                      )
+                    }
                     Ok(response(result))
                   }
                 )
@@ -197,7 +202,7 @@ object BallotboxApi extends Controller with Response {
       println(s"posting to $url")
       val hmac = Crypto.hmac(boothSecret, message)
       val khmac = s"khmac:///sha-256;$hmac/$message"
-      val f = ws.url(url)
+      val f = WS.url(url)
         .withHeaders(
           "Accept" -> "application/json",
           "Authorization" -> khmac)
