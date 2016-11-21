@@ -91,7 +91,7 @@ object BallotboxApi extends Controller with Response {
                     val message = "$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
                     callbackUrl.map {
                       url => postVoteCallback(
-                        voteCallbackUrl
+                        url
                           .replace("${eid}", electionId+"")
                           .replace("${uid}", voterId)
                         ,
