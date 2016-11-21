@@ -206,7 +206,6 @@ object BallotboxApi extends Controller with Response {
         .withHeaders(
           "Accept" -> "application/json",
           "Authorization" -> khmac)
-        .withRequestTimeout(3000.millis) // voting shouldn't take much time!
         .post(Results.EmptyContent())
         .map { resp =>
           if(resp.status != HTTP.ACCEPTED) {
