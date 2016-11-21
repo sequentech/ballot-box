@@ -91,7 +91,7 @@ object BallotboxApi extends Controller with Response {
                         .replace("${eid}", electionId+"")
                         .replace("${uid}", voterId)
                     val now = new java.util.Date().getTime / 1000
-                    val message = "$voterId:successful_auth:$now"
+                    val message = "$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
                     callbackUrl.map { url => postVoteCallback(url, message) }
                     Ok(response(result))
                   }
