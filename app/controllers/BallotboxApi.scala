@@ -89,6 +89,7 @@ object BallotboxApi extends Controller with Response {
                     val result = DAL.votes.insertWithSession(validated)
                     val now = new java.util.Date().getTime / 1000
                     val message = "$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
+                    val timestamp: Long = System.currentTimeMillis / 1000
                     voteCallbackUrl.map {
                       url => postVoteCallback(
                         url
@@ -96,6 +97,9 @@ object BallotboxApi extends Controller with Response {
                           .replace("${uid}", voterId)
                         ,
                         message
+                          .replace("$voterId", voterId)
+                          .replace("$electionId", electionId+"")
+                          .replace("$now", timestamp+"")
                       )
                     }
                     Ok(response(result))
