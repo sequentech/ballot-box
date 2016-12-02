@@ -192,7 +192,7 @@ def dump_votes_with_ids(id):
     print('> dump_votes_with_ids..')
     admin.dump_votes_with_ids(cfg, args)
 
-def calculate_results(id, results_config):
+def calculate_results(id, results_config=None):
     if not os.path.isfile(tally_path(id)):
         raise Exception('tally file not found (private ds)')
     cfg = {}

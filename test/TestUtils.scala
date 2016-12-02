@@ -77,9 +77,13 @@ trait TestContexts {
           "min": 0,
           "num_winners": 1,
           "title": "Secretaria General",
-          "randomize_answer_order": true,
           "tally_type": "plurality-at-large",
           "answer_total_votes_percentage": "over-total-valid-votes",
+          "extra_options": {
+              "shuffle_categories": true,
+              "shuffle_all_options": true,
+              "shuffle_category_list": []
+          }
           "answers": [
               {
                   "id": 0,
