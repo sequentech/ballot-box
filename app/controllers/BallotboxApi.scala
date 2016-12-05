@@ -23,7 +23,6 @@ import utils.Response
 
 import play.api._
 import play.api.mvc._
-import play.api.libs.json._
 import play.api.Play.current
 import play.api.db.slick.DB
 import play.libs.Akka
@@ -88,7 +87,21 @@ object BallotboxApi extends Controller with Response {
 
                     val validated = vote.validate(pks, true, electionId, voterId)
                     val result = DAL.votes.insertWithSession(validated)
-                    voteCallbackUrl.map { url => postVoteCallback(url, voterId) }
+                    val now = new java.util.Date().getTime / 1000
+                    val message = "$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
+                    val timestamp: Long = System.currentTimeMillis / 1000
+                    voteCallbackUrl.map {
+                      url => postVoteCallback(
+                        url
+                          .replace("${eid}", electionId+"")
+                          .replace("${uid}", voterId)
+                        ,
+                        message
+                          .replace("$voterId", voterId)
+                          .replace("$electionId", electionId+"")
+                          .replace("$now", timestamp+"")
+                      )
+                    }
                     Ok(response(result))
                   }
                 )
@@ -189,19 +202,20 @@ object BallotboxApi extends Controller with Response {
   }
 
   private def postVoteCallback(url: String, message: String) = {
-    try{
+    try {
       println(s"posting to $url")
       val hmac = Crypto.hmac(boothSecret, message)
       val khmac = s"khmac:///sha-256;$hmac/$message"
-      val data = Json.obj(
-        "message" -> message,
-        "credentials" -> khmac
-      )
-      val f = WS.url(url).post(data).map { resp =>
-        if(resp.status != HTTP.ACCEPTED) {
-          Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body}")
+      val f = WS.url(url)
+        .withHeaders(
+          "Accept" -> "application/json",
+          "Authorization" -> khmac)
+        .post(Results.EmptyContent())
+        .map { resp =>
+          if(resp.status != HTTP.ACCEPTED) {
+            Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body} and khmac ${khmac}")
+          }
         }
-      }
       f.recover {
         case t: Throwable => {
           Logger.warn(s"Exception caught when posting to callback $t")
