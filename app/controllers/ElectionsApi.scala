@@ -297,7 +297,9 @@ object ElectionsApi
     val future = getElection(id).flatMap
     {
       e =>
-        if(e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK)
+        if( Elections.TALLY_OK    == e.state ||
+            Elections.RESULTS_OK  == e.state ||
+            Elections.RESULTS_PUB == e.state )
         {
           var electionConfigStr = Json.parse(e.configuration).as[JsObject]
           if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
