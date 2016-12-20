@@ -255,8 +255,8 @@ object ElectionsApi
                           }
                         case _ =>
                           if(
-                            (e.state == Elections.TALLY_OK || e.state == Elections.RESULTS_OK) ||
-                            (e.virtual && e.state != Elections.RESULTS_PUB)
+                            (Elections.TALLY_OK == e.state || Elections.RESULTS_OK == e.state || Elections.RESULTS_PUB == e.state) ||
+                            e.virtual
                           ) {
                             calcResults(id, config, validated.virtualSubelections.get).flatMap( r => updateResults(e, r) )
                           }
