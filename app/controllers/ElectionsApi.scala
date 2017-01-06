@@ -81,17 +81,17 @@ object ElectionsApi
   val authorities = getAuthorityData
 
   /** inserts election into the db in the registered state */
-  def register(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+  def register(id: Long) = HAction("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
     registerElection(request, id)
   }
 
   /** updates an election's config */
-  def update(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+  def update(id: Long) = HAction("", "AuthEvent", id, "edit|update").async(BodyParsers.parse.json) { request =>
     updateElection(id, request)
   }  
   
   /** updates an election's social share buttons config */
-  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
     updateShareElection(id, request)
   }
 
@@ -107,7 +107,7 @@ object ElectionsApi
   }
 
   /** Creates an election in eo */
-  def create(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+  def create(id: Long) = HAction("", "AuthEvent", id, "edit|create").async { request =>
 
     getElection(id).flatMap(createElection).recover {
 
@@ -487,6 +487,13 @@ object ElectionsApi
       {
         try {
           val validated = config.validate(authorities, id)
+          if (validated.real && !HMACAuthAction(
+            "", "AuthEvent", id, "edit|register-real"
+          ).validate(request))
+          {
+            Logger.warn(s"Invalid config json, user has not permissions to register real elections")
+            BadRequest(error(s"Invalid config json"))
+          }
           DB.withSession
           {
             implicit session =>
@@ -599,6 +606,13 @@ object ElectionsApi
       config => {
 
         val validated = config.validate(authorities, id)
+        if (validated.real && !HMACAuthAction(
+          "", "AuthEvent", id, "edit|register-real"
+        ).validate(request))
+        {
+          Logger.warn(s"Invalid config json, user has not permissions to register real elections")
+          BadRequest(error(s"Invalid config json"))
+        }
 
         val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
         Ok(response(result))
