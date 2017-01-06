@@ -487,12 +487,24 @@ object ElectionsApi
       {
         try {
           val validated = config.validate(authorities, id)
-          if (validated.real && !HMACAuthAction(
-            "", "AuthEvent", id, "edit|register-real"
-          ).validate(request))
+          if (validated.real)
           {
-            Logger.warn(s"Invalid config json, user has not permissions to register real elections")
-            BadRequest(error(s"Invalid config json"))
+            request
+              .headers
+              .get("Authorization")
+              .map(
+                HMACAuthAction("", "AuthEvent", id, "edit|register-real")
+                  .validate(request)
+              ) match
+            {
+              case Some(true) => None
+              case _ => BadRequest(
+                error(
+                  s"Invalid config json, user has not permissions to " +
+                  s"register real elections"
+                )
+              )
+            }
           }
           DB.withSession
           {
@@ -606,12 +618,24 @@ object ElectionsApi
       config => {
 
         val validated = config.validate(authorities, id)
-        if (validated.real && !HMACAuthAction(
-          "", "AuthEvent", id, "edit|register-real"
-        ).validate(request))
+        if (validated.real)
         {
-          Logger.warn(s"Invalid config json, user has not permissions to register real elections")
-          BadRequest(error(s"Invalid config json"))
+          request
+            .headers
+            .get("Authorization")
+            .map(
+              HMACAuthAction("", "AuthEvent", id, "edit|register-real")
+                .validate(request)
+            ) match
+          {
+            case Some(true) => None
+            case _ => BadRequest(
+              error(
+                s"Invalid config json, user has not permissions to " +
+                s"register real elections"
+              )
+            )
+          }
         }
 
         val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
