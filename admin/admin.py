@@ -608,7 +608,7 @@ def encrypt(cfg, args):
         output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
 
         print("Received encrypt.sh output (" + str(len(output)) + " chars)")
-        parsed = json.loads(output)
+        parsed = json.loads(output.decode('utf-8'))
 
         print("Writing file to " + ctextsPath)
         with codecs.open(ctextsPath, encoding='utf-8', mode='w+') as votes_file:
@@ -659,11 +659,14 @@ def gen_votes(cfg, args):
     def gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count):
         base_plaintexts = [ d.strip() for d in _read_file(base_plaintexts_path).splitlines() ]
         new_plaintext_path = os.path.join(temp_path, 'plaintext')
-        new_plaintext = ""
+        new_plaintext = "[\n"
         counter = 0
         mod_base = len(base_plaintexts)
         while counter < vote_count:
-            new_plaintext += "%s\n" % (base_plaintexts[counter % mod_base])
+            if counter + 1 == vote_count:
+                new_plaintext += "%s]" % (base_plaintexts[counter % mod_base])
+            else:
+                new_plaintext += "%s,\n" % (base_plaintexts[counter % mod_base])
             counter += 1
         _write_file(new_plaintext_path, new_plaintext)
         return new_plaintext_path
@@ -675,11 +678,11 @@ def gen_votes(cfg, args):
         timestamp = 1000 * int(time.time())
         counter = 0
         khmac_list = []
+        voterid_len = 28
         while counter < vote_count:
-            voterid = ''.join(alphabet[c % len(alphabet)] for c in os.urandom(length))
+            voterid = ''.join(alphabet[c % len(alphabet)] for c in os.urandom(voterid_len))
             message = '%s:AuthEvent:%i:vote:%s' % (voterid, election_id, timestamp)
-            _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
-            khmac = 'khmac:///sha-256;%s/%s' % (_hmac, message)
+            khmac = get_hmac(cfg, voterid, "AuthEvent", election_id, 'vote')
             khmac_list.append((voterid, khmac))
             counter += 1
 
@@ -688,7 +691,7 @@ def gen_votes(cfg, args):
     def send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id):
         cyphertexts_list = _read_file(ciphertexts_path).splitlines()
         host,port = get_local_hostport()
-        for index, ballot in enumerate(cyphertexts_list):
+        for index, vote in enumerate(cyphertexts_list):
             if index >= vote_count:
                 break
             voterid, khmac = khmac_list[index]
@@ -696,7 +699,12 @@ def gen_votes(cfg, args):
                 'content-type': 'application/json',
                 'Authorization': khmac
             }
-            url = 'http://%s:%d/elections/api/election/%i/voter/%s' % (host, port, election_id, voterid)
+            vote_hash = hashlib.sha256(vote_string).hexdigest()
+            ballot = json.dumps({
+                "vote": json.dumps(vote),
+                "vote_hash": vote_hash
+            })
+            url = 'http://%s:%d/api/election/%i/voter/%s' % (host, port, election_id, voterid)
             r = requests.post(url, data=ballot, headers=headers)
             if r.status_code != 200:
                 raise Exception("Error voting: HTTP POST to %s with khmac %s returned code %i and error %s" % (url, khmac, r.status_code, r.text[:200]))
@@ -704,7 +712,7 @@ def gen_votes(cfg, args):
     if args.vote_count <= 0:
         raise Exception("vote count must be > 0")
 
-    _check_file(config['plaintexts'])
+    _check_file(cfg['plaintexts'])
     with tempfile.TemporaryDirectory() as temp_path:
         # a list of base plaintexts to generate
         print("created temporary folder at %s" % temp_path) 
@@ -724,7 +732,7 @@ def gen_votes(cfg, args):
         print("ballotes encrypted")
         khmac_list = gen_all_khmacs(vote_count, election_id)
         print("khmacs generated")
-        send_all_ballots((vote_count, ciphertexts_path, khmac_list, election_id))
+        send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
         print("ballots sent")
 
 def get_hmac(cfg, userId, objType, objId, perm):
@@ -762,6 +770,7 @@ count_votes [election_id, [election_id], ...]: count votes
 dump_votes [election_id, [election_id], ...]: dump voter ids
 list_votes <election_dir>: list votes
 list_elections: list elections
+cast_votes <election_dir>: cast votes from ciphertetxs
 dump_pks <election_id>: dumps pks for an election (public datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
