@@ -724,7 +724,7 @@ def gen_votes(cfg, args):
         print("ballotes encrypted")
         khmac_list = gen_all_khmacs(vote_count, election_id)
         print("khmacs generated")
-        send_all_ballots((vote_count, ciphertexts_path, khmac_list, election_id)
+        send_all_ballots((vote_count, ciphertexts_path, khmac_list, election_id))
         print("ballots sent")
 
 def get_hmac(cfg, userId, objType, objId, perm):
