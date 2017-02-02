@@ -707,18 +707,25 @@ def gen_votes(cfg, args):
     _check_file(config['plaintexts'])
     with tempfile.TemporaryDirectory() as temp_path:
         # a list of base plaintexts to generate
+        print("created temporary folder at %s" % temp_path) 
         base_plaintexts_path = cfg["plaintexts"]
         election_id = cfg['election_id']
         vote_count = args.vote_count
         ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
         cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
+        print("created plaintexts") 
         khmac_list = gen_all_khmacs(vote_count, election_id)
+        print("created khmac") 
         cfg['encrypt-count'] = vote_count
         cfg['ciphertexts'] = ciphertexts_path
         dump_pks(cfg, args)
+        print("pks dumped")
         encrypt(cfg, args)
+        print("ballotes encrypted")
         khmac_list = gen_all_khmacs(vote_count, election_id)
+        print("khmacs generated")
         send_all_ballots((vote_count, ciphertexts_path, khmac_list, election_id)
+        print("ballots sent")
 
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
