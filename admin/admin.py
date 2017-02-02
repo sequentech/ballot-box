@@ -31,6 +31,7 @@ from datetime import datetime
 import hashlib
 import codecs
 import traceback
+import tempfile
 
 import os.path
 import os
@@ -636,13 +637,96 @@ def change_social(cfg, args):
         print("invalid share-config file %s" % args.share_config)
         return 400
 
+def gen_votes(cfg, args):
+    def _open(path, mode):
+        return codecs.open(path, encoding='utf-8', mode=mode)
+
+    def _read_file(path):
+        _check_file(path)
+        with _open(path, mode='r') as f:
+            return f.read()
+
+    def _check_file(path):
+        if not os.access(path, os.R_OK):
+            raise Exception("Error: can't read %s" % path)
+        if not os.path.isfile(path):
+            raise Exception("Error: not a file %s" % path)
+
+    def _write_file(path, data):
+        with _open(path, mode='w') as f:
+            return f.write(data)
+
+    def gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count):
+        base_plaintexts = [ d.strip() for d in _read_file(base_plaintexts_path).splitlines() ]
+        new_plaintext_path = os.path.join(temp_path, 'plaintext')
+        new_plaintext = ""
+        counter = 0
+        mod_base = len(base_plaintexts)
+        while counter < vote_count:
+            new_plaintext += "%s\n" % (base_plaintexts[counter % mod_base])
+            counter += 1
+        _write_file(new_plaintext_path, new_plaintext)
+        return new_plaintext_path
+
+    def gen_all_khmacs(vote_count, election_id):
+        import hmac
+        secret = shared_secret
+        alphabet = '0123456789abcdef'
+        timestamp = 1000 * int(time.time())
+        counter = 0
+        khmac_list = []
+        while counter < vote_count:
+            voterid = ''.join(alphabet[c % len(alphabet)] for c in os.urandom(length))
+            message = '%s:AuthEvent:%i:vote:%s' % (voterid, election_id, timestamp)
+            _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
+            khmac = 'khmac:///sha-256;%s/%s' % (_hmac, message)
+            khmac_list.append((voterid, khmac))
+            counter += 1
+
+        return khmac_list
+
+    def send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id):
+        cyphertexts_list = _read_file(ciphertexts_path).splitlines()
+        host,port = get_local_hostport()
+        for index, ballot in enumerate(cyphertexts_list):
+            if index >= vote_count:
+                break
+            voterid, khmac = khmac_list[index]
+            headers = {
+                'content-type': 'application/json',
+                'Authorization': khmac
+            }
+            url = 'http://%s:%d/elections/api/election/%i/voter/%s' % (host, port, election_id, voterid)
+            r = requests.post(url, data=ballot, headers=headers)
+            if r.status_code != 200:
+                raise Exception("Error voting: HTTP POST to %s with khmac %s returned code %i and error %s" % (url, khmac, r.status_code, r.text[:200]))
+
+    if args.vote_count <= 0:
+        raise Exception("vote count must be > 0")
+
+    _check_file(config['plaintexts'])
+    with tempfile.TemporaryDirectory() as temp_path:
+        # a list of base plaintexts to generate
+        base_plaintexts_path = cfg["plaintexts"]
+        election_id = cfg['election_id']
+        vote_count = args.vote_count
+        ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
+        cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
+        khmac_list = gen_all_khmacs(vote_count, election_id)
+        cfg['encrypt-count'] = vote_count
+        cfg['ciphertexts'] = ciphertexts_path
+        dump_pks(cfg, args)
+        encrypt(cfg, args)
+        khmac_list = gen_all_khmacs(vote_count, election_id)
+        send_all_ballots((vote_count, ciphertexts_path, khmac_list, election_id)
+
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
 
     secret = shared_secret
-    now = 1000*long(time.time())
+    now = 1000*int(time.time())
     message = "%s:%s:%d:%s:%d" % (userId, objType, objId, perm, now)
-    _hmac = hmac.new(str(secret), str(message), hashlib.sha256).hexdigest()
+    _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
     ret  = 'khmac:///sha-256;%s/%s' % (_hmac, message)
 
     return ret
@@ -677,12 +761,14 @@ encryptNode <election_id>: encrypts votes using node (public key must be in data
 dump_votes <election_id>: dumps votes for an election (private datastore)
 change_social <election_id>: changes the social netoworks share buttons configuration
 authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist.
+gen_votes <election_id>: generate votes
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--filter-config', help='file with filter configuration', default = None)
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
+    parser.add_argument('--vote-count', help='number of votes to generate', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('--ips-log', help='')
