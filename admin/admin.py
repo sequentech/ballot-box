@@ -287,7 +287,7 @@ def cast_votes(cfg, args):
                 vote_string = json.dumps(vote)
                 vote_hash = hashlib.sha256(vote_string).hexdigest()
                 vote = {
-                    "vote": json.dumps(vote),
+                    "vote": vote_string,
                     "vote_hash": vote_hash
                 }
 
@@ -673,7 +673,6 @@ def gen_votes(cfg, args):
 
     def gen_all_khmacs(vote_count, election_id):
         import hmac
-        secret = shared_secret
         alphabet = '0123456789abcdef'
         timestamp = 1000 * int(time.time())
         counter = 0
@@ -689,9 +688,10 @@ def gen_votes(cfg, args):
         return khmac_list
 
     def send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id):
-        cyphertexts_list = _read_file(ciphertexts_path).splitlines()
+        cyphertexts_json = json.loads(_read_file(ciphertexts_path))
         host,port = get_local_hostport()
-        for index, vote in enumerate(cyphertexts_list):
+        for index, vote in enumerate(cyphertexts_json):
+            vote_string = json.dumps(vote)
             if index >= vote_count:
                 break
             voterid, khmac = khmac_list[index]
@@ -699,15 +699,15 @@ def gen_votes(cfg, args):
                 'content-type': 'application/json',
                 'Authorization': khmac
             }
-            vote_hash = hashlib.sha256(vote_string).hexdigest()
-            ballot = json.dumps({
-                "vote": json.dumps(vote),
+            vote_hash = hashlib.sha256(str.encode(vote_string)).hexdigest()
+            json.dumps({
+                "vote": vote_string,
                 "vote_hash": vote_hash
             })
             url = 'http://%s:%d/api/election/%i/voter/%s' % (host, port, election_id, voterid)
             r = requests.post(url, data=ballot, headers=headers)
             if r.status_code != 200:
-                raise Exception("Error voting: HTTP POST to %s with khmac %s returned code %i and error %s" % (url, khmac, r.status_code, r.text[:200]))
+                raise Exception("Error voting: HTTP POST to %s with khmac %s returned code %i, error %s, http data: %s" % (url, khmac, r.status_code, r.text[:200], ballot))
 
     if args.vote_count <= 0:
         raise Exception("vote count must be > 0")
