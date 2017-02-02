@@ -700,7 +700,7 @@ def gen_votes(cfg, args):
                 'Authorization': khmac
             }
             vote_hash = hashlib.sha256(str.encode(vote_string)).hexdigest()
-            json.dumps({
+            ballot = json.dumps({
                 "vote": vote_string,
                 "vote_hash": vote_hash
             })
