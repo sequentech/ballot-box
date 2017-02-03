@@ -37,7 +37,7 @@ import string
 import os.path
 import os
 from prettytable import PrettyTable
-
+import random
 
 import warnings as _warnings
 import os as _os
@@ -766,7 +766,7 @@ def gen_votes(cfg, args):
 
     def gen_rnd_str(length, choices):
         return ''.join(
-            random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+            random.SystemRandom().choice(choices)
             for _ in range(length)
         )
 
