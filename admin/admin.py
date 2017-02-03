@@ -38,6 +38,7 @@ import os.path
 import os
 from prettytable import PrettyTable
 import random
+import shutil
 
 import warnings as _warnings
 import os as _os
@@ -772,6 +773,7 @@ def gen_votes(cfg, args):
 
     def gen_all_khmacs(vote_count, election_id):
         import hmac
+        start_time = time.time()
         alphabet = '0123456789abcdef'
         timestamp = 1000 * int(time.time())
         counter = 0
@@ -784,9 +786,15 @@ def gen_votes(cfg, args):
             khmac_list.append((voterid, khmac))
             counter += 1
 
+        end_time = time.time()
+        delta_t = end_time - start_time
+        troughput = vote_count / float(delta_t)
+        print("created %i khmacs in %f secs. %f khmacs/sec" % (vote_count, delta_t, troughput))
+
         return khmac_list
 
     def send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id):
+        start_time = time.time()
         cyphertexts_json = json.loads(_read_file(ciphertexts_path))
         host,port = get_local_hostport()
         for index, vote in enumerate(cyphertexts_json):
@@ -807,28 +815,54 @@ def gen_votes(cfg, args):
             r = requests.post(url, data=ballot, headers=headers)
             if r.status_code != 200:
                 raise Exception("Error voting: HTTP POST to %s with khmac %s returned code %i, error %s, http data: %s" % (url, khmac, r.status_code, r.text[:200], ballot))
+        end_time = time.time()
+        delta_t = end_time - start_time
+        troughput = vote_count / float(delta_t)
+        print("sent %i votes in %f secs. %f votes/sec" % (vote_count, delta_t, troughput))
 
     if args.vote_count <= 0:
         raise Exception("vote count must be > 0")
 
-    _check_file(cfg['plaintexts'])
     with TemporaryDirectory() as temp_path:
-        # a list of base plaintexts to generate
-        print("created temporary folder at %s" % temp_path) 
-        base_plaintexts_path = cfg["plaintexts"]
+        print("created temporary folder at %s" % temp_path)
+
         election_id = cfg['election_id']
         vote_count = args.vote_count
-        ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
-        cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
-        print("created plaintexts") 
-        khmac_list = gen_all_khmacs(vote_count, election_id)
-        print("created khmacs") 
+
+        save_ciphertexts = False
+        read_ciphertexts = False
+        if cfg['ciphertexts'] is not None:
+           # if the file exists, then read it: we don't need to generate it
+           if os.access(cfg['ciphertexts'], os.R_OK) and os.path.isfile(cfg['ciphertexts']):
+               read_ciphertexts = True
+               ciphertexts_path = cfg['ciphertexts']
+           # if it doesn't exist, generate the ciphertexts and save them there
+           else:
+               _check_file(cfg['plaintexts'])
+               save_ciphertexts = True
+               save_ciphertexts_path = cfg['ciphertexts']
+        else:
+            _check_file(cfg['plaintexts'])
+
         cfg['encrypt-count'] = vote_count
         cfg['ciphertexts'] = ciphertexts_path
-        dump_pks(cfg, args)
-        print("pks dumped")
-        encrypt(cfg, args)
-        print("ballots encrypted")
+
+        if not read_ciphertexts:
+            # a list of base plaintexts to generate ballots
+            base_plaintexts_path = cfg["plaintexts"]
+            ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
+            cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
+            print("created plaintexts")
+            dump_pks(cfg, args)
+            print("pks dumped")
+            encrypt(cfg, args)
+            print("ballots encrypted")
+            if save_ciphertexts:
+                shutil.copy2(ciphertexts_path, save_ciphertexts_path)
+                print("encrypted ballots saved to file %s" % ciphertexts_path)
+
+        khmac_list = gen_all_khmacs(vote_count, election_id)
+        print("created khmacs")
         send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
         print("ballots sent")
 
