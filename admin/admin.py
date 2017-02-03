@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import requests
 import json
 import time
@@ -31,11 +32,17 @@ from datetime import datetime
 import hashlib
 import codecs
 import traceback
-import tempfile
+import string
 
 import os.path
 import os
 from prettytable import PrettyTable
+
+
+import warnings as _warnings
+import os as _os
+
+from tempfile import mkdtemp
 
 from sqlalchemy import create_engine, select, func, text
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
@@ -60,6 +67,92 @@ authapi_db_password = 'authapi'
 authapi_db_name = 'authapi'
 authapi_db_port = 5432
 node = '/usr/local/bin/node'
+
+class TemporaryDirectory(object):
+    """Create and return a temporary directory.  This has the same
+    behavior as mkdtemp but can be used as a context manager.  For
+    example:
+
+        with TemporaryDirectory() as tmpdir:
+            ...
+
+    Upon exiting the context, the directory and everything contained
+    in it are removed.
+    """
+
+    def __init__(self, suffix="", prefix="tmp", dir=None):
+        self._closed = False
+        self.name = None # Handle mkdtemp raising an exception
+        self.name = mkdtemp(suffix, prefix, dir)
+
+    def __repr__(self):
+        return "<{} {!r}>".format(self.__class__.__name__, self.name)
+
+    def __enter__(self):
+        return self.name
+
+    def cleanup(self, _warn=False):
+        if self.name and not self._closed:
+            try:
+                self._rmtree(self.name)
+            except (TypeError, AttributeError) as ex:
+                # Issue #10188: Emit a warning on stderr
+                # if the directory could not be cleaned
+                # up due to missing globals
+                if "None" not in str(ex):
+                    raise
+                print("ERROR: {!r} while cleaning up {!r}".format(ex, self,),
+                      file=_sys.stderr)
+                return
+            self._closed = True
+            if _warn:
+                self._warn("Implicitly cleaning up {!r}".format(self),
+                           ResourceWarning)
+    def __exit__(self, exc, value, tb):
+        self.cleanup()
+
+    def __del__(self):
+        # Issue a ResourceWarning if implicit cleanup needed
+        self.cleanup(_warn=True)
+
+    # XXX (ncoghlan): The following code attempts to make
+    # this class tolerant of the module nulling out process
+    # that happens during CPython interpreter shutdown
+    # Alas, it doesn't actually manage it. See issue #10188
+    _listdir = staticmethod(_os.listdir)
+    _path_join = staticmethod(_os.path.join)
+    _isdir = staticmethod(_os.path.isdir)
+    _islink = staticmethod(_os.path.islink)
+    _remove = staticmethod(_os.remove)
+    _rmdir = staticmethod(_os.rmdir)
+    _warn = _warnings.warn
+
+    def _rmtree(self, path):
+        # Essentially a stripped down version of shutil.rmtree.  We can't
+        # use globals because they may be None'ed out at shutdown.
+        for name in self._listdir(path):
+            fullname = self._path_join(path, name)
+            try:
+                isdir = self._isdir(fullname) and not self._islink(fullname)
+            except OSError:
+                isdir = False
+            if isdir:
+                self._rmtree(fullname)
+            else:
+                try:
+                    self._remove(fullname)
+                except OSError:
+                    pass
+        try:
+            self._rmdir(path)
+        except OSError:
+            pass
+
+
+
+
+
+
 
 def get_local_hostport():
     return app_host, app_port
@@ -671,6 +764,12 @@ def gen_votes(cfg, args):
         _write_file(new_plaintext_path, new_plaintext)
         return new_plaintext_path
 
+    def gen_rnd_str(length, choices):
+        return ''.join(
+            random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+            for _ in range(length)
+        )
+
     def gen_all_khmacs(vote_count, election_id):
         import hmac
         alphabet = '0123456789abcdef'
@@ -679,7 +778,7 @@ def gen_votes(cfg, args):
         khmac_list = []
         voterid_len = 28
         while counter < vote_count:
-            voterid = ''.join(alphabet[c % len(alphabet)] for c in os.urandom(voterid_len))
+            voterid = gen_rnd_str(voterid_len, alphabet)
             message = '%s:AuthEvent:%i:vote:%s' % (voterid, election_id, timestamp)
             khmac = get_hmac(cfg, voterid, "AuthEvent", election_id, 'vote')
             khmac_list.append((voterid, khmac))
@@ -713,7 +812,7 @@ def gen_votes(cfg, args):
         raise Exception("vote count must be > 0")
 
     _check_file(cfg['plaintexts'])
-    with tempfile.TemporaryDirectory() as temp_path:
+    with TemporaryDirectory() as temp_path:
         # a list of base plaintexts to generate
         print("created temporary folder at %s" % temp_path) 
         base_plaintexts_path = cfg["plaintexts"]
