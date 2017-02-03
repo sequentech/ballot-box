@@ -824,7 +824,7 @@ def gen_votes(cfg, args):
         raise Exception("vote count must be > 0")
 
     with TemporaryDirectory() as temp_path:
-        print("created temporary folder at %s" % temp_path)
+        print("%s created temporary folder at %s" % (str(datetime.now()), temp_path))
 
         election_id = cfg['election_id']
         vote_count = args.vote_count
@@ -851,13 +851,16 @@ def gen_votes(cfg, args):
             base_plaintexts_path = cfg["plaintexts"]
             ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
             cfg['ciphertexts'] = ciphertexts_path
+            print("%s start generation of plaintexts" % str(datetime.now()))
             cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
-            print("created plaintexts")
+            print("%s plaintexts created" % str(datetime.now()))
+            print("%s start dump_pks" % str(datetime.now()))
             dump_pks(cfg, args)
-            print("pks dumped")
+            print("%s pks dumped" % str(datetime.now()))
+            print("%s start ballot encryption" % str(datetime.now()))
             start_time = time.time()
             encrypt(cfg, args)
-            print("ballots encrypted")
+            print("%s ballots encrypted" % str(datetime.now()))
             end_time = time.time()
             delta_t = end_time - start_time
             troughput = vote_count / float(delta_t)
@@ -866,10 +869,12 @@ def gen_votes(cfg, args):
                 shutil.copy2(ciphertexts_path, save_ciphertexts_path)
                 print("encrypted ballots saved to file %s" % ciphertexts_path)
 
+        print("%s start khmac generation" % str(datetime.now()))
         khmac_list = gen_all_khmacs(vote_count, election_id)
-        print("created khmacs")
+        print("%s khmacs generated" % str(datetime.now()))
+        print("%s start sending ballots" % str(datetime.now()))
         send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
-        print("ballots sent")
+        print("%s ballots sent" % str(datetime.now()))
 
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
