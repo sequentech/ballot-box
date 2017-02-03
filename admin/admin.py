@@ -828,6 +828,7 @@ def gen_votes(cfg, args):
 
         election_id = cfg['election_id']
         vote_count = args.vote_count
+        cfg['encrypt-count'] = vote_count
 
         save_ciphertexts = False
         read_ciphertexts = False
@@ -844,19 +845,23 @@ def gen_votes(cfg, args):
         else:
             _check_file(cfg['plaintexts'])
 
-        cfg['encrypt-count'] = vote_count
-        cfg['ciphertexts'] = ciphertexts_path
 
         if not read_ciphertexts:
             # a list of base plaintexts to generate ballots
             base_plaintexts_path = cfg["plaintexts"]
             ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
+            cfg['ciphertexts'] = ciphertexts_path
             cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
             print("created plaintexts")
             dump_pks(cfg, args)
             print("pks dumped")
+            start_time = time.time()
             encrypt(cfg, args)
             print("ballots encrypted")
+            end_time = time.time()
+            delta_t = end_time - start_time
+            troughput = vote_count / float(delta_t)
+            print("encrypted %i votes in %f secs. %f votes/sec" % (vote_count, delta_t, troughput))
             if save_ciphertexts:
                 shutil.copy2(ciphertexts_path, save_ciphertexts_path)
                 print("encrypted ballots saved to file %s" % ciphertexts_path)
