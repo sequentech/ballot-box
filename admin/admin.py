@@ -822,15 +822,13 @@ def gen_votes(cfg, args):
         cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
         print("created plaintexts") 
         khmac_list = gen_all_khmacs(vote_count, election_id)
-        print("created khmac") 
+        print("created khmacs") 
         cfg['encrypt-count'] = vote_count
         cfg['ciphertexts'] = ciphertexts_path
         dump_pks(cfg, args)
         print("pks dumped")
         encrypt(cfg, args)
-        print("ballotes encrypted")
-        khmac_list = gen_all_khmacs(vote_count, election_id)
-        print("khmacs generated")
+        print("ballots encrypted")
         send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
         print("ballots sent")
 
