@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import requests
 import json
 import time
@@ -31,10 +32,18 @@ from datetime import datetime
 import hashlib
 import codecs
 import traceback
+import string
 
 import os.path
 import os
 from prettytable import PrettyTable
+import random
+import shutil
+
+import warnings as _warnings
+import os as _os
+
+from tempfile import mkdtemp
 
 from sqlalchemy import create_engine, select, func, text
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
@@ -59,6 +68,92 @@ authapi_db_password = 'authapi'
 authapi_db_name = 'authapi'
 authapi_db_port = 5432
 node = '/usr/local/bin/node'
+
+class TemporaryDirectory(object):
+    """Create and return a temporary directory.  This has the same
+    behavior as mkdtemp but can be used as a context manager.  For
+    example:
+
+        with TemporaryDirectory() as tmpdir:
+            ...
+
+    Upon exiting the context, the directory and everything contained
+    in it are removed.
+    """
+
+    def __init__(self, suffix="", prefix="tmp", dir=None):
+        self._closed = False
+        self.name = None # Handle mkdtemp raising an exception
+        self.name = mkdtemp(suffix, prefix, dir)
+
+    def __repr__(self):
+        return "<{} {!r}>".format(self.__class__.__name__, self.name)
+
+    def __enter__(self):
+        return self.name
+
+    def cleanup(self, _warn=False):
+        if self.name and not self._closed:
+            try:
+                self._rmtree(self.name)
+            except (TypeError, AttributeError) as ex:
+                # Issue #10188: Emit a warning on stderr
+                # if the directory could not be cleaned
+                # up due to missing globals
+                if "None" not in str(ex):
+                    raise
+                print("ERROR: {!r} while cleaning up {!r}".format(ex, self,),
+                      file=_sys.stderr)
+                return
+            self._closed = True
+            if _warn:
+                self._warn("Implicitly cleaning up {!r}".format(self),
+                           ResourceWarning)
+    def __exit__(self, exc, value, tb):
+        self.cleanup()
+
+    def __del__(self):
+        # Issue a ResourceWarning if implicit cleanup needed
+        self.cleanup(_warn=True)
+
+    # XXX (ncoghlan): The following code attempts to make
+    # this class tolerant of the module nulling out process
+    # that happens during CPython interpreter shutdown
+    # Alas, it doesn't actually manage it. See issue #10188
+    _listdir = staticmethod(_os.listdir)
+    _path_join = staticmethod(_os.path.join)
+    _isdir = staticmethod(_os.path.isdir)
+    _islink = staticmethod(_os.path.islink)
+    _remove = staticmethod(_os.remove)
+    _rmdir = staticmethod(_os.rmdir)
+    _warn = _warnings.warn
+
+    def _rmtree(self, path):
+        # Essentially a stripped down version of shutil.rmtree.  We can't
+        # use globals because they may be None'ed out at shutdown.
+        for name in self._listdir(path):
+            fullname = self._path_join(path, name)
+            try:
+                isdir = self._isdir(fullname) and not self._islink(fullname)
+            except OSError:
+                isdir = False
+            if isdir:
+                self._rmtree(fullname)
+            else:
+                try:
+                    self._remove(fullname)
+                except OSError:
+                    pass
+        try:
+            self._rmdir(path)
+        except OSError:
+            pass
+
+
+
+
+
+
 
 def get_local_hostport():
     return app_host, app_port
@@ -286,7 +381,7 @@ def cast_votes(cfg, args):
                 vote_string = json.dumps(vote)
                 vote_hash = hashlib.sha256(vote_string).hexdigest()
                 vote = {
-                    "vote": json.dumps(vote),
+                    "vote": vote_string,
                     "vote_hash": vote_hash
                 }
 
@@ -607,7 +702,7 @@ def encrypt(cfg, args):
         output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
 
         print("Received encrypt.sh output (" + str(len(output)) + " chars)")
-        parsed = json.loads(output)
+        parsed = json.loads(output.decode('utf-8'))
 
         print("Writing file to " + ctextsPath)
         with codecs.open(ctextsPath, encoding='utf-8', mode='w+') as votes_file:
@@ -636,13 +731,158 @@ def change_social(cfg, args):
         print("invalid share-config file %s" % args.share_config)
         return 400
 
+def gen_votes(cfg, args):
+    def _open(path, mode):
+        return codecs.open(path, encoding='utf-8', mode=mode)
+
+    def _read_file(path):
+        _check_file(path)
+        with _open(path, mode='r') as f:
+            return f.read()
+
+    def _check_file(path):
+        if not os.access(path, os.R_OK):
+            raise Exception("Error: can't read %s" % path)
+        if not os.path.isfile(path):
+            raise Exception("Error: not a file %s" % path)
+
+    def _write_file(path, data):
+        with _open(path, mode='w') as f:
+            return f.write(data)
+
+    def gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count):
+        base_plaintexts = [ d.strip() for d in _read_file(base_plaintexts_path).splitlines() ]
+        new_plaintext_path = os.path.join(temp_path, 'plaintext')
+        new_plaintext = "[\n"
+        counter = 0
+        mod_base = len(base_plaintexts)
+        while counter < vote_count:
+            if counter + 1 == vote_count:
+                new_plaintext += "%s]" % (base_plaintexts[counter % mod_base])
+            else:
+                new_plaintext += "%s,\n" % (base_plaintexts[counter % mod_base])
+            counter += 1
+        _write_file(new_plaintext_path, new_plaintext)
+        return new_plaintext_path
+
+    def gen_rnd_str(length, choices):
+        return ''.join(
+            random.SystemRandom().choice(choices)
+            for _ in range(length)
+        )
+
+    def gen_all_khmacs(vote_count, election_id):
+        import hmac
+        start_time = time.time()
+        alphabet = '0123456789abcdef'
+        timestamp = 1000 * int(time.time())
+        counter = 0
+        khmac_list = []
+        voterid_len = 28
+        while counter < vote_count:
+            voterid = gen_rnd_str(voterid_len, alphabet)
+            message = '%s:AuthEvent:%i:vote:%s' % (voterid, election_id, timestamp)
+            khmac = get_hmac(cfg, voterid, "AuthEvent", election_id, 'vote')
+            khmac_list.append((voterid, khmac))
+            counter += 1
+
+        end_time = time.time()
+        delta_t = end_time - start_time
+        troughput = vote_count / float(delta_t)
+        print("created %i khmacs in %f secs. %f khmacs/sec" % (vote_count, delta_t, troughput))
+
+        return khmac_list
+
+    def send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id):
+        start_time = time.time()
+        cyphertexts_json = json.loads(_read_file(ciphertexts_path))
+        host,port = get_local_hostport()
+        for index, vote in enumerate(cyphertexts_json):
+            vote_string = json.dumps(vote)
+            if index >= vote_count:
+                break
+            voterid, khmac = khmac_list[index]
+            headers = {
+                'content-type': 'application/json',
+                'Authorization': khmac
+            }
+            vote_hash = hashlib.sha256(str.encode(vote_string)).hexdigest()
+            ballot = json.dumps({
+                "vote": vote_string,
+                "vote_hash": vote_hash
+            })
+            url = 'http://%s:%d/api/election/%i/voter/%s' % (host, port, election_id, voterid)
+            r = requests.post(url, data=ballot, headers=headers)
+            if r.status_code != 200:
+                raise Exception("Error voting: HTTP POST to %s with khmac %s returned code %i, error %s, http data: %s" % (url, khmac, r.status_code, r.text[:200], ballot))
+        end_time = time.time()
+        delta_t = end_time - start_time
+        troughput = vote_count / float(delta_t)
+        print("sent %i votes in %f secs. %f votes/sec" % (vote_count, delta_t, troughput))
+
+    if args.vote_count <= 0:
+        raise Exception("vote count must be > 0")
+
+    with TemporaryDirectory() as temp_path:
+        print("%s created temporary folder at %s" % (str(datetime.now()), temp_path))
+
+        election_id = cfg['election_id']
+        vote_count = args.vote_count
+        cfg['encrypt-count'] = vote_count
+
+        save_ciphertexts = False
+        read_ciphertexts = False
+        if cfg['ciphertexts'] is not None:
+           # if the file exists, then read it: we don't need to generate it
+           if os.access(cfg['ciphertexts'], os.R_OK) and os.path.isfile(cfg['ciphertexts']):
+               read_ciphertexts = True
+               ciphertexts_path = cfg['ciphertexts']
+           # if it doesn't exist, generate the ciphertexts and save them there
+           else:
+               _check_file(cfg['plaintexts'])
+               save_ciphertexts = True
+               save_ciphertexts_path = cfg['ciphertexts']
+        else:
+            _check_file(cfg['plaintexts'])
+
+
+        if not read_ciphertexts:
+            # a list of base plaintexts to generate ballots
+            base_plaintexts_path = cfg["plaintexts"]
+            ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
+            cfg['ciphertexts'] = ciphertexts_path
+            print("%s start generation of plaintexts" % str(datetime.now()))
+            cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
+            print("%s plaintexts created" % str(datetime.now()))
+            print("%s start dump_pks" % str(datetime.now()))
+            dump_pks(cfg, args)
+            print("%s pks dumped" % str(datetime.now()))
+            print("%s start ballot encryption" % str(datetime.now()))
+            start_time = time.time()
+            encrypt(cfg, args)
+            print("%s ballots encrypted" % str(datetime.now()))
+            end_time = time.time()
+            delta_t = end_time - start_time
+            troughput = vote_count / float(delta_t)
+            print("encrypted %i votes in %f secs. %f votes/sec" % (vote_count, delta_t, troughput))
+            if save_ciphertexts:
+                shutil.copy2(ciphertexts_path, save_ciphertexts_path)
+                print("encrypted ballots saved to file %s" % ciphertexts_path)
+
+        print("%s start khmac generation" % str(datetime.now()))
+        khmac_list = gen_all_khmacs(vote_count, election_id)
+        print("%s khmacs generated" % str(datetime.now()))
+        print("%s start sending ballots" % str(datetime.now()))
+        send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
+        print("%s ballots sent" % str(datetime.now()))
+
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
 
     secret = shared_secret
-    now = 1000*long(time.time())
+    now = 1000*int(time.time())
     message = "%s:%s:%d:%s:%d" % (userId, objType, objId, perm, now)
-    _hmac = hmac.new(str(secret), str(message), hashlib.sha256).hexdigest()
+    _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
     ret  = 'khmac:///sha-256;%s/%s' % (_hmac, message)
 
     return ret
@@ -671,18 +911,21 @@ count_votes [election_id, [election_id], ...]: count votes
 dump_votes [election_id, [election_id], ...]: dump voter ids
 list_votes <election_dir>: list votes
 list_elections: list elections
+cast_votes <election_dir>: cast votes from ciphertetxs
 dump_pks <election_id>: dumps pks for an election (public datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 dump_votes <election_id>: dumps votes for an election (private datastore)
 change_social <election_id>: changes the social netoworks share buttons configuration
 authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist.
+gen_votes <election_id>: generate votes
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--filter-config', help='file with filter configuration', default = None)
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
+    parser.add_argument('--vote-count', help='number of votes to generate', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('--ips-log', help='')
