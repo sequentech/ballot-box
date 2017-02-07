@@ -103,9 +103,11 @@ import java.math.BigInteger
   }
 
   /** encode and then encrypt a plaintext */
-  def encrypt(pk: PublicKey, value: Long) = {
-    val encoded = encode(pk, value)
-    encryptEncoded(pk, encoded)
+  def encrypt(pks: Array[PublicKey], values: Array[Long]) = {
+    val encoded = pks.view.zipWithIndex.map( t =>
+      encode(t._1, values(t._2))
+    ).toArray
+    encryptEncoded(pks, encoded)
   }
 
   /** return a random bigint between 0 and max - 1 */
@@ -132,22 +134,30 @@ import java.math.BigInteger
   }
 
   /** encrypt an encoded plaintext */
-  def encryptEncoded(pk: PublicKey, value: BigInt) = {
-    val r = randomBigInt(pk.q)
-    val alpha = pk.g.modPow(r, pk.p)
-    val beta = (value * (pk.y.modPow(r, pk.p))).mod(pk.p)
+  def encryptEncoded(pks: Array[PublicKey], values: Array[BigInt]) = {
+    var choices = Array[Choice]()
+    var proofs = Array[Popk]()
+    val evote = EncryptedVote(Array(), "now", Array())
+    for ( index <- 0 to  pks.length ) {
+      val pk = pks(index)
+      val value = values(index)
+      val r = randomBigInt(pk.q)
+      val alpha = pk.g.modPow(r, pk.p)
+      val beta = (value * (pk.y.modPow(r, pk.p))).mod(pk.p)
 
-    // prove knowledge
-    val w = randomBigInt(pk.q)
+      // prove knowledge
+      val w = randomBigInt(pk.q)
 
-    val commitment = pk.g.modPow(w, pk.p)
+      val commitment = pk.g.modPow(w, pk.p)
 
-    val toHash = s"${alpha.toString}/${commitment.toString}"
-    val challenge = BigInt(sha256(toHash), 16)
+      val toHash = s"${alpha.toString}/${commitment.toString}"
+      val challenge = BigInt(sha256(toHash), 16)
 
-    // compute response = w +  randomness * challenge
-    val response = (w + (r * challenge)).mod(pk.q)
-
-    EncryptedVote(Array(Choice(alpha, beta)), "now", Array(Popk(challenge, commitment, response)))
+      // compute response = w +  randomness * challenge
+      val response = (w + (r * challenge)).mod(pk.q)
+      choices :+= Choice(alpha, beta)
+      proofs :+= Popk(challenge, commitment, response)
+    }
+    EncryptedVote(choices, "now", proofs)
   }
 }

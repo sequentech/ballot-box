@@ -757,10 +757,12 @@ def gen_votes(cfg, args):
         counter = 0
         mod_base = len(base_plaintexts)
         while counter < vote_count:
+            base_ballot = base_plaintexts[counter % mod_base]
+            json_ballot = "[%s]" % base_ballot
             if counter + 1 == vote_count:
-                new_plaintext += "%s]" % (base_plaintexts[counter % mod_base])
+                new_plaintext += "%s]" % json_ballot
             else:
-                new_plaintext += "%s,\n" % (base_plaintexts[counter % mod_base])
+                new_plaintext += "%s,\n" % json_ballot
             counter += 1
         _write_file(new_plaintext_path, new_plaintext)
         return new_plaintext_path
