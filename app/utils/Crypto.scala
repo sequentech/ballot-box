@@ -137,8 +137,7 @@ import java.math.BigInteger
   def encryptEncoded(pks: Array[PublicKey], values: Array[BigInt]) = {
     var choices = Array[Choice]()
     var proofs = Array[Popk]()
-    val evote = EncryptedVote(Array(), "now", Array())
-    for ( index <- 0 to  pks.length ) {
+    for ( index <- 0 until pks.length ) {
       val pk = pks(index)
       val value = values(index)
       val r = randomBigInt(pk.q)
