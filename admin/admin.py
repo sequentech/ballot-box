@@ -868,13 +868,13 @@ def gen_votes(cfg, args):
             if save_ciphertexts:
                 shutil.copy2(ciphertexts_path, save_ciphertexts_path)
                 print("encrypted ballots saved to file %s" % ciphertexts_path)
-
-        print("%s start khmac generation" % str(datetime.now()))
-        khmac_list = gen_all_khmacs(vote_count, election_id)
-        print("%s khmacs generated" % str(datetime.now()))
-        print("%s start sending ballots" % str(datetime.now()))
-        send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
-        print("%s ballots sent" % str(datetime.now()))
+        else:
+            print("%s start khmac generation" % str(datetime.now()))
+            khmac_list = gen_all_khmacs(vote_count, election_id)
+            print("%s khmacs generated" % str(datetime.now()))
+            print("%s start sending ballots" % str(datetime.now()))
+            send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
+            print("%s ballots sent" % str(datetime.now()))
 
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
