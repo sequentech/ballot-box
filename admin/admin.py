@@ -767,12 +767,6 @@ def gen_votes(cfg, args):
         _write_file(new_plaintext_path, new_plaintext)
         return new_plaintext_path
 
-    def gen_rnd_str(length, choices):
-        return ''.join(
-            random.SystemRandom().choice(choices)
-            for _ in range(length)
-        )
-
     if args.vote_count <= 0:
         raise Exception("vote count must be > 0")
 
@@ -828,6 +822,12 @@ def send_votes(cfg, args):
         _check_file(path)
         with _open(path, mode='r') as f:
             return f.read()
+
+    def gen_rnd_str(length, choices):
+        return ''.join(
+            random.SystemRandom().choice(choices)
+            for _ in range(length)
+        )
 
     def gen_all_khmacs(vote_count, election_id):
         import hmac
