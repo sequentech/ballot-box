@@ -757,13 +757,71 @@ def gen_votes(cfg, args):
         counter = 0
         mod_base = len(base_plaintexts)
         while counter < vote_count:
+            base_ballot = base_plaintexts[counter % mod_base]
+            json_ballot = "[%s]" % base_ballot
             if counter + 1 == vote_count:
-                new_plaintext += "%s]" % (base_plaintexts[counter % mod_base])
+                new_plaintext += "%s]" % json_ballot
             else:
-                new_plaintext += "%s,\n" % (base_plaintexts[counter % mod_base])
+                new_plaintext += "%s,\n" % json_ballot
             counter += 1
         _write_file(new_plaintext_path, new_plaintext)
         return new_plaintext_path
+
+    if args.vote_count <= 0:
+        raise Exception("vote count must be > 0")
+
+    with TemporaryDirectory() as temp_path:
+        print("%s created temporary folder at %s" % (str(datetime.now()), temp_path))
+
+        election_id = cfg['election_id']
+        vote_count = args.vote_count
+        cfg['encrypt-count'] = vote_count
+
+        if cfg['ciphertexts'] is None:
+            raise Exception("missing ciphertexts argument")
+
+        if cfg['plaintexts'] is None:
+            raise Exception("missing ciphertexts argument")
+
+        _check_file(cfg['plaintexts'])
+        save_ciphertexts_path = cfg['ciphertexts']
+
+        # a list of base plaintexts to generate ballots
+        base_plaintexts_path = cfg["plaintexts"]
+        ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
+        cfg['ciphertexts'] = ciphertexts_path
+        print("%s start generation of plaintexts" % str(datetime.now()))
+        cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
+        print("%s plaintexts created" % str(datetime.now()))
+        print("%s start dump_pks" % str(datetime.now()))
+        dump_pks(cfg, args)
+        print("%s pks dumped" % str(datetime.now()))
+        print("%s start ballot encryption" % str(datetime.now()))
+        start_time = time.time()
+        encrypt(cfg, args)
+        print("%s ballots encrypted" % str(datetime.now()))
+        end_time = time.time()
+        delta_t = end_time - start_time
+        troughput = vote_count / float(delta_t)
+        print("encrypted %i votes in %f secs. %f votes/sec" % (vote_count, delta_t, troughput))
+
+        shutil.copy2(ciphertexts_path, save_ciphertexts_path)
+        print("encrypted ballots saved to file %s" % ciphertexts_path)
+
+def send_votes(cfg, args):
+    def _open(path, mode):
+        return codecs.open(path, encoding='utf-8', mode=mode)
+
+    def _check_file(path):
+        if not os.access(path, os.R_OK):
+            raise Exception("Error: can't read %s" % path)
+        if not os.path.isfile(path):
+            raise Exception("Error: not a file %s" % path)
+
+    def _read_file(path):
+        _check_file(path)
+        with _open(path, mode='r') as f:
+            return f.read()
 
     def gen_rnd_str(length, choices):
         return ''.join(
@@ -823,58 +881,21 @@ def gen_votes(cfg, args):
     if args.vote_count <= 0:
         raise Exception("vote count must be > 0")
 
-    with TemporaryDirectory() as temp_path:
-        print("%s created temporary folder at %s" % (str(datetime.now()), temp_path))
+    if cfg['ciphertexts'] is None:
+        raise Exception("ciphertexts argument is missing")
 
-        election_id = cfg['election_id']
-        vote_count = args.vote_count
-        cfg['encrypt-count'] = vote_count
+    _check_file(cfg['ciphertexts'])
+    ciphertexts_path = cfg['ciphertexts']
 
-        save_ciphertexts = False
-        read_ciphertexts = False
-        if cfg['ciphertexts'] is not None:
-           # if the file exists, then read it: we don't need to generate it
-           if os.access(cfg['ciphertexts'], os.R_OK) and os.path.isfile(cfg['ciphertexts']):
-               read_ciphertexts = True
-               ciphertexts_path = cfg['ciphertexts']
-           # if it doesn't exist, generate the ciphertexts and save them there
-           else:
-               _check_file(cfg['plaintexts'])
-               save_ciphertexts = True
-               save_ciphertexts_path = cfg['ciphertexts']
-        else:
-            _check_file(cfg['plaintexts'])
+    election_id = cfg['election_id']
+    vote_count = args.vote_count
 
-
-        if not read_ciphertexts:
-            # a list of base plaintexts to generate ballots
-            base_plaintexts_path = cfg["plaintexts"]
-            ciphertexts_path = os.path.join(temp_path, 'ciphertexts')
-            cfg['ciphertexts'] = ciphertexts_path
-            print("%s start generation of plaintexts" % str(datetime.now()))
-            cfg["plaintexts"] = gen_all_plaintexts(temp_path, base_plaintexts_path, vote_count)
-            print("%s plaintexts created" % str(datetime.now()))
-            print("%s start dump_pks" % str(datetime.now()))
-            dump_pks(cfg, args)
-            print("%s pks dumped" % str(datetime.now()))
-            print("%s start ballot encryption" % str(datetime.now()))
-            start_time = time.time()
-            encrypt(cfg, args)
-            print("%s ballots encrypted" % str(datetime.now()))
-            end_time = time.time()
-            delta_t = end_time - start_time
-            troughput = vote_count / float(delta_t)
-            print("encrypted %i votes in %f secs. %f votes/sec" % (vote_count, delta_t, troughput))
-            if save_ciphertexts:
-                shutil.copy2(ciphertexts_path, save_ciphertexts_path)
-                print("encrypted ballots saved to file %s" % ciphertexts_path)
-
-        print("%s start khmac generation" % str(datetime.now()))
-        khmac_list = gen_all_khmacs(vote_count, election_id)
-        print("%s khmacs generated" % str(datetime.now()))
-        print("%s start sending ballots" % str(datetime.now()))
-        send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
-        print("%s ballots sent" % str(datetime.now()))
+    print("%s start khmac generation" % str(datetime.now()))
+    khmac_list = gen_all_khmacs(vote_count, election_id)
+    print("%s khmacs generated" % str(datetime.now()))
+    print("%s start sending ballots" % str(datetime.now()))
+    send_all_ballots(vote_count, ciphertexts_path, khmac_list, election_id)
+    print("%s ballots sent" % str(datetime.now()))
 
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
@@ -919,6 +940,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
 change_social <election_id>: changes the social netoworks share buttons configuration
 authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist.
 gen_votes <election_id>: generate votes
+send_votes <election_id>: send votes generated by the command gen_votes
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
