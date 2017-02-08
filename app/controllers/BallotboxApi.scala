@@ -95,7 +95,8 @@ object BallotboxApi extends Controller with Response {
                           .replace("${eid}", electionId+"")
                           .replace("${uid}", voterId)
                         ,
-                        message
+                        message,
+                        vote.vote_hash
                       )
                     }
                     Ok(response(result))
@@ -197,7 +198,7 @@ object BallotboxApi extends Controller with Response {
     }
   }
 
-  private def postVoteCallback(url: String, message: String) = {
+  private def postVoteCallback(url: String, message: String, vote_hash: String) = {
     try {
       println(s"posting to $url")
       val hmac = Crypto.hmac(boothSecret, message)
@@ -205,7 +206,8 @@ object BallotboxApi extends Controller with Response {
       val f = WS.url(url)
         .withHeaders(
           "Accept" -> "application/json",
-          "Authorization" -> khmac)
+          "Authorization" -> khmac,
+          "BallotTracker" -> vote_hash)
         .post(Results.EmptyContent())
         .map { resp =>
           if(resp.status != HTTP.ACCEPTED) {
