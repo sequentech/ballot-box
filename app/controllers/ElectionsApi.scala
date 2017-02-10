@@ -718,7 +718,8 @@ object ElectionsApi
 
     // taken from https://www.playframework.com/documentation/2.3.x/ScalaWS
     val futureResponse: Future[(WSResponseHeaders, Enumerator[Array[Byte]])] =
-    WS.url(url).getStream()
+    /* 3600 seconds timeout should be enough for everybody WCPGR? */
+    WS.url(url).withRequestTimeout(3600000).getStream()
 
     val downloadedFile: Future[Unit] = futureResponse.flatMap {
       case (headers, body) =>
