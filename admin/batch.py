@@ -104,12 +104,6 @@ def main(argv):
 
     elif args.command == 'list-tally-with-ids':
         for eid in args.election_ids:
-            print('next id %d, dumping votes with matching ids (in private datastore)' % eid)
-            ret = cycle.dump_votes_with_ids(eid)
-            if ret in [400, 500]:
-                  print("dump_votes_with_ids returned %d, continuing without it" % ret)
-                  continue
-
             print('next id %d, stopping election' % eid)
             ret = cycle.stop(eid)
             if ret in [400, 500]:
@@ -222,12 +216,6 @@ def main(argv):
                     next_id = cfg['payload']['id']
                 else:
                     next_id = cfg['id']
-
-                print('next id %d, dumping votes with matching ids (in private datastore)' % next_id)
-                ret = cycle.dump_votes_with_ids(next_id)
-                if ret in [400, 500]:
-                     print("dump_votes_with_ids returned %d, continuing without it" % ret)
-                     continue
 
                 print('next id %d, stopping election' % next_id)
                 ret = cycle.stop(next_id)
