@@ -89,7 +89,7 @@ object ElectionsApi
   def update(id: Long) = HAction("", "AuthEvent", id, "edit|update").async(BodyParsers.parse.json) { request =>
     updateElection(id, request)
   }  
-  
+
   /** updates an election's social share buttons config */
   def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
     updateShareElection(id, request)
@@ -487,25 +487,6 @@ object ElectionsApi
       {
         try {
           val validated = config.validate(authorities, id)
-          if (validated.real)
-          {
-            request
-              .headers
-              .get("Authorization")
-              .map(
-                HMACAuthAction("", "AuthEvent", id, "edit|register-real")
-                  .validate(request)
-              ) match
-            {
-              case Some(true) => None
-              case _ => BadRequest(
-                error(
-                  s"Invalid config json, user has not permissions to " +
-                  s"register real elections"
-                )
-              )
-            }
-          }
           DB.withSession
           {
             implicit session =>
@@ -618,25 +599,6 @@ object ElectionsApi
       config => {
 
         val validated = config.validate(authorities, id)
-        if (validated.real)
-        {
-          request
-            .headers
-            .get("Authorization")
-            .map(
-              HMACAuthAction("", "AuthEvent", id, "edit|register-real")
-                .validate(request)
-            ) match
-          {
-            case Some(true) => None
-            case _ => BadRequest(
-              error(
-                s"Invalid config json, user has not permissions to " +
-                s"register real elections"
-              )
-            )
-          }
-        }
 
         val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
         Ok(response(result))
