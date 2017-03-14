@@ -29,6 +29,7 @@ import javax.xml.bind.DatatypeConverter
 import java.math.BigInteger
 import scala.concurrent.forkjoin._
 import scala.collection.mutable.{ListBuffer, ArrayBuffer}
+import scala.util.{Success, Failure}
 
 import java.nio.file.{Paths, Files}
 
@@ -40,6 +41,7 @@ case class DumpPksError(message: String) extends Exception(message)
 
 object PlaintextBallot {
   val ID = 0
+  val ANSWER = 1
 }
 
 /**
@@ -80,7 +82,6 @@ object Console {
       } else if ("--batch-size" == args(arg_index + 1)) {
         batch_size = args(arg_index + 2).toInt
         arg_index += 2
-      }
       } else {
         throw new java.lang.IllegalArgumentException("unrecognized argument: " + args(arg_index + 1))
       }
@@ -93,15 +94,23 @@ object Console {
   }
 
   private def dump_pks(electionId: Int): Future[Unit] = {
+    val promise = Promise[Unit]()
+    Future {
+      promise success ( () )
+    }  onComplete  { case Failure(error) =>
+      promise failure error
+      case _ =>
+    }
+    promise.future
   }
 
   private def processPlaintextLine(line: String, lineNumber: Int) : PlaintextBallot  = {
     var strIndex: Option[String] = None
     var state = PlaintextBallot.ID
-    val ballot = PlaintextBallot()
+    var ballot = PlaintextBallot()
     var optionsBuffer: Option[ArrayBuffer[Int]] = None
     var answersBuffer: ArrayBuffer[Answer] = ArrayBuffer[Answer]()
-    for (int i = 0; i < line.length; i++) {
+    for (i <- 0 until line.length) {
       val c = line.charAt(i)
       if(c.isDigit) { // keep reading digits till we get the whole number
         strIndex match {
@@ -119,7 +128,7 @@ object Console {
           }
           strIndex match {
             case Some(strIndexValue) =>
-              ballot.id = strIndex.get.toInt
+              ballot = PlaintextBallot(strIndex.get.toInt, ballot.answers)
               strIndex = None
               optionsBuffer = Some(ArrayBuffer[Int]())
               state = PlaintextBallot.ANSWER
@@ -160,7 +169,7 @@ object Console {
       case None =>
         throw PlaintextError(s"Error on line $lineNumber: unknown error, invalid state. Line: $line")
     }
-    ballot.answers = answersBuffer.toArray
+    ballot = PlaintextBallot(ballot.id, answersBuffer.toArray)
     ballot
   }
 
@@ -170,53 +179,59 @@ object Console {
       val ballotsList = scala.collection.mutable.ListBuffer[PlaintextBallot]()
       val electionsSet = scala.collection.mutable.Set[Int]()
       if (Files.exists(Paths.get(plaintexts_path))) {
-        val fileLinesMap: List[PlaintextBallot] = io.Source.fromFile(plaintexts_path).getLines() foreach {
-          line =>
-            val ballot = processPlaintextLine(line)
-            list += ballot
-            electionsSet += ballot.id
+        io.Source.fromFile(plaintexts_path).getLines().zipWithIndex.foreach { 
+          case (line, number) =>
+              val ballot = processPlaintextLine(line, number)
+              ballotsList += ballot
+              electionsSet += ballot.id
         }
       } else {
         throw new java.io.FileNotFoundException("tally does not exist")
       }
       promise success ( ballotsList.sortBy(_.id).toList, electionsSet.toSet )
-    } (ec) onFailure { case error =>
+    } onComplete { case Failure(error) =>
       promise failure error
-    } (ec)
+      case _ =>
+    }
+    promise.future
   }
-  
+
   private def dump_pks_elections(electionsSet: scala.collection.immutable.Set[Int]): Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
       var count : Int = 0
       var futuresCreated = Promise[Unit]()
-      futuresCreated onFailure { case error =>
-        promise failure error
+      futuresCreated.future onComplete { 
+        case Failure(error) =>
+          promise failure error
+      case _ =>
       }
       for (electionId <- electionsSet) {
-        count.synchronized {
+        this.synchronized {
           count += 1
         }
         dump_pks(electionId) onComplete {
           case Success(value) =>
-            futuresCreated onSuccess { case value2 =>
-              count.synchronized {
+            futuresCreated.future onComplete  { case Success(value2) =>
+              this.synchronized {
                 if ( 0 >= count ) {
                   promise failure DumpPksError("Logic error")
                 }
                 count -= 1
                 if ( 0 == count ) {
-                  promise success ()
+                  promise success ( () )
                 }
               }
-            } (ec)
+              case _ =>
+            }
           case Failure(error) =>
             futuresCreated failure error
-        } (ec)
+        }
       }
-      futuresCreated success ()
-    } (ec) onFailure { case error =>
+      futuresCreated success ( () )
+    } onComplete { case Failure(error) =>
       promise failure error
+      case _ =>
     }
     promise.future
   }
@@ -224,10 +239,11 @@ object Console {
   private def encryptBallotTask(ballotsList: scala.collection.immutable.List[PlaintextBallot], index: Int, numBallots: Int, fileWriteMutex: Unit) : Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
-      promise success ()
-    } (ec) onFailure { case error =>
+      promise success ( () )
+    } onComplete { case Failure(error) =>
       promise failure error
-    } (ec)
+      case _ =>
+    }
     promise.future
   }
 
@@ -235,7 +251,7 @@ object Console {
     val promise = Promise[Unit]()
     Future {
       val fileWriteMutex: Unit = ()
-      val count : Int = 0
+      var count : Int = 0
       while ( count < vote_count ) {
         val numBallots : Int =  if ( vote_count - count < batch_size ) {
           vote_count - count
@@ -245,23 +261,26 @@ object Console {
         encryptBallotTask(ballotsList, count % ballotsList.length, numBallots, fileWriteMutex)
         count += numBallots
       }
-    } (ec) onFailure { case error =>
+    } onComplete { case Failure(error) =>
       promise failure error
-    } (ec)
+      case _ =>
+    }
     promise.future
   }
 
   private def gen_votes(): Future[Unit] =  {
     val promise = Promise[Unit]()
     Future {
-      promise completeWith parsePlaintexts() flatMap { (ballotsList, electionsSet) =>
-        dump_pks_elections(electionsSet) flatMap { u =>
-          encryptBallots(ballotsList, electionsSet)
-        } (ec)
-      } (ec)
-    } (ec) onFailure { case error =>
+      promise completeWith { parsePlaintexts() flatMap { case (ballotsList, electionsSet) =>
+          dump_pks_elections(electionsSet) flatMap { case u =>
+            encryptBallots(ballotsList, electionsSet)
+          }
+        }
+      }
+    } onComplete { case Failure(error) =>
       promise failure error
-    } (ec)
+      case _ =>
+    }
     promise.future
   }
 
