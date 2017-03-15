@@ -36,7 +36,12 @@ import play.libs.Akka
 
 import play.api.libs.json._
 
-import java.nio.file.{Paths, Files}
+import java.nio.file.{Paths, Files, Path}
+import java.nio.file.StandardOpenOption._
+import java.nio.charset.StandardCharsets
+import java.io.File
+import java.io.RandomAccessFile
+import java.nio._
 
 import play.api.Play.current
 import play.api.libs.ws._
@@ -59,6 +64,16 @@ object PlaintextBallot {
   val ANSWER = 1
 }
 
+
+class VotesWriter(filePath: Path) {
+  Files.write(filePath, "".getBytes(StandardCharsets.UTF_8), CREATE, TRUNCATE_EXISTING)
+  def write(id: Long, ballot: EncryptedVote) = Future {
+    val content: String = id.toString + "-" + Json.toJson(ballot).toString + "\n"
+    this.synchronized {
+      Files.write(filePath, content.getBytes(StandardCharsets.UTF_8), APPEND)
+    }
+  }
+}
 /**
   * Command for admin purposes
   *
@@ -78,7 +93,6 @@ object Console {
   var ciphertexts_path = "ciphertexts.csv"
   var shared_secret = "<password>"
   var datastore = "/home/agoraelections/datastore"
-  var batch_size : Long = 50
 
   // copied from https://www.playframework.com/documentation/2.3.x/ScalaWS
   val clientConfig = new DefaultWSClientConfig()
@@ -105,9 +119,6 @@ object Console {
         arg_index += 2
       } else if ("--shared-secret" == args(arg_index + 1)) {
         shared_secret = args(arg_index + 2)
-        arg_index += 2
-      } else if ("--batch-size" == args(arg_index + 1)) {
-        batch_size = args(arg_index + 2).toLong
         arg_index += 2
       } else if ("--port" == args(arg_index + 1)) {
         port = args(arg_index + 2).toLong
@@ -314,10 +325,6 @@ object Console {
     array
   }
 
-  private def saveVote( electionId : Long, encryptedVote : EncryptedVote ) = {
-    
-  }
-
   private def encryptBallots(
     ballotsList: scala.collection.immutable.List[PlaintextBallot],
     electionsSet: scala.collection.immutable.Set[Long],
@@ -335,11 +342,12 @@ object Console {
         val extra = Array.fill(extraSize.toInt){ votes(scala.util.Random.nextInt(votes.length)) }
         votes ++ extra
       }
+      val writer = new VotesWriter(Paths.get(ciphertexts_path))
       toEncrypt.par.map { case (electionId, plaintext) =>
         val jsonPks = Json.parse(electionsInfoMap.get(electionId).get.pks.get)
         val pks = jsonPks.validate[Array[PublicKey]].get
         val encryptedVote = Crypto.encrypt(pks, plaintext)
-        saveVote(electionId, encryptedVote)
+        writer.write(electionId, encryptedVote)
       }
       promise success ( () )
     } recover { case error: Throwable =>
