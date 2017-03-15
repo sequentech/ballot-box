@@ -65,12 +65,13 @@ object PlaintextBallot {
 }
 
 
-class VotesWriter(filePath: Path) {
-  Files.write(filePath, "".getBytes(StandardCharsets.UTF_8), CREATE, TRUNCATE_EXISTING)
+class VotesWriter(path: Path) {
+  Files.deleteIfExists(path)
+  Files.createFile(path)
   def write(id: Long, ballot: EncryptedVote) = Future {
     val content: String = id.toString + "-" + Json.toJson(ballot).toString + "\n"
     this.synchronized {
-      Files.write(filePath, content.getBytes(StandardCharsets.UTF_8), APPEND)
+      Files.write(path, content.getBytes(StandardCharsets.UTF_8), APPEND)
     }
   }
 }
