@@ -28,16 +28,28 @@ import javax.crypto.Mac
 import javax.xml.bind.DatatypeConverter
 import java.math.BigInteger
 import scala.concurrent.forkjoin._
-import scala.collection.mutable.{ListBuffer, ArrayBuffer}
-import scala.util.{Success, Failure}
+import scala.collection.mutable.ArrayBuffer
+import scala.util.{Try, Success, Failure}
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.libs.Akka
 
 import java.nio.file.{Paths, Files}
 
-case class Answer(options: Array[Int] = Array[Int]())
+import play.api.Play.current
+import play.api.libs.ws._
+import play.api.libs.ws.ning.NingAsyncHttpClientConfigBuilder
+import play.api.libs.ws.ning.NingWSClient
+import play.api.mvc._
+import play.api.http.{Status => HTTP}
+
+
+case class Answer(options: Array[Long] = Array[Long]())
 // id is the election ID
-case class PlaintextBallot(id: Int = -1, answers: Array[Answer] = Array[Answer]())
+case class PlaintextBallot(id: Long = -1, answers: Array[Answer] = Array[Answer]())
 case class PlaintextError(message: String) extends Exception(message)
 case class DumpPksError(message: String) extends Exception(message)
+case class BallotEncryptionError(message: String) extends Exception(message)
 
 object PlaintextBallot {
   val ID = 0
@@ -53,21 +65,33 @@ object PlaintextBallot {
   * from CLI
   */
 object Console {
-  implicit val ec = ExecutionContext.fromExecutor(new ForkJoinPool(100))
+  //implicit val ec = ExecutionContext.fromExecutor(new ForkJoinPool(100))
+  //implicit val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
 
-  var vote_count = 0
+  var vote_count : Long = 0
+  var host = "localhost"
+  var port : Long = 9000
   var plaintexts_path = "plaintexts.txt"
   var ciphertexts_path = "ciphertexts.csv"
   var shared_secret = "<password>"
   var datastore = "/home/agoraelections/datastore"
-  var batch_size = 50
+  var batch_size : Long = 50
+
+  // copied from https://www.playframework.com/documentation/2.3.x/ScalaWS
+  val clientConfig = new DefaultWSClientConfig()
+  val secureDefaults:com.ning.http.client.AsyncHttpClientConfig = new NingAsyncHttpClientConfigBuilder(clientConfig).build()
+  val builder = new com.ning.http.client.AsyncHttpClientConfig.Builder(secureDefaults)
+  builder.setCompressionEnabled(true)
+  val secureDefaultsWithSpecificOptions:com.ning.http.client.AsyncHttpClientConfig = builder.build()
+  implicit val wsClient = new play.api.libs.ws.ning.NingWSClient(secureDefaultsWithSpecificOptions)
+
 
   private def parse_args(args: Array[String]) = {
     var arg_index = 0
     while (arg_index + 2 < args.length) {
       // number of ballots to create
       if ("--vote-count" == args(arg_index + 1)) {
-        vote_count = args(arg_index + 2).toInt
+        vote_count = args(arg_index + 2).toLong
         arg_index += 2
       }
       else if ("--plaintexts" == args(arg_index + 1)) {
@@ -80,35 +104,29 @@ object Console {
         shared_secret = args(arg_index + 2)
         arg_index += 2
       } else if ("--batch-size" == args(arg_index + 1)) {
-        batch_size = args(arg_index + 2).toInt
+        batch_size = args(arg_index + 2).toLong
+        arg_index += 2
+      } else if ("--port" == args(arg_index + 1)) {
+        port = args(arg_index + 2).toLong
+        if (port <= 0 || port > 65535) {
+          throw new java.lang.IllegalArgumentException(s"Invalid port $port")
+        }
         arg_index += 2
       } else {
-        throw new java.lang.IllegalArgumentException("unrecognized argument: " + args(arg_index + 1))
+        throw new java.lang.IllegalArgumentException("Unrecognized argument: " + args(arg_index + 1))
       }
     }
   } 
 
   private def showHelp() = {
     System.out.println("showHelp")
-    ()
   }
 
-  private def dump_pks(electionId: Int): Future[Unit] = {
-    val promise = Promise[Unit]()
-    Future {
-      promise success ( () )
-    }  onComplete  { case Failure(error) =>
-      promise failure error
-      case _ =>
-    }
-    promise.future
-  }
-
-  private def processPlaintextLine(line: String, lineNumber: Int) : PlaintextBallot  = {
+  private def processPlaintextLine(line: String, lineNumber: Long) : PlaintextBallot  = {
     var strIndex: Option[String] = None
     var state = PlaintextBallot.ID
     var ballot = PlaintextBallot()
-    var optionsBuffer: Option[ArrayBuffer[Int]] = None
+    var optionsBuffer: Option[ArrayBuffer[Long]] = None
     var answersBuffer: ArrayBuffer[Answer] = ArrayBuffer[Answer]()
     for (i <- 0 until line.length) {
       val c = line.charAt(i)
@@ -128,9 +146,9 @@ object Console {
           }
           strIndex match {
             case Some(strIndexValue) =>
-              ballot = PlaintextBallot(strIndex.get.toInt, ballot.answers)
+              ballot = PlaintextBallot(strIndex.get.toLong, ballot.answers)
               strIndex = None
-              optionsBuffer = Some(ArrayBuffer[Int]())
+              optionsBuffer = Some(ArrayBuffer[Long]())
               state = PlaintextBallot.ANSWER
             case None =>
               throw PlaintextError(s"Error on line $lineNumber, character $i: election index not recognized. Line: $line")
@@ -140,15 +158,15 @@ object Console {
             case Some(optionsBufferValue) =>
               if ('|' == c) {
                 if (strIndex.isDefined) {
-                  optionsBufferValue += strIndex.get.toInt
+                  optionsBufferValue += strIndex.get.toLong
                   strIndex = None
                 }
                 answersBuffer += Answer(optionsBufferValue.toArray)
-                optionsBuffer = Some(ArrayBuffer[Int]())
+                optionsBuffer = Some(ArrayBuffer[Long]())
               } else if(',' == c) {
                 strIndex match {
                   case Some(strIndexValue) =>
-                    optionsBufferValue += strIndexValue.toInt
+                    optionsBufferValue += strIndexValue.toLong
                     strIndex = None
                   case None =>
                     throw PlaintextError(s"Error on line $lineNumber, character $i: option number not recognized before comma on question ${ballot.answers.length}. Line: $line")
@@ -173,97 +191,138 @@ object Console {
     ballot
   }
 
-  private def parsePlaintexts(): Future[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Int])] = {
-    val promise = Promise[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Int])]()
+  private def parsePlaintexts(): Future[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Long])] = {
+    val promise = Promise[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Long])]()
     Future {
-      val ballotsList = scala.collection.mutable.ListBuffer[PlaintextBallot]()
-      val electionsSet = scala.collection.mutable.Set[Int]()
       if (Files.exists(Paths.get(plaintexts_path))) {
+        val ballotsList = scala.collection.mutable.ListBuffer[PlaintextBallot]()
+        val electionsSet = scala.collection.mutable.LinkedHashSet[Long]()
         io.Source.fromFile(plaintexts_path).getLines().zipWithIndex.foreach { 
           case (line, number) =>
               val ballot = processPlaintextLine(line, number)
               ballotsList += ballot
               electionsSet += ballot.id
         }
+        if ( electionsSet.isEmpty || ballotsList.isEmpty ) {
+          throw PlaintextError("Error: no ballot found")
+        } else {
+          promise success ( ( ballotsList.sortBy(_.id).toList, electionsSet.toSet ) )
+        }
       } else {
         throw new java.io.FileNotFoundException("tally does not exist")
       }
-      promise success ( ballotsList.sortBy(_.id).toList, electionsSet.toSet )
-    } onComplete { case Failure(error) =>
+    } recover { case error: Throwable =>
       promise failure error
-      case _ =>
     }
     promise.future
   }
 
-  private def dump_pks_elections(electionsSet: scala.collection.immutable.Set[Int]): Future[Unit] = {
+  private def get_khmac(userId: String, objType: String, objId: Long, perm: String) : String = {
+    val now: Long = System.currentTimeMillis / 1000
+    val message = s"$userId:$objType:$objId:$perm:$now"
+    val hmac = Crypto.hmac(shared_secret, message)
+    val khmac = s"khmac:///sha-256;$hmac/$message"
+    khmac
+  }
+
+  private def dump_pks(electionId: Long): Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
-      var count : Int = 0
-      var futuresCreated = Promise[Unit]()
-      futuresCreated.future onComplete { 
-        case Failure(error) =>
-          promise failure error
-      case _ =>
+      val auth = get_khmac("", "AuthEvent", electionId, "edit")
+      val url = s"http://$host:$port/api/election/$electionId/dump-pks"
+      wsClient.url(url)
+        .withHeaders("Authorization" -> auth)
+        .post(Results.EmptyContent()).map { response =>
+          if(response.status == HTTP.ACCEPTED) {
+            promise success ( () )
+          } else {
+            promise failure DumpPksError(s"HTTP POST request to $url returned status: ${response.status} and body: ${response.body}")
+          }
+      } recover { case error: Throwable =>
+        promise failure error
       }
+    } recover { case error: Throwable =>
+      promise failure error
+    }
+    promise.future
+  }
+
+  private def dump_pks_elections(electionsSet: scala.collection.immutable.Set[Long]): Future[Unit] = {
+    val promise = Promise[Unit]()
+    Future {
+      var count : Long = 0
+      var futuresCreated = Promise[Unit]()
       for (electionId <- electionsSet) {
-        this.synchronized {
-          count += 1
-        }
-        dump_pks(electionId) onComplete {
-          case Success(value) =>
-            futuresCreated.future onComplete  { case Success(value2) =>
+        count += 1
+        dump_pks(electionId) flatMap {
+          value =>
+            futuresCreated.future map  { value2 =>
               this.synchronized {
                 if ( 0 >= count ) {
-                  promise failure DumpPksError("Logic error")
+                  throw DumpPksError("Logic error")
                 }
                 count -= 1
                 if ( 0 == count ) {
                   promise success ( () )
                 }
               }
-              case _ =>
             }
-          case Failure(error) =>
-            futuresCreated failure error
+        } recover {
+          case error: Throwable =>
+            promise failure error
         }
       }
       futuresCreated success ( () )
-    } onComplete { case Failure(error) =>
+    } recover { case error: Throwable =>
       promise failure error
-      case _ =>
     }
     promise.future
   }
 
-  private def encryptBallotTask(ballotsList: scala.collection.immutable.List[PlaintextBallot], index: Int, numBallots: Int, fileWriteMutex: Unit) : Future[Unit] = {
+  private def encryptBallotTask(ballotsList: scala.collection.immutable.List[PlaintextBallot], index: Long, numBallots: Long) : Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
       promise success ( () )
-    } onComplete { case Failure(error) =>
+    } recover { case error: Throwable =>
       promise failure error
-      case _ =>
     }
     promise.future
   }
 
-  private def encryptBallots(ballotsList: scala.collection.immutable.List[PlaintextBallot], electionsSet: scala.collection.immutable.Set[Int]): Future[Unit] = {
+  private def encryptBallots(ballotsList: scala.collection.immutable.List[PlaintextBallot], electionsSet: scala.collection.immutable.Set[Long]): Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
-      val fileWriteMutex: Unit = ()
-      var count : Int = 0
-      while ( count < vote_count ) {
-        val numBallots : Int =  if ( vote_count - count < batch_size ) {
-          vote_count - count
-        } else {
+      var taskCounter : Long = 0
+      var ballotCounter : Long = 0
+      val tasksCreated = Promise[Unit]()
+      while (ballotCounter < vote_count) {
+        taskCounter += 1
+        val numBallots = if (vote_count > batch_size + ballotCounter) {
           batch_size
+        } else {
+          vote_count - ballotCounter
         }
-        encryptBallotTask(ballotsList, count % ballotsList.length, numBallots, fileWriteMutex)
-        count += numBallots
+        encryptBallotTask (ballotsList, ballotCounter % ballotsList.length, numBallots) flatMap { value =>
+          tasksCreated.future map { value2 =>
+            this.synchronized {
+              if ( 0 >= taskCounter ) {
+                throw BallotEncryptionError("Logic error")
+              }
+              taskCounter -= 1
+              if ( 0 == taskCounter ) {
+                promise success ( () )
+              }
+            }
+          }
+        } recover {
+          case error: Throwable =>
+            promise failure error
+        }
+        ballotCounter += numBallots
       }
-    } onComplete { case Failure(error) =>
+      tasksCreated success ( () )
+    } recover { case error: Throwable =>
       promise failure error
-      case _ =>
     }
     promise.future
   }
@@ -277,9 +336,8 @@ object Console {
           }
         }
       }
-    } onComplete { case Failure(error) =>
+    } recover { case error: Throwable =>
       promise failure error
-      case _ =>
     }
     promise.future
   }
@@ -288,15 +346,19 @@ object Console {
   }
 
   def main(args: Array[String]) = {
-    System.out.println("hi there")
     if(0 == args.length) {
       showHelp()
     } else {
       parse_args(args)
       val command = args(0)
       if ("gen_votes" == command) {
-        gen_votes() onSuccess { case a =>
-          System.out.println("hi there")
+        gen_votes() onComplete { 
+          case Success(value) =>
+            println("gen_votes success")
+            System.exit(0)
+          case Failure(error) =>
+            println("gen_votes error " + error)
+            System.exit(-1)
         }
       } else if ( "send_votes" == command) {
         send_votes()
