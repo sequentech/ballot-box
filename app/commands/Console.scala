@@ -59,6 +59,7 @@ case class DumpPksError(message: String) extends Exception(message)
 case class BallotEncryptionError(message: String) extends Exception(message)
 case class GetElectionInfoError(message: String) extends Exception(message)
 
+
 object PlaintextBallot {
   val ID = 0
   val ANSWER = 1
@@ -92,7 +93,7 @@ object Console {
   var port : Long = 9000
   var plaintexts_path = "plaintexts.txt"
   var ciphertexts_path = "ciphertexts.csv"
-  var shared_secret = "<password>"
+  var shared_secret = "<PASSWORD>"
   var datastore = "/home/agoraelections/datastore"
 
   // copied from https://www.playframework.com/documentation/2.3.x/ScalaWS
@@ -198,6 +199,9 @@ object Console {
     // add the last Answer
     optionsBuffer match {
       case Some(optionsBufferValue) =>
+        if (strIndex.isDefined) {
+          optionsBufferValue += strIndex.get.toLong
+        }
         answersBuffer += Answer(optionsBufferValue.toArray)
       case None =>
         throw PlaintextError(s"Error on line $lineNumber: unknown error, invalid state. Line: $line")
@@ -245,8 +249,8 @@ object Console {
     Future {
       val url = s"http://$host:$port/api/election/$electionId"
       wsClient.url(url) .get() map { response =>
-        if(response.status == HTTP.ACCEPTED) {
-          val dto = response.json.validate[ElectionDTO].get
+        if(response.status == HTTP.OK) {
+          val dto = (response.json \ "payload").validate[ElectionDTO].get
           promise success dto
         } else {
           promise failure GetElectionInfoError(s"HTTP GET request to $url returned status: ${response.status} and body: ${response.body}")
@@ -290,7 +294,7 @@ object Console {
       wsClient.url(url)
         .withHeaders("Authorization" -> auth)
         .post(Results.EmptyContent()).map { response =>
-          if(response.status == HTTP.ACCEPTED) {
+          if(response.status == HTTP.OK) {
             promise success ( () )
           } else {
             promise failure DumpPksError(s"HTTP POST request to $url returned status: ${response.status} and body: ${response.body}")
@@ -319,13 +323,18 @@ object Console {
   }
 
   private def encodePlaintext(ballot: PlaintextBallot, dto: ElectionDTO): Array[Long] = {
-    var array =  Array[Long](ballot.answers.length)
+    var array =  new Array[Long](ballot.answers.length)
     for (i <- 0 until array.length) {
       val numChars = ( dto.configuration.questions(i).answers.length + 2 ).toString.length
       var strValue : String = ""
       val answer = ballot.answers(i)
       for (j <- 0 until answer.options.length) {
         val optionStrBase = ( answer.options(j) + 1 ).toString
+        strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
+      }
+      // blank vote
+      if (0 == answer.options.length) {
+        val optionStrBase = ( dto.configuration.questions(i).answers.length + 2 ).toString
         strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
       }
       array(i) = strValue.toLong
@@ -378,9 +387,9 @@ object Console {
           case (ballotsList, electionsSet) =>
             val dumpPksFuture = dump_pks_elections(electionsSet)
             get_election_info_all(electionsSet) flatMap {
-              case electionsInfoMap =>
+              electionsInfoMap =>
                 dumpPksFuture flatMap {
-                  case pksDumped =>
+                  pksDumped =>
                     encryptBallots(ballotsList, electionsSet, electionsInfoMap)
                 }
             }
