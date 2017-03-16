@@ -264,14 +264,18 @@ object Console {
     val promise = Promise[scala.collection.mutable.HashMap[Long, ElectionDTO]]()
     Future {
       val map = scala.collection.mutable.HashMap[Long, ElectionDTO]()
-      electionsSet.par.foreach { eid =>
-        get_election_info(eid) map { dto : ElectionDTO =>
-          this.synchronized {
-            map += (dto.id -> dto)
+      promise completeWith {
+        Future.traverse(electionsSet) { eid =>
+          get_election_info(eid) map { dto : ElectionDTO =>
+            this.synchronized {
+              map += (dto.id -> dto)
+            }
+            ()
           }
+        } map { _ =>
+          map
         }
       }
-      promise success ( map )
     } recover { case error: Throwable =>
       promise failure error
     }
@@ -303,8 +307,11 @@ object Console {
   private def dump_pks_elections(electionsSet: scala.collection.immutable.Set[Long]): Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
-      electionsSet.par map ( dump_pks(_) )
-      promise success ( () )
+      promise completeWith {
+        Future.traverse( electionsSet ) ( x => dump_pks(x) ) map { _ =>
+          ()
+        }
+      }
     } recover { case error: Throwable =>
       promise failure error
     }
@@ -338,19 +345,25 @@ object Console {
       val votes = ballotsList.par.map{ ballot : PlaintextBallot =>
         (ballot.id, encodePlaintext( ballot, electionsInfoMap.get(ballot.id).get ) ) 
       }.seq
-      val toEncrypt = {
+      val toEncrypt : Seq[(Long, Array[Long])] = {
         val extraSize = vote_count - votes.length
         val extra = Array.fill(extraSize.toInt){ votes(scala.util.Random.nextInt(votes.length)) }
         votes ++ extra
       }
       val writer = new VotesWriter(Paths.get(ciphertexts_path))
-      toEncrypt.par.map { case (electionId, plaintext) =>
-        val jsonPks = Json.parse(electionsInfoMap.get(electionId).get.pks.get)
-        val pks = jsonPks.validate[Array[PublicKey]].get
-        val encryptedVote = Crypto.encrypt(pks, plaintext)
-        writer.write(electionId, encryptedVote)
+      promise completeWith {
+        Future.traverse (toEncrypt) { case (electionId, plaintext) =>
+          Future {
+            val jsonPks = Json.parse(electionsInfoMap.get(electionId).get.pks.get)
+            val pks = jsonPks.validate[Array[PublicKey]].get
+            val encryptedVote = Crypto.encrypt(pks, plaintext)
+            writer.write(electionId, encryptedVote)
+            ()
+          }
+        } map { _ =>
+          ()
+        }
       }
-      promise success ( () )
     } recover { case error: Throwable =>
       promise failure error
     }
@@ -360,13 +373,17 @@ object Console {
   private def gen_votes(): Future[Unit] =  {
     val promise = Promise[Unit]()
     Future {
-      promise completeWith { parsePlaintexts() flatMap { case (ballotsList, electionsSet) =>
-          val dumpPksFuture = dump_pks_elections(electionsSet)
-          get_election_info_all(electionsSet) flatMap { case electionsInfoMap =>
-            dumpPksFuture flatMap { case pksDumped =>
-              encryptBallots(ballotsList, electionsSet, electionsInfoMap)
+      promise completeWith {
+        parsePlaintexts() flatMap {
+          case (ballotsList, electionsSet) =>
+            val dumpPksFuture = dump_pks_elections(electionsSet)
+            get_election_info_all(electionsSet) flatMap {
+              case electionsInfoMap =>
+                dumpPksFuture flatMap {
+                  case pksDumped =>
+                    encryptBallots(ballotsList, electionsSet, electionsInfoMap)
+                }
             }
-          }
         }
       }
     } recover { case error: Throwable =>
