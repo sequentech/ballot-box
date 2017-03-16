@@ -69,8 +69,8 @@ object PlaintextBallot {
 class VotesWriter(path: Path) {
   Files.deleteIfExists(path)
   Files.createFile(path)
-  def write(id: Long, ballot: EncryptedVote) : Future[Unit] = Future {
-    val content: String = id.toString + "-" + Json.toJson(ballot).toString + "\n"
+
+  def write(content: String) : Future[Unit] = Future {
     this.synchronized {
       Files.write(path, content.getBytes(StandardCharsets.UTF_8), APPEND)
     }
@@ -93,8 +93,11 @@ object Console {
   var port : Long = 9000
   var plaintexts_path = "plaintexts.txt"
   var ciphertexts_path = "ciphertexts.csv"
+  var ciphertexts_khmac_path = "ciphertexts-khmac.csv"
   var shared_secret = "<PASSWORD>"
   var datastore = "/home/agoraelections/datastore"
+  var voterid_len : Int = 28
+  val voterid_alphabet: String = "0123456789abcdef"
 
   // copied from https://www.playframework.com/documentation/2.3.x/ScalaWS
   val clientConfig = new DefaultWSClientConfig()
@@ -103,6 +106,7 @@ object Console {
   builder.setCompressionEnabled(true)
   val secureDefaultsWithSpecificOptions:com.ning.http.client.AsyncHttpClientConfig = builder.build()
   implicit val wsClient = new play.api.libs.ws.ning.NingWSClient(secureDefaultsWithSpecificOptions)
+
 
 
   private def parse_args(args: Array[String]) = {
@@ -118,6 +122,12 @@ object Console {
         arg_index += 2
       } else if ("--ciphertexts" == args(arg_index + 1)) {
         ciphertexts_path = args(arg_index + 2)
+        arg_index += 2
+      } else if ("--ciphertexts-khmac" == args(arg_index + 1)) {
+        ciphertexts_khmac_path = args(arg_index + 2)
+        arg_index += 2
+      } else if ("--voterid-len" == args(arg_index + 1)) {
+        voterid_len = args(arg_index + 2).toInt
         arg_index += 2
       } else if ("--shared-secret" == args(arg_index + 1)) {
         shared_secret = args(arg_index + 2)
@@ -210,6 +220,32 @@ object Console {
     ballot
   }
 
+  private def add_khmacs() : Future[Unit] = {
+    val promise = Promise[Unit]()
+    Future {
+      if (Files.exists(Paths.get(ciphertexts_path))) {
+        val now = Some(System.currentTimeMillis / 1000)
+        val writer = new VotesWriter(Paths.get(ciphertexts_khmac_path))
+        promise completeWith {
+          Future.traverse (io.Source.fromFile(ciphertexts_path).getLines()) { file_line =>
+            val array = file_line.split('-')
+            val eid = array(0).toLong
+            val voterId = array(1)
+            val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
+            writer.write(file_line + "-" + khmac) 
+          } map { _ =>
+            ()
+          }
+        }
+      } else {
+        throw new java.io.FileNotFoundException("tally does not exist")
+      }
+    } recover { case error: Throwable =>
+      promise failure error
+    }
+    promise.future
+  }
+
   private def parsePlaintexts(): Future[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Long])] = {
     val promise = Promise[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Long])]()
     Future {
@@ -236,8 +272,11 @@ object Console {
     promise.future
   }
 
-  private def get_khmac(userId: String, objType: String, objId: Long, perm: String) : String = {
-    val now: Long = System.currentTimeMillis / 1000
+  private def get_khmac(userId: String, objType: String, objId: Long, perm: String, nowOpt: Option[Long] = None) : String = {
+    val now: Long = nowOpt match {
+      case Some(time) => time
+      case None => System.currentTimeMillis / 1000
+    }
     val message = s"$userId:$objType:$objId:$perm:$now"
     val hmac = Crypto.hmac(shared_secret, message)
     val khmac = s"khmac:///sha-256;$hmac/$message"
@@ -341,6 +380,25 @@ object Console {
     array
   }
 
+  private def gen_rnd_str(len: Int, choices: String) : String = {
+    (0 until len) map { _ =>
+      choices( scala.util.Random.nextInt(choices.length) )
+    } mkString
+  }
+
+  private def generate_voterid() : String = {
+    gen_rnd_str(voterid_len, voterid_alphabet)
+  }
+
+  private def generate_vote_line(id: Long, ballot: EncryptedVote) : String = {
+    val vote = Json.toJson(ballot).toString
+    val voteHash = Crypto.sha256(vote)
+    val voterId = generate_voterid()
+    val voteDTO = Json.toJson(VoteDTO(vote, voteHash)).toString
+    val line = id.toString + "-" + generate_voterid() + "-" + voteDTO + "\n"
+    line
+  }
+
   private def encryptBallots(
     ballotsList: scala.collection.immutable.List[PlaintextBallot],
     electionsSet: scala.collection.immutable.Set[Long],
@@ -366,7 +424,8 @@ object Console {
             val jsonPks = Json.parse(electionsInfoMap.get(electionId).get.pks.get)
             val pks = jsonPks.validate[Array[PublicKey]].get
             val encryptedVote = Crypto.encrypt(pks, plaintext)
-            writePromise completeWith writer.write(electionId, encryptedVote)
+            val line = generate_vote_line(electionId, encryptedVote)
+            writePromise completeWith writer.write(line)
           } recover { case error: Throwable =>
             writePromise failure error
           }
@@ -403,10 +462,7 @@ object Console {
     promise.future
   }
 
-  private def send_votes() = {
-  }
-
-  def main(args: Array[String]) = {
+  def main(args: Array[String]) : Unit = {
     if(0 == args.length) {
       showHelp()
     } else {
@@ -421,11 +477,12 @@ object Console {
             println("gen_votes error " + error)
             System.exit(-1)
         }
-      } else if ( "send_votes" == command) {
-        send_votes()
+      } else if ( "add_khmacs" == command) {
+        add_khmacs()
       } else {
         showHelp()
       }
     }
+    ()
   }
 }

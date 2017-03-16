@@ -833,13 +833,11 @@ def send_votes(cfg, args):
         import hmac
         start_time = time.time()
         alphabet = '0123456789abcdef'
-        timestamp = 1000 * int(time.time())
         counter = 0
         khmac_list = []
         voterid_len = 28
         while counter < vote_count:
             voterid = gen_rnd_str(voterid_len, alphabet)
-            message = '%s:AuthEvent:%i:vote:%s' % (voterid, election_id, timestamp)
             khmac = get_hmac(cfg, voterid, "AuthEvent", election_id, 'vote')
             khmac_list.append((voterid, khmac))
             counter += 1
