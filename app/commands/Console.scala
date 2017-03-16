@@ -69,7 +69,7 @@ object PlaintextBallot {
 class VotesWriter(path: Path) {
   Files.deleteIfExists(path)
   Files.createFile(path)
-  def write(id: Long, ballot: EncryptedVote) = Future {
+  def write(id: Long, ballot: EncryptedVote) : Future[Unit] = Future {
     val content: String = id.toString + "-" + Json.toJson(ballot).toString + "\n"
     this.synchronized {
       Files.write(path, content.getBytes(StandardCharsets.UTF_8), APPEND)
@@ -274,7 +274,6 @@ object Console {
             this.synchronized {
               map += (dto.id -> dto)
             }
-            ()
           }
         } map { _ =>
           map
@@ -362,13 +361,16 @@ object Console {
       val writer = new VotesWriter(Paths.get(ciphertexts_path))
       promise completeWith {
         Future.traverse (toEncrypt) { case (electionId, plaintext) =>
+          val writePromise = Promise[Unit]()
           Future {
             val jsonPks = Json.parse(electionsInfoMap.get(electionId).get.pks.get)
             val pks = jsonPks.validate[Array[PublicKey]].get
             val encryptedVote = Crypto.encrypt(pks, plaintext)
-            writer.write(electionId, encryptedVote)
-            ()
+            writePromise completeWith writer.write(electionId, encryptedVote)
+          } recover { case error: Throwable =>
+            writePromise failure error
           }
+          writePromise.future
         } map { _ =>
           ()
         }
