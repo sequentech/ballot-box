@@ -587,9 +587,28 @@ object Console {
       // map election ids and public keys
       val pksMap = scala.collection.mutable.HashMap[Long, Array[PublicKey]]()
       electionsInfoMap foreach { case (key, value) =>
-        val jsonPks = Json.toJson(value.pks.get)
-        val pks = jsonPks.validate[Array[PublicKey]].get
-        pksMap += (key -> pks)
+         val strPks = value.pks match {
+           case Some(strPks) =>
+             strPks
+           case None =>
+             val strDto = Json.toJson(value).toString
+             throw new GetElectionInfoError(s"Error: no public keys found for election $key. Election Info: $strDto")
+         }
+         val jsonPks = Try {
+           Json.parse(strPks)
+         } match {
+           case Success(jsonPks) =>
+            jsonPks
+           case Failure(error) =>
+            throw new GetElectionInfoError(s"Error: public keys with invalid JSON format for election $key.\nPublic keys: $strPks.\n${error.getMessage}")
+         }
+         jsonPks.validate[Array[PublicKey]] match {
+           case s :JsSuccess[Array[PublicKey]] =>
+             val pks = s.get
+             pksMap += (key -> pks)
+           case error : JsError =>
+             throw new GetElectionInfoError(s"Error: public keys with invalid Array[PublicKey] format for election $key.\nPublic keys ${jsonPks.toString}\n")
+         }
       }
       // we need to generate vote_count encrypted ballots, fill the list with
       // random samples of the base list
