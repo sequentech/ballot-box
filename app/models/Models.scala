@@ -645,3 +645,7 @@ case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
 
 /** data describing an authority, used in admin interface */
 case class AuthData(name: Option[String], description: Option[String], url: Option[String], image: Option[String])
+
+case class PlaintextAnswer(options: Array[Long] = Array[Long]())
+// id is the election ID
+case class PlaintextBallot(id: Long = -1, answers: Array[PlaintextAnswer] = Array[PlaintextAnswer]())

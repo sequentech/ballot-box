@@ -51,22 +51,26 @@ import play.api.mvc._
 import play.api.http.{Status => HTTP}
 
 
-case class Answer(options: Array[Long] = Array[Long]())
-// id is the election ID
-case class PlaintextBallot(id: Long = -1, answers: Array[Answer] = Array[Answer]())
 case class PlaintextError(message: String) extends Exception(message)
 case class DumpPksError(message: String) extends Exception(message)
 case class BallotEncryptionError(message: String) extends Exception(message)
 case class GetElectionInfoError(message: String) extends Exception(message)
+case class EncodePlaintextError(message: String) extends Exception(message)
+case class EncryptionError(message: String) extends Exception(message)
 
-
+/**
+ * This object contains the states required for reading a plaintext ballot
+ * It's used on Console.processPlaintextLine
+ */
 object PlaintextBallot {
-  val ID = 0
-  val ANSWER = 1
+  val ID = 0 // reading election ID
+  val ANSWER = 1 // reading answers
 }
 
-
-class VotesWriter(path: Path) {
+/**
+ * A simple class to write lines to a single file, in a multi-threading safe way
+ */
+class FileWriter(path: Path) {
   Files.deleteIfExists(path)
   Files.createFile(path)
 
@@ -88,17 +92,25 @@ object Console {
   //implicit val ec = ExecutionContext.fromExecutor(new ForkJoinPool(100))
   //implicit val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
 
+  // number of votes to create
   var vote_count : Long = 0
+  // hostname of the agora-elections server
   var host = "localhost"
+  // agora-elections port
   var port : Long = 9000
+  // default plaintext path
   var plaintexts_path = "plaintexts.txt"
+  // default ciphertexts path
   var ciphertexts_path = "ciphertexts.csv"
+  // default ciphertexts (with khmac) path
   var ciphertexts_khmac_path = "ciphertexts-khmac.csv"
   var shared_secret = "<PASSWORD>"
-  var datastore = "/home/agoraelections/datastore"
+  // default voter id length (number of characters)
   var voterid_len : Int = 28
   val voterid_alphabet: String = "0123456789abcdef"
 
+  // In order to make http requests with Play without a running Play instance,
+  // we have to do this
   // copied from https://www.playframework.com/documentation/2.3.x/ScalaWS
   val clientConfig = new DefaultWSClientConfig()
   val secureDefaults:com.ning.http.client.AsyncHttpClientConfig = new NingAsyncHttpClientConfigBuilder(clientConfig).build()
@@ -108,7 +120,9 @@ object Console {
   implicit val wsClient = new play.api.libs.ws.ning.NingWSClient(secureDefaultsWithSpecificOptions)
 
 
-
+  /**
+   * Parse program arguments
+   */
   private def parse_args(args: Array[String]) = {
     var arg_index = 0
     while (arg_index + 2 < args.length) {
@@ -142,19 +156,66 @@ object Console {
         throw new java.lang.IllegalArgumentException("Unrecognized argument: " + args(arg_index + 1))
       }
     }
-  } 
-
-  private def showHelp() = {
-    System.out.println("showHelp")
   }
 
+  /**
+   * Prints to the standard output how to use this program
+   */
+  private def showHelp() = {
+    System.out.println(
+    """NAME
+      |     commands.Console - Generate and send votes for benchmark purposes
+      |
+      |SYNOPSIS
+      |     commands.Console [gen_votes|add_khmacs] [--vote-count number]
+      |     [--plaintexts path] [--ciphertexts path] [--ciphertexts-khmac path]
+      |     [--voterid-len number] [--shared-secret password] [--port port]
+      |
+      |DESCRIPTION
+      |     In order to run this program, use:
+      |         activator "runMain commands.Console [arguments]"
+      |     possible commands:
+      |     - gen_votes
+      |     - add_khmacs
+      |     Possible arguments
+      |     - vote-count
+      |     - plaintexts
+      |     - ciphertexts
+      |     - ciphertexts-khmac
+      |     - voterid-len
+      |     - shared-secret
+      |     - port
+      |""".stripMargin)
+  }
+
+ /**
+  * Processes a plaintext ballot line
+  * A plaintext ballot will have the following format:
+  * id|option1,option2|option1||
+  *
+  * - The id is a number that corresponds to the election id
+  * - A separator '|' is used  to signal the end of the election id
+  * - The chosen options for each answer come after the election id
+  * - The options for an answer are separated by a ','
+  * - Each answer is separated by a '|'
+  * - A blank vote for an answer is represented with no characters
+  * - For example '||' means a blank vote for the corresponding answer
+  */
   private def processPlaintextLine(line: String, lineNumber: Long) : PlaintextBallot  = {
+    // in this variable we keep adding the characters that will form a complete number
     var strIndex: Option[String] = None
+    // state: either reading the election index or the election answers
     var state = PlaintextBallot.ID
-    var ballot = PlaintextBallot()
+    // the ballot to be returned
+    var ballot = new PlaintextBallot()
+    // for each question in the election, there will be zero (blank vote) to n possible chosen options
+    // We'll keep here the options chosen for each answer as we are reading them
     var optionsBuffer: Option[ArrayBuffer[Long]] = None
-    var answersBuffer: ArrayBuffer[Answer] = ArrayBuffer[Answer]()
-    for (i <- 0 until line.length) {
+    // buffer that holds the chosen options for the answers
+    var answersBuffer: ArrayBuffer[PlaintextAnswer] = ArrayBuffer[PlaintextAnswer]()
+
+    // iterate through all characters in the string line
+    for (i <- 0 until line.length) { 
       val c = line.charAt(i)
       if(c.isDigit) { // keep reading digits till we get the whole number
         strIndex match {
@@ -165,31 +226,39 @@ object Console {
             // add the first character to the string containing a number
             strIndex = Some(c.toString)
         }
-      } else {
+      }
+      // it's not a digit
+      else { 
+        // state: reading election ID
         if (PlaintextBallot.ID == state) {
           if ('|' != c) {
               throw PlaintextError(s"Error on line $lineNumber, character $i: character separator '|' not found after election index . Line: $line")
           }
           strIndex match {
             case Some(strIndexValue) =>
-              ballot = PlaintextBallot(strIndex.get.toLong, ballot.answers)
+              ballot = new PlaintextBallot(strIndex.get.toLong, ballot.answers)
               strIndex = None
               optionsBuffer = Some(ArrayBuffer[Long]())
               state = PlaintextBallot.ANSWER
             case None =>
               throw PlaintextError(s"Error on line $lineNumber, character $i: election index not recognized. Line: $line")
           }
-        } else if (PlaintextBallot.ANSWER == state) {
+        }
+        // state: reading answers to each question
+        else if (PlaintextBallot.ANSWER == state) {
           optionsBuffer match {
             case Some(optionsBufferValue) =>
+              // end of this question, add question to buffer
               if ('|' == c) {
                 if (strIndex.isDefined) {
                   optionsBufferValue += strIndex.get.toLong
                   strIndex = None
                 }
-                answersBuffer += Answer(optionsBufferValue.toArray)
+                answersBuffer += PlaintextAnswer(optionsBufferValue.toArray)
                 optionsBuffer = Some(ArrayBuffer[Long]())
-              } else if(',' == c) {
+              }
+              // add chosen option to buffer
+              else if(',' == c) {
                 strIndex match {
                   case Some(strIndexValue) =>
                     optionsBufferValue += strIndexValue.toLong
@@ -206,26 +275,54 @@ object Console {
         }
       }
     }
-    // add the last Answer
+    // add the last answer
     optionsBuffer match {
       case Some(optionsBufferValue) =>
+        // read last option of last answer, if there's any
         if (strIndex.isDefined) {
           optionsBufferValue += strIndex.get.toLong
         }
-        answersBuffer += Answer(optionsBufferValue.toArray)
+        answersBuffer += PlaintextAnswer(optionsBufferValue.toArray)
       case None =>
         throw PlaintextError(s"Error on line $lineNumber: unknown error, invalid state. Line: $line")
     }
-    ballot = PlaintextBallot(ballot.id, answersBuffer.toArray)
+    ballot = new PlaintextBallot(ballot.id, answersBuffer.toArray)
     ballot
   }
 
+  /**
+   * Reads a file created by gen_votes and adds a khmac to each ballot
+   *
+   * The objective of this command is to prepare the ballots to be sent by
+   * jmeter.
+   *
+   * Encrypting the plaintext ballots takes some time, and it can be
+   * done at any moment. However, the khmacs will only be valid for a certain
+   * period of time, and therefore, it can be useful to first encrypt the
+   * ballots and only generate the khmacs just before sending the ballots to
+   * the server.
+   *
+   * The format of each line of the ciphertexts file that this command reads
+   * should be:
+   *
+   *     electionId-voterId-ballot
+   *
+   * Notice that the separator character is '-'
+   *
+   * The format of each line of the ciphertexts_khmac file that this command
+   * creates is:
+   *
+   *     electionId-voterId-ballot-khmac
+   *
+   * Notice that it simply adds the khmac.
+   */
   private def add_khmacs() : Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
+      // check that the file we want to read exists
       if (Files.exists(Paths.get(ciphertexts_path))) {
         val now = Some(System.currentTimeMillis / 1000)
-        val writer = new VotesWriter(Paths.get(ciphertexts_khmac_path))
+        val writer = new FileWriter(Paths.get(ciphertexts_khmac_path))
         promise completeWith {
           Future.traverse (io.Source.fromFile(ciphertexts_path).getLines()) { file_line =>
             val array = file_line.split('-')
@@ -246,14 +343,25 @@ object Console {
     promise.future
   }
 
+  /**
+   * Opens the plaintexts file, and reads and parses each line.
+   * See Console.processPlaintextLine() comments for more info on the format
+   * of the plaintext file.
+   */
   private def parsePlaintexts(): Future[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Long])] = {
     val promise = Promise[(scala.collection.immutable.List[PlaintextBallot], scala.collection.immutable.Set[Long])]()
     Future {
-      if (Files.exists(Paths.get(plaintexts_path))) {
+      val path = Paths.get(plaintexts_path)
+      // Check that the plaintexts file exists
+      if (Files.exists(path)) {
+        // buffer with all the parsed ballots
         val ballotsList = scala.collection.mutable.ListBuffer[PlaintextBallot]()
+        // set of all the election ids
         val electionsSet = scala.collection.mutable.LinkedHashSet[Long]()
+        // read all lines
         io.Source.fromFile(plaintexts_path).getLines().zipWithIndex.foreach { 
           case (line, number) =>
+              // parse line
               val ballot = processPlaintextLine(line, number)
               ballotsList += ballot
               electionsSet += ballot.id
@@ -264,7 +372,7 @@ object Console {
           promise success ( ( ballotsList.sortBy(_.id).toList, electionsSet.toSet ) )
         }
       } else {
-        throw new java.io.FileNotFoundException("tally does not exist")
+        throw new java.io.FileNotFoundException(s"plaintext file ${path.toAbsolutePath.toString} does not exist or can't be opened")
       }
     } recover { case error: Throwable =>
       promise failure error
@@ -272,6 +380,9 @@ object Console {
     promise.future
   }
 
+  /**
+   * Generate khmac
+   */
   private def get_khmac(userId: String, objType: String, objId: Long, perm: String, nowOpt: Option[Long] = None) : String = {
     val now: Long = nowOpt match {
       case Some(time) => time
@@ -283,6 +394,10 @@ object Console {
     khmac
   }
 
+  /**
+   * Makes an http request to agora-elections to get the election info.
+   * Returns the parsed election info
+   */
   private def get_election_info(electionId: Long) : Future[ElectionDTO] = {
     val promise = Promise[ElectionDTO]
     Future {
@@ -303,6 +418,10 @@ object Console {
     promise.future
   }
 
+  /**
+   * Given a set of election ids, it returns a map of the election ids and their
+   * election info.
+   */
   private def get_election_info_all(electionsSet: scala.collection.immutable.Set[Long]) : Future[scala.collection.mutable.HashMap[Long, ElectionDTO]] = {
     val promise = Promise[scala.collection.mutable.HashMap[Long, ElectionDTO]]()
     Future {
@@ -310,6 +429,7 @@ object Console {
       promise completeWith {
         Future.traverse(electionsSet) { eid =>
           get_election_info(eid) map { dto : ElectionDTO =>
+            // using synchronized to make it thread-safe
             this.synchronized {
               map += (dto.id -> dto)
             }
@@ -324,6 +444,10 @@ object Console {
     promise.future
   }
 
+  /**
+   * Makes an HTTP request to agora-elections to dump the public keys for a
+   * given election id.
+   */
   private def dump_pks(electionId: Long): Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
@@ -346,6 +470,10 @@ object Console {
     promise.future
   }
 
+  /**
+   * Given a set of election ids, it returns a future that will be completed
+   * when all the public keys of all those elections have been dumped.
+   */
   private def dump_pks_elections(electionsSet: scala.collection.immutable.Set[Long]): Future[Unit] = {
     val promise = Promise[Unit]()
     Future {
@@ -360,36 +488,75 @@ object Console {
     promise.future
   }
 
+  /**
+   * Given a plaintext and the election info, it encodes each question's answers
+   * into a number, ready to be encrypted
+   */
   private def encodePlaintext(ballot: PlaintextBallot, dto: ElectionDTO): Array[Long] = {
     var array =  new Array[Long](ballot.answers.length)
+    if (dto.configuration.questions.length != ballot.answers.length) {
+      val strBallot = Json.toJson(ballot).toString
+      val strDto = Json.toJson(dto).toString
+      throw EncodePlaintextError(
+        s"""Plaintext ballot:\n$strBallot\nElection dto:\n$strDto\n
+           |Error: wrong number of questions on the plaintext ballot:
+           |${dto.configuration.questions.length} != ${ballot.answers.length}""")
+    }
     for (i <- 0 until array.length) {
-      val numChars = ( dto.configuration.questions(i).answers.length + 2 ).toString.length
-      var strValue : String = ""
-      val answer = ballot.answers(i)
-      for (j <- 0 until answer.options.length) {
-        val optionStrBase = ( answer.options(j) + 1 ).toString
-        strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
+      Try {
+        val numChars = ( dto.configuration.questions(i).answers.length + 2 ).toString.length
+        // holds the value of the encoded answer, before converting it to a Long
+        var strValue : String = ""
+        val answer = ballot.answers(i)
+        for (j <- 0 until answer.options.length) {
+          // sum 1 as the encryption method can't encode value zero
+          val optionStrBase = ( answer.options(j) + 1 ).toString
+          // Each chosen option needs to have the same length in number of 
+          // characters/digits, so we fill in with zeros on the left
+          strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
+        }
+        // blank vote
+        if (0 == answer.options.length) {
+          val optionStrBase = ( dto.configuration.questions(i).answers.length + 2 ).toString
+          strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
+        }
+        // Convert to long. Notice that the zeros on the left added by the last
+        // chosen option won't be included
+        array(i) = strValue.toLong
+      } match {
+        case Failure(error) =>
+          val strBallot = Json.toJson(ballot).toString
+          val strDto = Json.toJson(dto).toString
+          throw EncodePlaintextError(s"Plaintext ballot:\n$strBallot\nElection dto:\n$strDto\nQuestion index where error was generated: $i\nError: ${error.getMessage}")
+        case _ =>
       }
-      // blank vote
-      if (0 == answer.options.length) {
-        val optionStrBase = ( dto.configuration.questions(i).answers.length + 2 ).toString
-        strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
-      }
-      array(i) = strValue.toLong
     }
     array
   }
 
+  /**
+   * Generate a random string with a given length and alphabet
+   * Note: This is not truly random, it uses a pseudo-random generator
+   */
   private def gen_rnd_str(len: Int, choices: String) : String = {
     (0 until len) map { _ =>
       choices( scala.util.Random.nextInt(choices.length) )
     } mkString
   }
 
+  /**
+  * Generate a random voter id
+   */
   private def generate_voterid() : String = {
     gen_rnd_str(voterid_len, voterid_alphabet)
   }
 
+  /**
+   * Given an election id and an encrypted ballot, it generates a String text
+   * line in the following format:
+   *     electionId - voterId - vote
+   * Notice that it automatically adds a random voter id
+   */
   private def generate_vote_line(id: Long, ballot: EncryptedVote) : String = {
     val vote = Json.toJson(ballot).toString
     val voteHash = Crypto.sha256(vote)
@@ -399,30 +566,47 @@ object Console {
     line
   }
 
+  /**
+   * Given a list of plaintext ballots and a map of election ids and their
+   * election info, it generates and encrypts the ballots, saving them to a
+   * file.
+   * Read generate_vote_line for more info on the output file format.
+   */
   private def encryptBallots(
     ballotsList: scala.collection.immutable.List[PlaintextBallot],
-    electionsSet: scala.collection.immutable.Set[Long],
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
   )
     : Future[Unit] =
   {
     val promise = Promise[Unit]()
     Future {
+      // base list of encoded plaintext ballots
       val votes = ballotsList.par.map{ ballot : PlaintextBallot =>
         (ballot.id, encodePlaintext( ballot, electionsInfoMap.get(ballot.id).get ) ) 
       }.seq
+      // map election ids and public keys
+      val pksMap = scala.collection.mutable.HashMap[Long, Array[PublicKey]]()
+      electionsInfoMap foreach { case (key, value) =>
+        val jsonPks = Json.toJson(value.pks.get)
+        val pks = jsonPks.validate[Array[PublicKey]].get
+        pksMap += (key -> pks)
+      }
+      // we need to generate vote_count encrypted ballots, fill the list with
+      // random samples of the base list
       val toEncrypt : Seq[(Long, Array[Long])] = {
         val extraSize = vote_count - votes.length
         val extra = Array.fill(extraSize.toInt){ votes(scala.util.Random.nextInt(votes.length)) }
         votes ++ extra
       }
-      val writer = new VotesWriter(Paths.get(ciphertexts_path))
+      val writer = new FileWriter(Paths.get(ciphertexts_path))
       promise completeWith {
         Future.traverse (toEncrypt) { case (electionId, plaintext) =>
           val writePromise = Promise[Unit]()
           Future {
-            val jsonPks = Json.parse(electionsInfoMap.get(electionId).get.pks.get)
-            val pks = jsonPks.validate[Array[PublicKey]].get
+            val pks = pksMap.get(electionId).get
+            if (pks.length != plaintext.length) {
+              throw new EncryptionError(s"${pks.length} != ${plaintext.length}")
+            }
             val encryptedVote = Crypto.encrypt(pks, plaintext)
             val line = generate_vote_line(electionId, encryptedVote)
             writePromise completeWith writer.write(line)
@@ -440,6 +624,9 @@ object Console {
     promise.future
   }
 
+  /**
+   * Given a list of plaintexts, it generates their ciphertexts
+   */
   private def gen_votes(): Future[Unit] =  {
     val promise = Promise[Unit]()
     Future {
@@ -451,7 +638,7 @@ object Console {
               electionsInfoMap =>
                 dumpPksFuture flatMap {
                   pksDumped =>
-                    encryptBallots(ballotsList, electionsSet, electionsInfoMap)
+                    encryptBallots(ballotsList, electionsInfoMap)
                 }
             }
         }
