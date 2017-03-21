@@ -329,7 +329,7 @@ object Console {
             val eid = array(0).toLong
             val voterId = array(1)
             val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
-            writer.write(file_line + "|" + khmac) 
+            writer.write(file_line + "|" + khmac + "\n") 
           } map { _ =>
             ()
           }
@@ -695,7 +695,14 @@ object Console {
             System.exit(-1)
         }
       } else if ( "add_khmacs" == command) {
-        add_khmacs()
+        add_khmacs() onComplete { 
+          case Success(value) =>
+            println("add_khmacs success")
+            System.exit(0)
+          case Failure(error) =>
+            println("add_khmacs error " + error)
+            System.exit(-1)
+        }
       } else {
         showHelp()
       }
