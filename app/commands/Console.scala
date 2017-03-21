@@ -305,14 +305,14 @@ object Console {
    * The format of each line of the ciphertexts file that this command reads
    * should be:
    *
-   *     electionId-voterId-ballot
+   *     electionId|voterId|ballot
    *
-   * Notice that the separator character is '-'
+   * Notice that the separator character is '|'
    *
    * The format of each line of the ciphertexts_khmac file that this command
    * creates is:
    *
-   *     electionId-voterId-ballot-khmac
+   *     electionId|voterId|ballot|khmac
    *
    * Notice that it simply adds the khmac.
    */
@@ -325,11 +325,11 @@ object Console {
         val writer = new FileWriter(Paths.get(ciphertexts_khmac_path))
         promise completeWith {
           Future.traverse (io.Source.fromFile(ciphertexts_path).getLines()) { file_line =>
-            val array = file_line.split('-')
+            val array = file_line.split('|')
             val eid = array(0).toLong
             val voterId = array(1)
             val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
-            writer.write(file_line + "-" + khmac) 
+            writer.write(file_line + "|" + khmac) 
           } map { _ =>
             ()
           }
@@ -554,7 +554,7 @@ object Console {
   /**
    * Given an election id and an encrypted ballot, it generates a String text
    * line in the following format:
-   *     electionId - voterId - vote
+   *     electionId|voterId|vote
    * Notice that it automatically adds a random voter id
    */
   private def generate_vote_line(id: Long, ballot: EncryptedVote) : String = {
@@ -562,7 +562,7 @@ object Console {
     val voteHash = Crypto.sha256(vote)
     val voterId = generate_voterid()
     val voteDTO = Json.toJson(VoteDTO(vote, voteHash)).toString
-    val line = id.toString + "-" + generate_voterid() + "-" + voteDTO + "\n"
+    val line = id.toString + "|" + generate_voterid() + "|" + voteDTO + "\n"
     line
   }
 
