@@ -23,10 +23,10 @@ import utils.Crypto
 import java.util.concurrent.Executors
 import scala.concurrent._
 
-import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 import javax.xml.bind.DatatypeConverter
 import java.math.BigInteger
+import java.security.KeyStore
 import scala.concurrent.forkjoin._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Try, Success, Failure}
@@ -94,8 +94,12 @@ object Console {
 
   // number of votes to create
   var vote_count : Long = 0
+  // http or https
+  var http_type = "https"
   // hostname of the agora-elections server
   var host = "localhost"
+  // path to the service inside the host
+  var service_path = "elections/"
   // agora-elections port
   var port : Long = 9000
   // default plaintext path
@@ -108,6 +112,7 @@ object Console {
   // default voter id length (number of characters)
   var voterid_len : Int = 28
   val voterid_alphabet: String = "0123456789abcdef"
+  var keystore_path: Option[String] = None
 
   // In order to make http requests with Play without a running Play instance,
   // we have to do this
@@ -143,8 +148,23 @@ object Console {
       } else if ("--voterid-len" == args(arg_index + 1)) {
         voterid_len = args(arg_index + 2).toInt
         arg_index += 2
+      } else if ("--ssl" == args(arg_index + 1)) {
+        if ("true" == args(arg_index + 2)) {
+          http_type = "https"
+        } else if ("false" == args(arg_index + 2)) {
+          http_type = "http"
+        } else {
+          throw new java.lang.IllegalArgumentException(s"Invalid --ssl option: " + args(arg_index + 2) + ". Valid values: true, false")
+        }
+        arg_index += 2
       } else if ("--shared-secret" == args(arg_index + 1)) {
         shared_secret = args(arg_index + 2)
+        arg_index += 2
+      } else if ("--service-path" == args(arg_index + 1)) {
+        service_path = args(arg_index + 2)
+        arg_index += 2
+      } else if ("--host" == args(arg_index + 1)) {
+        host = args(arg_index + 2)
         arg_index += 2
       } else if ("--port" == args(arg_index + 1)) {
         port = args(arg_index + 2).toLong
@@ -163,29 +183,112 @@ object Console {
    */
   private def showHelp() = {
     System.out.println(
-    """NAME
-      |     commands.Console - Generate and send votes for benchmark purposes
-      |
-      |SYNOPSIS
-      |     commands.Console [gen_votes|add_khmacs] [--vote-count number]
-      |     [--plaintexts path] [--ciphertexts path] [--ciphertexts-khmac path]
-      |     [--voterid-len number] [--shared-secret password] [--port port]
-      |
-      |DESCRIPTION
-      |     In order to run this program, use:
-      |         activator "runMain commands.Console [arguments]"
-      |     possible commands:
-      |     - gen_votes
-      |     - add_khmacs
-      |     Possible arguments
-      |     - vote-count
-      |     - plaintexts
-      |     - ciphertexts
-      |     - ciphertexts-khmac
-      |     - voterid-len
-      |     - shared-secret
-      |     - port
-      |""".stripMargin)
+"""NAME
+  |     commands.Console - Generate and send votes for load testing and benchmarking
+  |
+  |SYNOPSIS
+  |     commands.Console [gen_votes|add_khmacs] [--vote-count number]
+  |     [--plaintexts path] [--ciphertexts path] [--ciphertexts-khmac path]
+  |     [--voterid-len number] [--shared-secret password] [--port port]
+  |     [--ssl boolean] [--host hostname] [--service-path path]
+  |
+  |DESCRIPTION
+  |     In order to run this program, use:
+  |         activator "runMain commands.Console [arguments]"
+  |
+  |     Possible commands
+  |
+  |     gen_votes
+  |       Given a plaintext file where each string line contains a plaintext,
+  |       it generates a ciphertext file with encrypted ballots. Encrypting
+  |       ballots is a computationally intensive process, so it can take a
+  |       while. The user ids are generated in a random fashion.
+  |
+  |     add_khmacs
+  |       Given a ciphertexts file where each string line contains an encrypted
+  |       ballot, it adds a khmac to each line and saves the new file. This step
+  |       is faster than encrypting the ballots and it prepares them to be sent
+  |       to the ballot box with jmeter.The khmacs are only valid for a period
+  |       of time and that's why they are generated just before sending the
+  |       ballots.
+  |
+  |     Possible arguments
+  |
+  |     --vote-count
+  |       Number of ballots to be generated. If the number of plaintexts is less
+  |       than the vote count, then the plaintexts will be repeated till the
+  |       desired number is achieved.
+  |       Default value: 0
+  |
+  |     --plaintexts
+  |       Path to the plaintexts file. In this file, each line represents a
+  |       ballot with the chosen voting options. For example:
+  |           39||0|22,4
+  |       In this line, the election id is 39, on the first question the chosen
+  |       option is a blank vote, on the first option it's voting to option 0,
+  |       and on the last question it's voting to options 22 and 4.
+  |       Notice that as each line indicates the election id, this file can be
+  |       used to generate ballots for multiple elections.
+  |       Default value: plaintexts.txt
+  |
+  |     --ciphertexts
+  |       The path to the ciphertexts file. This file is created by the
+  |       gen_votes command and it contains the encrypted ballots generated from
+  |       the plaintexts file. In this file, each line represents an encrypted
+  |       ballot, in the following format:
+  |           election_id|voter_id|ballot
+  |       This is an intermediate file, because as it doesn't contain the
+  |       khmacs, it's not ready to be used by jmeter.
+  |       Default value: ciphertexts.csv
+  |
+  |     --ciphertexts-khmac
+  |       The path to the final ciphertexts file, which includes the khmacs.
+  |       This file is generated by the add_khmacs command. The file format is
+  |       the same as the ciphertexts file, except that it adds the khmac to
+  |       each ballot:
+  |           election_id|voter_id|ballot|khmac
+  |       This is the file that will be fed to jmeter
+  |       Default value: ciphertexts-khmac.csv
+  |
+  |     --voterid-len
+  |       Voter ids for each ballot are generated with random numbers and
+  |       represented in hexadecimal format. This parameter configures the
+  |       number of hexadecimal characters of the voter ids.
+  |       Default value: 28
+  |
+  |     --shared-secret
+  |       The shared secret required for authentication and creating khmacs.
+  |       This value can be found on the config.yml
+  |       agora.agora_elections.shared_secret variable.
+  |       Default value: <PASSWORD>
+  |
+  |     --service-path
+  |       The location of service agora_elections in the host server. For
+  |       example if a call to the server is:
+  |           https://agora:443/elections/api/election/39
+  |       Then the service path is "elections/".
+  |       Default value: elections/
+  |
+  |     --port
+  |       Port number of the agora_elections service.
+  |       Default value: 443
+  |
+  |     --host
+  |       Hostname of the agora_elections service.
+  |       Default value: localhost
+  |
+  |     --ssl
+  |       Enables or disables https. If true, http requests to the
+  |       agora_elections service will use https.
+  |       Usually, the agora_elections service will use a self-signed
+  |       certificate. To make this program to accept the certificate, use
+  |       -Djavax.net.ssl.trustStore=/path/to/jks/truststore  and 
+  |       -Djavax.net.ssl.trustStorePassword=pass with a jks truststore that
+  |       includes the agora_elections certificate.
+  |       Possible values: true|false
+  |       Default value: true
+  |
+  |""".stripMargin)
   }
 
  /**
@@ -401,7 +504,7 @@ object Console {
   private def get_election_info(electionId: Long) : Future[ElectionDTO] = {
     val promise = Promise[ElectionDTO]
     Future {
-      val url = s"http://$host:$port/api/election/$electionId"
+      val url = s"$http_type://$host:$port/${service_path}api/election/$electionId"
       wsClient.url(url) .get() map { response =>
         if(response.status == HTTP.OK) {
           val dto = (response.json \ "payload").validate[ElectionDTO].get
@@ -452,7 +555,7 @@ object Console {
     val promise = Promise[Unit]()
     Future {
       val auth = get_khmac("", "AuthEvent", electionId, "edit")
-      val url = s"http://$host:$port/api/election/$electionId/dump-pks"
+      val url = s"$http_type://$host:$port/${service_path}api/election/$electionId/dump-pks"
       wsClient.url(url)
         .withHeaders("Authorization" -> auth)
         .post(Results.EmptyContent()).map { response =>
@@ -686,7 +789,7 @@ object Console {
       parse_args(args)
       val command = args(0)
       if ("gen_votes" == command) {
-        gen_votes() onComplete { 
+        gen_votes() onComplete {
           case Success(value) =>
             println("gen_votes success")
             System.exit(0)
@@ -695,7 +798,7 @@ object Console {
             System.exit(-1)
         }
       } else if ( "add_khmacs" == command) {
-        add_khmacs() onComplete { 
+        add_khmacs() onComplete {
           case Success(value) =>
             println("add_khmacs success")
             System.exit(0)
