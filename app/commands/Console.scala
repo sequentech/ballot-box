@@ -57,6 +57,7 @@ case class BallotEncryptionError(message: String) extends Exception(message)
 case class GetElectionInfoError(message: String) extends Exception(message)
 case class EncodePlaintextError(message: String) extends Exception(message)
 case class EncryptionError(message: String) extends Exception(message)
+case class ElectionIdsFileError(message: String) extends Exception(message)
 
 /**
  * This object contains the states required for reading a plaintext ballot
@@ -118,6 +119,7 @@ object Console
   var voterid_len : Int = 28
   val voterid_alphabet: String = "0123456789abcdef"
   var keystore_path: Option[String] = None
+  var election_ids_path : Option[String] = None
 
   // In order to make http requests with Play without a running Play instance,
   // we have to do this
@@ -190,6 +192,11 @@ object Console
         service_path = args(arg_index + 2)
         arg_index += 2
       }
+      else if ("--election-ids" == args(arg_index + 1))
+      {
+        election_ids_path = Some(args(arg_index + 2))
+        arg_index += 2
+      }
       else if ("--host" == args(arg_index + 1))
       {
         host = args(arg_index + 2)
@@ -226,12 +233,18 @@ object Console
   |     [--plaintexts path] [--ciphertexts path] [--ciphertexts-khmac path]
   |     [--voterid-len number] [--shared-secret password] [--port port]
   |     [--ssl boolean] [--host hostname] [--service-path path]
+  |     [--election-ids path]
   |
   |DESCRIPTION
   |     In order to run this program, use:
   |         activator "runMain commands.Console [arguments]"
   |
   |     Possible commands
+  |
+  |     gen_plaintexts
+  |       Generates plaintext ballots covering every option for every question
+  |       for each election id. Use --vote-count to set the number of plaintexts
+  |       to be generated, which should be at least the number of elections. 
   |
   |     gen_votes
   |       Given a plaintext file where each string line contains a plaintext,
@@ -322,6 +335,10 @@ object Console
   |       includes the agora_elections certificate.
   |       Possible values: true|false
   |       Default value: true
+  |
+  |     --election-ids path
+  |       Path to a file containing the election ids. Required parameter by
+  |       command gen_plaintexts.
   |
   |""".stripMargin)
   }
@@ -497,7 +514,7 @@ object Console
               val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
               writer.write(file_line + "|" + khmac + "\n") 
           }
-          map
+          .map
           {
             _ => ()
           }
@@ -508,7 +525,7 @@ object Console
         throw new java.io.FileNotFoundException("tally does not exist")
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -537,7 +554,7 @@ object Console
         // set of all the election ids
         val electionsSet = scala.collection.mutable.LinkedHashSet[Long]()
         // read all lines
-        io.Source.fromFile(plaintexts_path).getLines().zipWithIndex.foreach 
+        io.Source.fromFile(plaintexts_path).getLines().zipWithIndex.foreach
         {
           case (line, number) =>
               // parse line
@@ -559,7 +576,7 @@ object Console
         throw new java.io.FileNotFoundException(s"plaintext file ${path.toAbsolutePath.toString} does not exist or can't be opened")
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -599,7 +616,7 @@ object Console
     Future
     {
       val url = s"$http_type://$host:$port/${service_path}api/election/$electionId"
-      wsClient.url(url) .get() map
+      wsClient.url(url) .get() .map
       {
         response =>
           if(response.status == HTTP.OK)
@@ -613,12 +630,12 @@ object Console
               s"HTTP GET request to $url returned status: ${response.status} and body: ${response.body}")
           }
       }
-      recover
+      .recover
       {
         case error: Throwable => promise failure error
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -653,13 +670,13 @@ object Console
                 }
             }
         }
-        map
+        .map
         {
           _ => map
         }
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -691,12 +708,12 @@ object Console
               promise failure DumpPksError(s"HTTP POST request to $url returned status: ${response.status} and body: ${response.body}")
             }
       }
-      recover
+      .recover
       {
         case error: Throwable => promise failure error
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -723,7 +740,7 @@ object Console
         }
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -889,7 +906,7 @@ object Console
       val votes = ballotsList.par.map
       {
         ballot : PlaintextBallot =>
-          (ballot.id, encodePlaintext( ballot, electionsInfoMap.get(ballot.id).get ) ) 
+          (ballot.id, encodePlaintext( ballot, electionsInfoMap.get(ballot.id).get ) )
       }.seq
       // we need to generate vote_count encrypted ballots, fill the list with
       // random samples of the base list
@@ -917,19 +934,19 @@ object Console
               val line = generate_vote_line(electionId, encryptedVote)
               writePromise completeWith writer.write(line)
             }
-            recover
+            .recover
             {
               case error: Throwable => writePromise failure error
             }
             writePromise.future
         }
-        map
+        .map
         {
           _ => ()
         }
       }
     }
-    recover
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -939,7 +956,7 @@ object Console
   /**
    * Given a list of plaintexts, it generates their ciphertexts
    */
-  private def gen_votes(): Future[Unit] =
+  private def gen_votes() : Future[Unit] =
   {
     val promise = Promise[Unit]()
     Future
@@ -962,7 +979,165 @@ object Console
         }
       }
     }
-    recover
+    .recover
+    {
+      case error: Throwable => promise failure error
+    }
+    promise.future
+  }
+
+  private def generate_plaintexts_for_eid(eid: Long, numVotes: Long, dto: ElectionDTO) : String =
+  {
+    var outText: String = ""
+    val sEid = eid.toString
+    for (i <- 0 until numVotes.toInt)
+    {
+      var line: String = sEid
+      for (question <- dto.configuration.questions)
+      {
+        line += "|"
+        val diff = question.max - question.min
+        val optionsBuffer : scala.collection.mutable.ArrayBuffer[Long] =
+          (0 until question.answers.size)
+          .map(_.toLong).to[scala.collection.mutable.ArrayBuffer]
+        val num_answers = question.min + scala.util.Random.nextInt(diff + 1)
+        for (j <- 0 until num_answers)
+        {
+          if (0 != j)
+          {
+            line += ","
+          }
+          val option = optionsBuffer(scala.util.Random.nextInt(optionsBuffer.size))
+          optionsBuffer -= option
+          line += option.toString
+        }
+      }
+      outText += line
+    }
+    outText
+  }
+
+  private def generate_map_num_votes_dto(
+    electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
+  )
+    : scala.collection.mutable.HashMap[Long, (Long, ElectionDTO)]
+  =
+  {
+    val numElections = electionsInfoMap.size
+    if (0 == vote_count)
+    {
+      throw new java.lang.IllegalArgumentException(s"Missing argument: --vote-count")
+    }
+    else if (vote_count < numElections)
+    {
+      throw new java.lang.IllegalArgumentException(
+       s"vote-count: $vote_count is less than the number of elections ($numElections)")
+    }
+    // minimum number of votes per election
+    val votesFloor = (vote_count.toFloat / numElections.toFloat).floor.toLong
+    var votesSoFar: Long = 0
+    var electionsSoFar: Long = 0
+    val electionsVotesDtoMap = scala.collection.mutable.HashMap[Long, (Long, ElectionDTO)]()
+    electionsInfoMap.foreach
+    {
+      case (eid, dto) =>
+        val votesToGenThisEid = if (vote_count - votesSoFar > votesFloor*(numElections - electionsSoFar))
+        {
+          votesFloor + 1
+        }
+        else
+        {
+          votesFloor
+        }
+        electionsVotesDtoMap += (eid -> (votesToGenThisEid, dto))
+        votesSoFar += votesToGenThisEid
+        electionsSoFar += 1
+    }
+    electionsVotesDtoMap
+  }
+
+  private def generate_save_plaintexts(
+    electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
+  )
+    : Future[Unit] =
+  {
+    val promise = Promise[Unit]()
+    Future
+    {
+      val electionsVotesDtoMap = generate_map_num_votes_dto(electionsInfoMap)
+      val writer = new FileWriter(Paths.get(plaintexts_path))
+      promise completeWith {
+        Future.traverse (electionsVotesDtoMap)
+        {
+          case (eid, (numVotes, dto)) =>
+            val writePromise = Promise[Unit]()
+            Future
+            {
+              val text = generate_plaintexts_for_eid(eid, numVotes, dto)
+              writePromise completeWith writer.write(text)
+            }
+            .recover
+            {
+              case error: Throwable => writePromise failure error
+            }
+            writePromise.future
+        }.map
+        {
+          _ => ()
+        }
+      }
+    }
+    .recover
+    {
+      case error: Throwable => promise failure error
+    }
+    promise.future
+  }
+
+  private def getElectionsSet() : Future[scala.collection.immutable.Set[Long]] =
+  {
+    val promise = Promise[scala.collection.immutable.Set[Long]]()
+    Future
+    {
+      if (election_ids_path.isEmpty) {
+        throw new java.lang.IllegalArgumentException(s"Missing argument: --elections-ids")
+      }
+      val eids_path = Paths.get(election_ids_path.get)
+      val electionsSet =
+      io.Source.fromFile(plaintexts_path).getLines().toList.map
+      {
+        strEid => strEid.toLong
+      }.toSet
+      promise.success(electionsSet)
+    }
+    .recover
+    {
+      case error: Throwable => promise failure error
+    }
+    promise.future
+  }
+
+  /**
+   *
+   */
+  private def gen_plaintexts() : Future[Unit] =
+  {
+    val promise = Promise[Unit]()
+    Future
+    {
+      promise completeWith
+      {
+        getElectionsSet() flatMap
+        {
+          electionsSet =>
+          get_election_info_all(electionsSet) flatMap {
+            electionsInfoMap =>
+              generate_save_plaintexts(electionsInfoMap)
+          }
+        }
+      }
+    }
+    .recover
     {
       case error: Throwable => promise failure error
     }
@@ -971,7 +1146,7 @@ object Console
 
   def main(args: Array[String]) : Unit =
   {
-    if(0 == args.length) 
+    if(0 == args.length)
     {
       showHelp()
     } else 
@@ -1004,7 +1179,15 @@ object Console
       }
       else if ("gen_plaintexts" == command)
       {
-        
+        gen_plaintexts() onComplete
+        {
+          case Success(value) =>
+            println("gen_plaintexts success")
+            System.exit(0)
+          case Failure(error) =>
+            println("gen_plaintexts error " + error)
+            System.exit(-1)
+        }
       }
       else
       {
