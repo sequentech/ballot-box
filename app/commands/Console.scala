@@ -908,38 +908,35 @@ object Console
         ballot : PlaintextBallot =>
           (ballot.id, encodePlaintext( ballot, electionsInfoMap.get(ballot.id).get ) )
       }.seq
-      // we need to generate vote_count encrypted ballots, fill the list with
-      // random samples of the base list
-      val toEncrypt : Seq[(Long, Array[BigInt])] =
-      {
-        val extraSize = vote_count - votes.length
-        val extra = Array.fill(extraSize.toInt){ votes(scala.util.Random.nextInt(votes.length)) }
-        votes ++ extra
-      }
       val writer = new FileWriter(Paths.get(ciphertexts_path))
+      // we need to generate vote_count encrypted ballots, iterate the
+      // plaintexts list as many times as we need
+      val futuresArray =
+      (0 until vote_count.toInt).toStream.map
+      {
+        index =>
+          val writePromise = Promise[Unit]()
+          Future
+          {
+            val (electionId, plaintext) = votes(index % votes.size)
+            val pks = pksMap.get(electionId).get
+            if (pks.length != plaintext.length)
+            {
+              throw new EncryptionError(s"${pks.length} != ${plaintext.length}")
+            }
+            val encryptedVote = Crypto.encryptBig(pks, plaintext)
+            val line = generate_vote_line(electionId, encryptedVote)
+            writePromise completeWith writer.write(line)
+          }
+          .recover
+          {
+            case error: Throwable => writePromise failure error
+          }
+          writePromise.future
+      }
       promise completeWith
       {
-        Future.traverse (toEncrypt)
-        {
-          case (electionId, plaintext) =>
-            val writePromise = Promise[Unit]()
-            Future
-            {
-              val pks = pksMap.get(electionId).get
-              if (pks.length != plaintext.length)
-              {
-                throw new EncryptionError(s"${pks.length} != ${plaintext.length}")
-              }
-              val encryptedVote = Crypto.encryptBig(pks, plaintext)
-              val line = generate_vote_line(electionId, encryptedVote)
-              writePromise completeWith writer.write(line)
-            }
-            .recover
-            {
-              case error: Throwable => writePromise failure error
-            }
-            writePromise.future
-        }
+        Future.sequence (futuresArray)
         .map
         {
           _ => ()
