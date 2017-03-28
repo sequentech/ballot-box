@@ -1258,6 +1258,7 @@ object Console
       else
       {
         showHelp()
+        System.exit(0)
       }
     }
     ()
