@@ -119,7 +119,7 @@ object Console
   var voterid_len : Int = 28
   val voterid_alphabet: String = "0123456789abcdef"
   var keystore_path: Option[String] = None
-  var election_ids_path : Option[String] = None
+  var election_ids_path : String = "election_ids.txt"
 
   // In order to make http requests with Play without a running Play instance,
   // we have to do this
@@ -194,7 +194,7 @@ object Console
       }
       else if ("--election-ids" == args(arg_index + 1))
       {
-        election_ids_path = Some(args(arg_index + 2))
+        election_ids_path = args(arg_index + 2)
         arg_index += 2
       }
       else if ("--host" == args(arg_index + 1))
@@ -990,7 +990,7 @@ object Console
   {
     var outText: String = ""
     val sEid = eid.toString
-    for (i <- 0 until numVotes.toInt)
+    for (i <- 0L until numVotes)
     {
       var line: String = sEid
       for (question <- dto.configuration.questions)
@@ -998,8 +998,8 @@ object Console
         line += "|"
         val diff = question.max - question.min
         val optionsBuffer : scala.collection.mutable.ArrayBuffer[Long] =
-          (0 until question.answers.size)
-          .map(_.toLong).to[scala.collection.mutable.ArrayBuffer]
+          (0L until question.answers.size.toLong)
+          .to[scala.collection.mutable.ArrayBuffer]
         val num_answers = question.min + scala.util.Random.nextInt(diff + 1)
         for (j <- 0 until num_answers)
         {
@@ -1094,20 +1094,21 @@ object Console
     promise.future
   }
 
-  private def getElectionsSet() : Future[scala.collection.immutable.Set[Long]] =
+  private def getElectionsSet()
+    : Future[scala.collection.immutable.Set[Long]] =
   {
     val promise = Promise[scala.collection.immutable.Set[Long]]()
     Future
     {
-      if (election_ids_path.isEmpty) {
-        throw new java.lang.IllegalArgumentException(s"Missing argument: --elections-ids")
-      }
-      val eids_path = Paths.get(election_ids_path.get)
+      val eids_path = Paths.get(election_ids_path)
       val electionsSet =
-      io.Source.fromFile(plaintexts_path).getLines().toList.map
-      {
-        strEid => strEid.toLong
-      }.toSet
+        io.Source.fromFile(election_ids_path)
+        .getLines()
+        .toList.map
+        {
+          strEid => strEid.toLong
+        }
+        .toSet
       promise.success(electionsSet)
     }
     .recover
@@ -1120,20 +1121,22 @@ object Console
   /**
    *
    */
-  private def gen_plaintexts() : Future[Unit] =
+  private def gen_plaintexts()
+    : Future[Unit] =
   {
     val promise = Promise[Unit]()
     Future
     {
       promise completeWith
       {
-        getElectionsSet() flatMap
+        getElectionsSet()
+        .flatMap
         {
-          electionsSet =>
-          get_election_info_all(electionsSet) flatMap {
-            electionsInfoMap =>
-              generate_save_plaintexts(electionsInfoMap)
-          }
+          electionsSet => get_election_info_all(electionsSet) 
+        }
+        .flatMap
+        {
+          electionsInfoMap => generate_save_plaintexts(electionsInfoMap)
         }
       }
     }
@@ -1144,7 +1147,8 @@ object Console
     promise.future
   }
 
-  def main(args: Array[String]) : Unit =
+  def main(args: Array[String])
+    : Unit =
   {
     if(0 == args.length)
     {
