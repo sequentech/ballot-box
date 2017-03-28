@@ -777,7 +777,8 @@ object Console
         val answer = ballot.answers(i)
         for (j <- 0 until answer.options.length)
         {
-          // sum 1 as the encryption method can't encode value zero
+          // sum 1 as it would cause encoding problems, as zeros on the left are
+          // removed in the end
           val optionStrBase = ( answer.options(j) + 1 ).toString
           // Each chosen option needs to have the same length in number of 
           // characters/digits, so we fill in with zeros on the left
