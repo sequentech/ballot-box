@@ -25,7 +25,7 @@ import scala.concurrent._
 
 import javax.crypto.Mac
 import javax.xml.bind.DatatypeConverter
-import java.math.BigInteger
+import scala.math.BigInt
 import java.security.KeyStore
 import scala.concurrent.forkjoin._
 import scala.collection.mutable.ArrayBuffer
@@ -229,11 +229,11 @@ object Console
   |     commands.Console - Generate and send votes for load testing and benchmarking
   |
   |SYNOPSIS
-  |     commands.Console [gen_votes|add_khmacs] [--vote-count number]
-  |     [--plaintexts path] [--ciphertexts path] [--ciphertexts-khmac path]
-  |     [--voterid-len number] [--shared-secret password] [--port port]
-  |     [--ssl boolean] [--host hostname] [--service-path path]
-  |     [--election-ids path]
+  |     commands.Console [gen_plaintexts|gen_votes|add_khmacs]
+  |     [--vote-count number] [--plaintexts path] [--ciphertexts path]
+  |     [--ciphertexts-khmac path] [--voterid-len number]
+  |     [--shared-secret password] [--port port] [--ssl boolean]
+  |     [--host hostname] [--service-path path] [--election-ids path]
   |
   |DESCRIPTION
   |     In order to run this program, use:
@@ -755,9 +755,9 @@ object Console
     ballot: PlaintextBallot,
     dto: ElectionDTO
   )
-    : Array[Long] =
+    : Array[BigInt] =
   {
-    var array =  new Array[Long](ballot.answers.length)
+    var array =  new Array[BigInt](ballot.answers.length)
     if (dto.configuration.questions.length != ballot.answers.length)
     {
       val strBallot = Json.toJson(ballot).toString
@@ -791,7 +791,7 @@ object Console
         }
         // Convert to long. Notice that the zeros on the left added by the last
         // chosen option won't be included
-        array(i) = strValue.toLong
+        array(i) = BigInt(strValue)
       }
       match
       {
@@ -910,7 +910,7 @@ object Console
       }.seq
       // we need to generate vote_count encrypted ballots, fill the list with
       // random samples of the base list
-      val toEncrypt : Seq[(Long, Array[Long])] =
+      val toEncrypt : Seq[(Long, Array[BigInt])] =
       {
         val extraSize = vote_count - votes.length
         val extra = Array.fill(extraSize.toInt){ votes(scala.util.Random.nextInt(votes.length)) }
@@ -930,7 +930,7 @@ object Console
               {
                 throw new EncryptionError(s"${pks.length} != ${plaintext.length}")
               }
-              val encryptedVote = Crypto.encrypt(pks, plaintext)
+              val encryptedVote = Crypto.encryptBig(pks, plaintext)
               val line = generate_vote_line(electionId, encryptedVote)
               writePromise completeWith writer.write(line)
             }
@@ -986,36 +986,70 @@ object Console
     promise.future
   }
 
-  private def generate_plaintexts_for_eid(eid: Long, numVotes: Long, dto: ElectionDTO) : String =
+  /**
+   * Generates 'numVotes' random plaintext ballots for election id 'eid', using
+   * election info 'dto'.
+   * Each plaintext ballot will fill a string line and it will have the format
+   * described by method @processPlaintextLine:
+   *    eid||option1,option2|option1||
+   */
+
+  private def generate_plaintexts_for_eid(
+    eid: Long,
+    numVotes: Long,
+    dto: ElectionDTO
+  )
+    : String =
   {
+    // output variable
     var outText: String = ""
+    // election id, as a string
     val sEid = eid.toString
+    // iterate over all the plaintext ballots that need be generated
     for (i <- 0L until numVotes)
     {
+      // variable that contains one plaintext ballot
       var line: String = sEid
+      // iterate over all the questions this election has
       for (question <- dto.configuration.questions)
       {
+        // add questions separator
         line += "|"
         val diff = question.max - question.min
+        // buffer with all possible options for this question
         val optionsBuffer : scala.collection.mutable.ArrayBuffer[Long] =
           (0L until question.answers.size.toLong)
           .to[scala.collection.mutable.ArrayBuffer]
         val num_answers = question.min + scala.util.Random.nextInt(diff + 1)
+        // iterate over the number of answers to be generated for this question
         for (j <- 0 until num_answers)
         {
+          // add options separator
           if (0 != j)
           {
             line += ","
           }
+          // select a random, non-repeated option
           val option = optionsBuffer(scala.util.Random.nextInt(optionsBuffer.size))
+          // remove this option for the next operation, to avoid options repetition
           optionsBuffer -= option
+          // add option to plaintext ballot line
           line += option.toString
         }
       }
-      outText += line
+      // add plaintext ballot line to output variable
+      outText += line + "\n"
     }
     outText
   }
+
+  /**
+   * Given a map election id -> election info, and the total number of
+   * plaintext ballots (vote_count) to be generated, it generates another map
+   * election id -> (votes, election info).
+   * We'll generate between a and a+1 plaintext ballots for each election id,
+   * where a = vote_count / num elections.
+   */
 
   private def generate_map_num_votes_dto(
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
@@ -1035,12 +1069,17 @@ object Console
     }
     // minimum number of votes per election
     val votesFloor = (vote_count.toFloat / numElections.toFloat).floor.toLong
+    // number of votes already "used"
     var votesSoFar: Long = 0
+    // number of elections already used
     var electionsSoFar: Long = 0
+    // the output variable
     val electionsVotesDtoMap = scala.collection.mutable.HashMap[Long, (Long, ElectionDTO)]()
+    //
     electionsInfoMap.foreach
     {
       case (eid, dto) =>
+        // votes to be generated for this election
         val votesToGenThisEid = if (vote_count - votesSoFar > votesFloor*(numElections - electionsSoFar))
         {
           votesFloor + 1
@@ -1049,12 +1088,18 @@ object Console
         {
           votesFloor
         }
+        // add element to map
         electionsVotesDtoMap += (eid -> (votesToGenThisEid, dto))
         votesSoFar += votesToGenThisEid
         electionsSoFar += 1
     }
     electionsVotesDtoMap
   }
+
+  /**
+   * Given a map of election id to election info, it generates --vote-count
+   * number of plaintext ballots and save them on --plaintexts
+   */
 
   private def generate_save_plaintexts(
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
@@ -1064,7 +1109,9 @@ object Console
     val promise = Promise[Unit]()
     Future
     {
+      // get number of votes per election id, and election info, in a map
       val electionsVotesDtoMap = generate_map_num_votes_dto(electionsInfoMap)
+      // writer to write into the output plaintexts file in a thread-safe way
       val writer = new FileWriter(Paths.get(plaintexts_path))
       promise completeWith {
         Future.traverse (electionsVotesDtoMap)
@@ -1073,7 +1120,9 @@ object Console
             val writePromise = Promise[Unit]()
             Future
             {
+              // generate plaintexts for this election
               val text = generate_plaintexts_for_eid(eid, numVotes, dto)
+              // write plaintexts for this election into output file
               writePromise completeWith writer.write(text)
             }
             .recover
@@ -1094,16 +1143,24 @@ object Console
     promise.future
   }
 
+  /**
+   * Reads the --election-ids file, which consists of an election id per line,
+   * and returns a set of election ids
+   */
+
   private def getElectionsSet()
     : Future[scala.collection.immutable.Set[Long]] =
   {
     val promise = Promise[scala.collection.immutable.Set[Long]]()
     Future
     {
+      // convert string to path
       val eids_path = Paths.get(election_ids_path)
+      // read file, split it into string lines
       val electionsSet =
         io.Source.fromFile(election_ids_path)
         .getLines()
+        // convert each line to an integer representing the election id
         .toList.map
         {
           strEid => strEid.toLong
@@ -1119,7 +1176,14 @@ object Console
   }
 
   /**
-   *
+   * Generates random plaintext ballots for a number of elections.
+   * It generates --vote-count number of plaintexts, for the elections mentioned
+   * on file --election-ids. The election-ids file should have an election id on
+   * each line. Election ids should not be repeated. The generated plaintexts
+   * will be saved on the file set by option --plaintexts (or its default 
+   * value). The output format of the plaintexts file is compatible with the
+   * required input for command gen_votes. The number of votes should be at
+   * least as big as the number of elections.
    */
   private def gen_plaintexts()
     : Future[Unit] =
