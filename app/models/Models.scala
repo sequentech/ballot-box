@@ -424,7 +424,8 @@ case class QuestionExtra(
   shuffle_all_options: Option[Boolean],
   shuffle_category_list: Option[Array[String]],
   show_points: Option[Boolean],
-  default_selected_option_ids: Option[Array[Int]])
+  default_selected_option_ids: Option[Array[Int]],
+  select_categories_1click: Option[Boolean])
 {
 
   def validate() = {
