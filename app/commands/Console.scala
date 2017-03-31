@@ -85,18 +85,16 @@ class FileWriter(path: Path)
     }
   }
 }
-/**
-  * Command for admin purposes
-  *
-  * use runMain commands.Command <args> from console
-  * or
-  * activator "run-main commands.Command <args>"
-  * from CLI
-  */
-object Console
-{
-  //implicit val ec = ExecutionContext.fromExecutor(new ForkJoinPool(100))
-  //implicit val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
+
+trait ConsoleInterface {
+  def showHelp() : Unit
+  def parse_args(args: Array[String]) : Int
+  def gen_votes() : Future[Unit]
+  def add_khmacs() : Future[Unit]
+  def gen_plaintexts() : Future[Unit]
+}
+
+class ConsoleImpl extends ConsoleInterface {
 
   // number of votes to create
   var vote_count : Long = 0
@@ -131,13 +129,48 @@ object Console
   val secureDefaultsWithSpecificOptions:com.ning.http.client.AsyncHttpClientConfig = builder.build()
   implicit val wsClient = new play.api.libs.ws.ning.NingWSClient(secureDefaultsWithSpecificOptions)
 
+  /**
+   * Generates random plaintext ballots for a number of elections.
+   * It generates --vote-count number of plaintexts, for the elections mentioned
+   * on file --election-ids. The election-ids file should have an election id on
+   * each line. Election ids should not be repeated. The generated plaintexts
+   * will be saved on the file set by option --plaintexts (or its default 
+   * value). The output format of the plaintexts file is compatible with the
+   * required input for command gen_votes. The number of votes should be at
+   * least as big as the number of elections.
+   */
+  def gen_plaintexts()
+    : Future[Unit] =
+  {
+    val promise = Promise[Unit]()
+    Future
+    {
+      promise completeWith
+      {
+        getElectionsSet()
+        .flatMap
+        {
+          electionsSet => get_election_info_all(electionsSet) 
+        }
+        .flatMap
+        {
+          electionsInfoMap => generate_save_plaintexts(electionsInfoMap)
+        }
+      }
+    }
+    .recover
+    {
+      case error: Throwable => promise failure error
+    }
+    promise.future
+  }
 
   /**
    * Parse program arguments
    */
-  private def parse_args(args: Array[String]) =
+  def parse_args(args: Array[String]) : Int =
   {
-    var arg_index = 0
+    var arg_index : Int = 0
     while (arg_index + 2 < args.length)
     {
       // number of ballots to create
@@ -217,12 +250,111 @@ object Console
           args(arg_index + 1))
       }
     }
+    arg_index
+  }
+
+  /**
+   * Given a list of plaintexts, it generates their ciphertexts
+   */
+  def gen_votes() : Future[Unit] =
+  {
+    val promise = Promise[Unit]()
+    Future
+    {
+      promise completeWith
+      {
+        parsePlaintexts() flatMap
+        {
+          case (ballotsList, electionsSet) =>
+            val dumpPksFuture = dump_pks_elections(electionsSet)
+            get_election_info_all(electionsSet) flatMap
+            {
+              electionsInfoMap =>
+                dumpPksFuture flatMap
+                {
+                  pksDumped =>
+                    encryptBallots(ballotsList, electionsInfoMap)
+                }
+            }
+        }
+      }
+    }
+    .recover
+    {
+      case error: Throwable => promise failure error
+    }
+    promise.future
+  }
+
+  /**
+   * Reads a file created by gen_votes and adds a khmac to each ballot
+   *
+   * The objective of this command is to prepare the ballots to be sent by
+   * jmeter.
+   *
+   * Encrypting the plaintext ballots takes some time, and it can be
+   * done at any moment. However, the khmacs will only be valid for a certain
+   * period of time, and therefore, it can be useful to first encrypt the
+   * ballots and only generate the khmacs just before sending the ballots to
+   * the server.
+   *
+   * The format of each line of the ciphertexts file that this command reads
+   * should be:
+   *
+   *     electionId|voterId|ballot
+   *
+   * Notice that the separator character is '|'
+   *
+   * The format of each line of the ciphertexts_khmac file that this command
+   * creates is:
+   *
+   *     electionId|voterId|ballot|khmac
+   *
+   * Notice that it simply adds the khmac.
+   */
+  def add_khmacs() : Future[Unit] =
+  {
+    val promise = Promise[Unit]()
+    Future
+    {
+      // check that the file we want to read exists
+      if (Files.exists(Paths.get(ciphertexts_path)))
+      {
+        val now = Some(System.currentTimeMillis / 1000)
+        val writer = new FileWriter(Paths.get(ciphertexts_khmac_path))
+        promise completeWith
+        {
+          Future.traverse (io.Source.fromFile(ciphertexts_path).getLines())
+          {
+            file_line =>
+              val array = file_line.split('|')
+              val eid = array(0).toLong
+              val voterId = array(1)
+              val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
+              writer.write(file_line + "|" + khmac + "\n") 
+          }
+          .map
+          {
+            _ => ()
+          }
+        }
+      }
+      else
+      {
+        throw new java.io.FileNotFoundException("tally does not exist")
+      }
+    }
+    .recover
+    {
+      case error: Throwable => promise failure error
+    }
+    promise.future
   }
 
   /**
    * Prints to the standard output how to use this program
    */
-  private def showHelp() =
+  def showHelp() =
   {
     System.out.println(
 """NAME
@@ -356,7 +488,7 @@ object Console
   * - A blank vote for an answer is represented with no characters
   * - For example '||' means a blank vote for the corresponding answer
   */
-  private def processPlaintextLine(
+  def processPlaintextLine(
     line: String,
     lineNumber: Long)
     : PlaintextBallot  =
@@ -467,77 +599,13 @@ object Console
     ballot
   }
 
-  /**
-   * Reads a file created by gen_votes and adds a khmac to each ballot
-   *
-   * The objective of this command is to prepare the ballots to be sent by
-   * jmeter.
-   *
-   * Encrypting the plaintext ballots takes some time, and it can be
-   * done at any moment. However, the khmacs will only be valid for a certain
-   * period of time, and therefore, it can be useful to first encrypt the
-   * ballots and only generate the khmacs just before sending the ballots to
-   * the server.
-   *
-   * The format of each line of the ciphertexts file that this command reads
-   * should be:
-   *
-   *     electionId|voterId|ballot
-   *
-   * Notice that the separator character is '|'
-   *
-   * The format of each line of the ciphertexts_khmac file that this command
-   * creates is:
-   *
-   *     electionId|voterId|ballot|khmac
-   *
-   * Notice that it simply adds the khmac.
-   */
-  private def add_khmacs() : Future[Unit] =
-  {
-    val promise = Promise[Unit]()
-    Future
-    {
-      // check that the file we want to read exists
-      if (Files.exists(Paths.get(ciphertexts_path)))
-      {
-        val now = Some(System.currentTimeMillis / 1000)
-        val writer = new FileWriter(Paths.get(ciphertexts_khmac_path))
-        promise completeWith
-        {
-          Future.traverse (io.Source.fromFile(ciphertexts_path).getLines())
-          {
-            file_line =>
-              val array = file_line.split('|')
-              val eid = array(0).toLong
-              val voterId = array(1)
-              val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
-              writer.write(file_line + "|" + khmac + "\n") 
-          }
-          .map
-          {
-            _ => ()
-          }
-        }
-      }
-      else
-      {
-        throw new java.io.FileNotFoundException("tally does not exist")
-      }
-    }
-    .recover
-    {
-      case error: Throwable => promise failure error
-    }
-    promise.future
-  }
 
   /**
    * Opens the plaintexts file, and reads and parses each line.
    * See Console.processPlaintextLine() comments for more info on the format
    * of the plaintext file.
    */
-  private def parsePlaintexts()
+  def parsePlaintexts()
     : Future[
              (scala.collection.immutable.List[PlaintextBallot],
              scala.collection.immutable.Set[Long])] =
@@ -586,7 +654,7 @@ object Console
   /**
    * Generate khmac
    */
-  private def get_khmac(
+  def get_khmac(
     userId: String,
     objType: String,
     objId: Long,
@@ -610,7 +678,7 @@ object Console
    * Makes an http request to agora-elections to get the election info.
    * Returns the parsed election info
    */
-  private def get_election_info(electionId: Long) : Future[ElectionDTO] =
+  def get_election_info(electionId: Long) : Future[ElectionDTO] =
   {
     val promise = Promise[ElectionDTO]
     Future
@@ -646,7 +714,7 @@ object Console
    * Given a set of election ids, it returns a map of the election ids and their
    * election info.
    */
-  private def get_election_info_all(
+  def get_election_info_all(
     electionsSet: scala.collection.immutable.Set[Long]
   )
     : Future[scala.collection.mutable.HashMap[Long, ElectionDTO]] =
@@ -687,7 +755,7 @@ object Console
    * Makes an HTTP request to agora-elections to dump the public keys for a
    * given election id.
    */
-  private def dump_pks(electionId: Long): Future[Unit] =
+  def dump_pks(electionId: Long): Future[Unit] =
   {
     val promise = Promise[Unit]()
     Future
@@ -724,7 +792,7 @@ object Console
    * Given a set of election ids, it returns a future that will be completed
    * when all the public keys of all those elections have been dumped.
    */
-  private def dump_pks_elections(
+  def dump_pks_elections(
     electionsSet: scala.collection.immutable.Set[Long]
   )
     : Future[Unit] =
@@ -751,7 +819,7 @@ object Console
    * Given a plaintext and the election info, it encodes each question's answers
    * into a number, ready to be encrypted
    */
-  private def encodePlaintext(
+  def encodePlaintext(
     ballot: PlaintextBallot,
     dto: ElectionDTO
   )
@@ -810,7 +878,7 @@ object Console
    * Generate a random string with a given length and alphabet
    * Note: This is not truly random, it uses a pseudo-random generator
    */
-  private def gen_rnd_str(len: Int, choices: String) : String =
+  def gen_rnd_str(len: Int, choices: String) : String =
   {
     (0 until len) map
     {
@@ -821,7 +889,7 @@ object Console
   /**
   * Generate a random voter id
    */
-  private def generate_voterid() : String =
+  def generate_voterid() : String =
   {
     gen_rnd_str(voterid_len, voterid_alphabet)
   }
@@ -832,7 +900,7 @@ object Console
    *     electionId|voterId|vote
    * Notice that it automatically adds a random voter id
    */
-  private def generate_vote_line(id: Long, ballot: EncryptedVote) : String =
+  def generate_vote_line(id: Long, ballot: EncryptedVote) : String =
   {
     val vote = Json.toJson(ballot).toString
     val voteHash = Crypto.sha256(vote)
@@ -846,7 +914,7 @@ object Console
    * Given a map of election ids and election info, it returns a map with the
    * election public keys
    */
-  private def get_pks_map(
+  def get_pks_map(
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
   )
     : scala.collection.mutable.HashMap[Long, Array[PublicKey]] = 
@@ -893,7 +961,7 @@ object Console
    * file.
    * Read generate_vote_line for more info on the output file format.
    */
-  private def encryptBallots(
+  def encryptBallots(
     ballotsList: scala.collection.immutable.List[PlaintextBallot],
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
   )
@@ -952,39 +1020,6 @@ object Console
   }
 
   /**
-   * Given a list of plaintexts, it generates their ciphertexts
-   */
-  private def gen_votes() : Future[Unit] =
-  {
-    val promise = Promise[Unit]()
-    Future
-    {
-      promise completeWith
-      {
-        parsePlaintexts() flatMap
-        {
-          case (ballotsList, electionsSet) =>
-            val dumpPksFuture = dump_pks_elections(electionsSet)
-            get_election_info_all(electionsSet) flatMap
-            {
-              electionsInfoMap =>
-                dumpPksFuture flatMap
-                {
-                  pksDumped =>
-                    encryptBallots(ballotsList, electionsInfoMap)
-                }
-            }
-        }
-      }
-    }
-    .recover
-    {
-      case error: Throwable => promise failure error
-    }
-    promise.future
-  }
-
-  /**
    * Generates 'numVotes' random plaintext ballots for election id 'eid', using
    * election info 'dto'.
    * Each plaintext ballot will fill a string line and it will have the format
@@ -992,7 +1027,7 @@ object Console
    *    eid||option1,option2|option1||
    */
 
-  private def generate_plaintexts_for_eid(
+  def generate_plaintexts_for_eid(
     eid: Long,
     numVotes: Long,
     dto: ElectionDTO
@@ -1049,7 +1084,7 @@ object Console
    * where a = vote_count / num elections.
    */
 
-  private def generate_map_num_votes_dto(
+  def generate_map_num_votes_dto(
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
   )
     : scala.collection.mutable.HashMap[Long, (Long, ElectionDTO)]
@@ -1099,7 +1134,7 @@ object Console
    * number of plaintext ballots and save them on --plaintexts
    */
 
-  private def generate_save_plaintexts(
+  def generate_save_plaintexts(
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
   )
     : Future[Unit] =
@@ -1146,7 +1181,7 @@ object Console
    * and returns a set of election ids
    */
 
-  private def getElectionsSet()
+  def getElectionsSet()
     : Future[scala.collection.immutable.Set[Long]] =
   {
     val promise = Promise[scala.collection.immutable.Set[Long]]()
@@ -1173,55 +1208,36 @@ object Console
     promise.future
   }
 
-  /**
-   * Generates random plaintext ballots for a number of elections.
-   * It generates --vote-count number of plaintexts, for the elections mentioned
-   * on file --election-ids. The election-ids file should have an election id on
-   * each line. Election ids should not be repeated. The generated plaintexts
-   * will be saved on the file set by option --plaintexts (or its default 
-   * value). The output format of the plaintexts file is compatible with the
-   * required input for command gen_votes. The number of votes should be at
-   * least as big as the number of elections.
-   */
-  private def gen_plaintexts()
-    : Future[Unit] =
-  {
-    val promise = Promise[Unit]()
-    Future
-    {
-      promise completeWith
-      {
-        getElectionsSet()
-        .flatMap
-        {
-          electionsSet => get_election_info_all(electionsSet) 
-        }
-        .flatMap
-        {
-          electionsInfoMap => generate_save_plaintexts(electionsInfoMap)
-        }
-      }
-    }
-    .recover
-    {
-      case error: Throwable => promise failure error
-    }
-    promise.future
-  }
+}
+
+/**
+  * Command for admin purposes
+  *
+  * use runMain commands.Command <args> from console
+  * or
+  * activator "run-main commands.Command <args>"
+  * from CLI
+  */
+object Console
+{
+  //implicit val ec = ExecutionContext.fromExecutor(new ForkJoinPool(100))
+  //implicit val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
+
+  val intf : ConsoleInterface = new ConsoleImpl()
 
   def main(args: Array[String])
     : Unit =
   {
     if(0 == args.length)
     {
-      showHelp()
+      intf.showHelp()
     } else 
     {
-      parse_args(args)
+      intf.parse_args(args)
       val command = args(0)
       if ("gen_votes" == command)
       {
-        gen_votes() onComplete
+        intf.gen_votes() onComplete
         {
           case Success(value) =>
             println("gen_votes success")
@@ -1233,7 +1249,7 @@ object Console
       }
       else if ("add_khmacs" == command)
       {
-        add_khmacs() onComplete
+        intf.add_khmacs() onComplete
         {
           case Success(value) =>
             println("add_khmacs success")
@@ -1245,7 +1261,7 @@ object Console
       }
       else if ("gen_plaintexts" == command)
       {
-        gen_plaintexts() onComplete
+        intf.gen_plaintexts() onComplete
         {
           case Success(value) =>
             println("gen_plaintexts success")
@@ -1257,7 +1273,7 @@ object Console
       }
       else
       {
-        showHelp()
+        intf.showHelp()
         System.exit(0)
       }
     }
