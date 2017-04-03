@@ -649,3 +649,13 @@ case class AuthData(name: Option[String], description: Option[String], url: Opti
 case class PlaintextAnswer(options: Array[Long] = Array[Long]())
 // id is the election ID
 case class PlaintextBallot(id: Long = -1, answers: Array[PlaintextAnswer] = Array[PlaintextAnswer]())
+
+/**
+ * This object contains the states required for reading a plaintext ballot
+ * It's used on Console.processPlaintextLine
+ */
+object PlaintextBallot
+{
+  val ID = 0 // reading election ID
+  val ANSWER = 1 // reading answers
+}

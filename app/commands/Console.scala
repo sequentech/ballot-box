@@ -60,16 +60,6 @@ case class EncryptionError(message: String) extends Exception(message)
 case class ElectionIdsFileError(message: String) extends Exception(message)
 
 /**
- * This object contains the states required for reading a plaintext ballot
- * It's used on Console.processPlaintextLine
- */
-object PlaintextBallot
-{
-  val ID = 0 // reading election ID
-  val ANSWER = 1 // reading answers
-}
-
-/**
  * A simple class to write lines to a single file, in a multi-threading safe way
  */
 class FileWriter(path: Path)
@@ -1109,9 +1099,10 @@ class ConsoleImpl extends ConsoleInterface {
     // the output variable
     val electionsVotesDtoMap = scala.collection.mutable.HashMap[Long, (Long, ElectionDTO)]()
     //
-    electionsInfoMap.foreach
+    electionsInfoMap.keys.toList.sorted foreach
     {
-      case (eid, dto) =>
+      case eid =>
+        val dto = electionsInfoMap.get(eid).get
         // votes to be generated for this election
         val votesToGenThisEid = if (vote_count - votesSoFar > votesFloor*(numElections - electionsSoFar))
         {
