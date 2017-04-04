@@ -110,6 +110,13 @@ import java.math.BigInteger
     encryptEncoded(pks, encoded)
   }
 
+  def encryptBig(pks: Array[PublicKey], values: Array[BigInt]) = {
+    val encoded = pks.view.zipWithIndex.map( t =>
+      encodeBig(t._1, values(t._2))
+    ).toArray
+    encryptEncoded(pks, encoded)
+  }
+
   /** return a random bigint between 0 and max - 1 */
   def randomBigInt(max: BigInt) = {
     val rnd = new java.util.Random()
@@ -125,6 +132,18 @@ import java.math.BigInteger
   def encode(pk: PublicKey, value: Long) = {
     val one = BigInt(1)
     val m = BigInt(value + 1)
+    val test = m.modPow(pk.q, pk.p)
+    if (test.equals(one)) {
+      m
+    } else {
+      -m.mod(pk.p)
+    }
+  }
+
+  /** encode plaintext into subgroup defined by pk */
+  def encodeBig(pk: PublicKey, value: BigInt) = {
+    val one = BigInt(1)
+    val m = value + one
     val test = m.modPow(pk.q, pk.p)
     if (test.equals(one)) {
       m

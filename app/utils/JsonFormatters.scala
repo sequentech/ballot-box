@@ -85,4 +85,12 @@ object JsonFormatters {
   implicit val tallyResponseF = Json.format[TallyResponse]
 
   implicit val authDataF = Json.format[AuthData]
+
+  implicit val plaintextAnswerW : Writes[PlaintextAnswer] =
+    (JsPath \ "options").write[Array[Long]] contramap { (t: PlaintextAnswer) => t.options }
+
+  implicit val plaintextAnswerR : Reads[PlaintextAnswer] =
+    (JsPath \ "options").read[Array[Long]] map (PlaintextAnswer.apply )
+
+  implicit val PlaintextBallotF = Json.format[PlaintextBallot]
 }
