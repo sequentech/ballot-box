@@ -517,7 +517,7 @@ class ConsoleSpec extends Specification with TestContexts
       electionSet.contains(42) must beEqualTo(true)
       electionSet.contains(55) must beEqualTo(true)
       electionSet.size must beEqualTo(2)
-    }
+    } // getElectionsSet
   }
 
 } // ConsoleSpec
