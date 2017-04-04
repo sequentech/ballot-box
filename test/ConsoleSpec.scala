@@ -35,6 +35,11 @@ import scala.util._
 import play.api.cache.Cache
 import java.sql.Timestamp
 
+import play.api.libs.Files._
+import java.nio.file.{Paths, Files, Path}
+import java.nio.file.StandardOpenOption._
+import java.nio.charset.StandardCharsets
+
 
 @RunWith(classOf[JUnitRunner])
 class ConsoleSpec extends Specification with TestContexts
@@ -495,5 +500,24 @@ class ConsoleSpec extends Specification with TestContexts
       numVotesMap.get(55).get._1 must beEqualTo(2)
     }
   } // generate_map_num_votes_dto
+
+  "getElectionsSet" should {
+    "work" in {
+      val tempFile = TemporaryFile(prefix = "election_ids", suffix = ".txt")
+      val filePath = tempFile.file.getAbsolutePath()
+      val eidsContent = "42\n55"
+      Files.write(Paths.get(filePath), eidsContent.getBytes(StandardCharsets.UTF_8), APPEND)
+      val console = new ConsoleImpl()
+      console.election_ids_path = filePath
+      val futureElectionSet = console.getElectionsSet()
+      val optionElectionSet = Await.ready(futureElectionSet, timeoutDuration).value
+
+      optionElectionSet.get must beSuccessfulTry
+      val electionSet = optionElectionSet.get.get
+      electionSet.contains(42) must beEqualTo(true)
+      electionSet.contains(55) must beEqualTo(true)
+      electionSet.size must beEqualTo(2)
+    }
+  }
 
 } // ConsoleSpec
