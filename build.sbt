@@ -17,6 +17,14 @@ name := """agora-elections"""
 
 version := "1.0-SNAPSHOT"
 
+fork in run := true
+
+fork in Test := true
+
+javaOptions in Test += "-Dconfig.file=conf/application.test.conf"
+
+trapExit in run := false
+
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.1"
