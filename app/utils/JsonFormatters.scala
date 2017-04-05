@@ -63,7 +63,112 @@ object JsonFormatters {
 
   implicit val urlF = Json.format[Url]
   implicit val answerF = Json.format[Answer]
-  implicit val questionExtraF = Json.format[QuestionExtra]
+
+  //////////////////////////////////////////////////////////////////////////////
+  // this is not pretty but at least it works
+  // it's necessary for case classes with >= 22 fields 
+  // for this version of Play (2.3.6)
+  // implicit val questionExtraF = Json.format[QuestionExtra]
+  // See http://stackoverflow.com/questions/28167971/scala-case-having-22-fields-but-having-issue-with-play-json-in-scala-2-11-5
+  val questionExtraFirstF
+    : 
+      OFormat[(
+        Option[String], Option[String], Option[String], Option[String],
+        Option[String], Option[String], Option[String], Option[String],
+        Option[String], Option[String], Option[String], Option[String],
+        Option[String], Option[String], Option[String])
+      ] =
+    (
+      (__ \ "group").format[Option[String]] and
+      (__ \ "next_button").format[Option[String]] and
+      (__ \ "shuffled_categories").format[Option[String]] and
+      (__ \ "shuffling_policy").format[Option[String]] and
+      (__ \ "ballot_parity_criteria").format[Option[String]] and
+      (__ \ "restrict_choices_by_tag__name").format[Option[String]] and
+      (__ \ "restrict_choices_by_tag__max").format[Option[String]] and
+      (__ \ "restrict_choices_by_tag__max_error_msg").format[Option[String]] and
+      (__ \ "accordion_folding_policy").format[Option[String]] and
+      (__ \ "restrict_choices_by_no_tag__max").format[Option[String]] and
+      (__ \ "force_allow_blank_vote").format[Option[String]] and
+      (__ \ "recommended_preset__tag").format[Option[String]] and
+      (__ \ "recommended_preset__title").format[Option[String]] and
+      (__ \ "recommended_preset__accept_text").format[Option[String]] and
+      (__ \ "recommended_preset__deny_text").format[Option[String]]
+    ).tupled
+
+  val questionExtraSecondF
+    :
+      OFormat[(
+        Option[Boolean], Option[Boolean], Option[Array[String]],
+        Option[Boolean], Option[Array[Int]], Option[Boolean], Option[String],
+        Option[String])
+      ] =
+    (
+      (__ \ "shuffle_categories").format[Option[Boolean]] and
+      (__ \ "shuffle_all_options").format[Option[Boolean]] and
+      (__ \ "shuffle_category_list").format[Option[Array[String]]] and
+      (__ \ "show_points").format[Option[Boolean]] and
+      (__ \ "default_selected_option_ids").format[Option[Array[Int]]] and
+      (__ \ "select_categories_1click").format[Option[Boolean]] and
+      (__ \ "answer_columns_size").format[Option[String]] and
+      (__ \ "group_answer_pairs").format[Option[String]]
+    ).tupled
+
+  implicit val questionExtraF : Format[QuestionExtra] =
+  ( questionExtraFirstF and questionExtraSecondF ).apply(
+    {
+      case (
+        (
+          group, next_button, shuffled_categories, shuffling_policy,
+          ballot_parity_criteria, restrict_choices_by_tag__name,
+          restrict_choices_by_tag__max, restrict_choices_by_tag__max_error_msg,
+          accordion_folding_policy, restrict_choices_by_no_tag__max,
+          force_allow_blank_vote, recommended_preset__tag,
+          recommended_preset__title, recommended_preset__accept_text,
+          recommended_preset__deny_text
+        ),
+        (
+          shuffle_categories, shuffle_all_options, shuffle_category_list,
+          show_points, default_selected_option_ids, select_categories_1click,
+          answer_columns_size, group_answer_pairs
+        )
+      ) =>
+        QuestionExtra(
+          group, next_button, shuffled_categories, shuffling_policy,
+          ballot_parity_criteria, restrict_choices_by_tag__name,
+          restrict_choices_by_tag__max, restrict_choices_by_tag__max_error_msg,
+          accordion_folding_policy, restrict_choices_by_no_tag__max,
+          force_allow_blank_vote, recommended_preset__tag,
+          recommended_preset__title, recommended_preset__accept_text,
+          recommended_preset__deny_text,
+          shuffle_categories, shuffle_all_options, shuffle_category_list,
+          show_points, default_selected_option_ids, select_categories_1click,
+          answer_columns_size, group_answer_pairs
+        )
+    },
+    q
+    =>
+      (
+        (
+          q.group, q.next_button, q.shuffled_categories, q.shuffling_policy,
+          q.ballot_parity_criteria, q.restrict_choices_by_tag__name,
+          q.restrict_choices_by_tag__max, q.restrict_choices_by_tag__max_error_msg,
+          q.accordion_folding_policy, q.restrict_choices_by_no_tag__max,
+          q.force_allow_blank_vote, q.recommended_preset__tag,
+          q.recommended_preset__title, q.recommended_preset__accept_text,
+          q.recommended_preset__deny_text
+        ),
+        (
+          q.shuffle_categories, q.shuffle_all_options, q.shuffle_category_list,
+          q.show_points, q.default_selected_option_ids, q.select_categories_1click,
+          q.answer_columns_size, q.group_answer_pairs
+        )
+      )
+  )
+
+  //////////////////////////////////////////////////////////////////////////////
+
+
   implicit val questionF = Json.format[Question]
   implicit val ShareTextItemF = Json.format[ShareTextItem]
 
