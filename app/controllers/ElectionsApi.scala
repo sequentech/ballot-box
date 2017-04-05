@@ -79,6 +79,8 @@ object ElectionsApi
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
   val authorities = getAuthorityData
+  val download_tally_timeout = Play.current.configuration.getInt("app.download_tally_timeout").get
+  val download_tally_retries = Play.current.configuration.getInt("app.download_tally_retries").get
 
   /** inserts election into the db in the registered state */
   def register(id: Long) = HAction("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
@@ -716,9 +718,35 @@ object ElectionsApi
 
     Logger.info(s"downloading tally from $url")
 
+    // function to retry the http request a number of times
+    def retryWrapper(
+      wsRequest: WSRequestHolder,
+      f: Future[(WSResponseHeaders, Enumerator[Array[Byte]])],
+      times: Int)
+    :
+      Future[(WSResponseHeaders, Enumerator[Array[Byte]])] =
+    {
+      f.recoverWith {
+        case t : Throwable =>
+          val promise = Promise[(WSResponseHeaders, Enumerator[Array[Byte]])]()
+          if (times > 0)
+          {
+            promise completeWith retryWrapper(wsRequest, wsRequest.getStream(), times - 1)
+          }
+          else
+          {
+            promise failure t
+          }
+          promise.future
+      }(slickExecutionContext)
+    }
+
     // taken from https://www.playframework.com/documentation/2.3.x/ScalaWS
+    // configure http request
+    val wsRequest = WS.url(url).withRequestTimeout(download_tally_timeout)
+    // http request future (including retries)
     val futureResponse: Future[(WSResponseHeaders, Enumerator[Array[Byte]])] =
-    WS.url(url).getStream()
+      retryWrapper(wsRequest, wsRequest.getStream(), download_tally_retries)
 
     val downloadedFile: Future[Unit] = futureResponse.flatMap {
       case (headers, body) =>
