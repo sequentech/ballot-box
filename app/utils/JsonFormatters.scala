@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package utils
 
 import play.api.libs.json._
@@ -41,12 +57,15 @@ object JsonFormatters {
   implicit val voteDtoF = Json.format[VoteDTO]
   implicit val voteF = Json.format[Vote]
   implicit val electionExtraF = Json.format[ElectionExtra]
+  implicit val questionConditionF = Json.format[QuestionCondition]
+  implicit val conditionalQuestionF = Json.format[ConditionalQuestion]
   implicit val electionF = Json.format[Election]
 
   implicit val urlF = Json.format[Url]
   implicit val answerF = Json.format[Answer]
   implicit val questionExtraF = Json.format[QuestionExtra]
   implicit val questionF = Json.format[Question]
+  implicit val ShareTextItemF = Json.format[ShareTextItem]
 
   implicit val presentationF = Json.format[ElectionPresentation]
   implicit val configF = Json.format[ElectionConfig]
@@ -66,4 +85,12 @@ object JsonFormatters {
   implicit val tallyResponseF = Json.format[TallyResponse]
 
   implicit val authDataF = Json.format[AuthData]
+
+  implicit val plaintextAnswerW : Writes[PlaintextAnswer] =
+    (JsPath \ "options").write[Array[Long]] contramap { (t: PlaintextAnswer) => t.options }
+
+  implicit val plaintextAnswerR : Reads[PlaintextAnswer] =
+    (JsPath \ "options").read[Array[Long]] map (PlaintextAnswer.apply )
+
+  implicit val PlaintextBallotF = Json.format[PlaintextBallot]
 }

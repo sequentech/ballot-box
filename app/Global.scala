@@ -1,3 +1,20 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
 package global
 
 import utils.Response
@@ -20,6 +37,7 @@ object Global extends WithFilters(LoggingFilter) with Response {
   override def onStart(app: play.api.Application) {
     ensureCfgExists("app.api.root")
     ensureCfgExists("app.datastore.root")
+    ensureCfgExists("app.datastore.ssl_root")
     ensureCfgExists("booth.auth.secret")
     ensureCfgExists("booth.auth.expiry")
     ensureCfgExists("app.datastore.public")

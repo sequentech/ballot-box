@@ -1,5 +1,21 @@
 #!/usr/bin/env python
 
+# This file is part of agora_elections.
+# Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+# agora_elections is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License.
+
+# agora_elections  is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import print_function
 import requests
 import json
 import time
@@ -16,10 +32,18 @@ from datetime import datetime
 import hashlib
 import codecs
 import traceback
+import string
 
 import os.path
 import os
 from prettytable import PrettyTable
+import random
+import shutil
+
+import warnings as _warnings
+import os as _os
+
+from tempfile import mkdtemp
 
 from sqlalchemy import create_engine, select, func, text
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
@@ -36,7 +60,100 @@ db_name = 'agora_elections'
 db_port = 5432
 app_host = 'localhost'
 app_port = 9000
+authapi_port = 10081
+authapi_credentials = dict()
+authapi_admin_eid = 1
+authapi_db_user = 'authapi'
+authapi_db_password = 'authapi'
+authapi_db_name = 'authapi'
+authapi_db_port = 5432
 node = '/usr/local/bin/node'
+
+class TemporaryDirectory(object):
+    """Create and return a temporary directory.  This has the same
+    behavior as mkdtemp but can be used as a context manager.  For
+    example:
+
+        with TemporaryDirectory() as tmpdir:
+            ...
+
+    Upon exiting the context, the directory and everything contained
+    in it are removed.
+    """
+
+    def __init__(self, suffix="", prefix="tmp", dir=None):
+        self._closed = False
+        self.name = None # Handle mkdtemp raising an exception
+        self.name = mkdtemp(suffix, prefix, dir)
+
+    def __repr__(self):
+        return "<{} {!r}>".format(self.__class__.__name__, self.name)
+
+    def __enter__(self):
+        return self.name
+
+    def cleanup(self, _warn=False):
+        if self.name and not self._closed:
+            try:
+                self._rmtree(self.name)
+            except (TypeError, AttributeError) as ex:
+                # Issue #10188: Emit a warning on stderr
+                # if the directory could not be cleaned
+                # up due to missing globals
+                if "None" not in str(ex):
+                    raise
+                print("ERROR: {!r} while cleaning up {!r}".format(ex, self,),
+                      file=_sys.stderr)
+                return
+            self._closed = True
+            if _warn:
+                self._warn("Implicitly cleaning up {!r}".format(self),
+                           ResourceWarning)
+    def __exit__(self, exc, value, tb):
+        self.cleanup()
+
+    def __del__(self):
+        # Issue a ResourceWarning if implicit cleanup needed
+        self.cleanup(_warn=True)
+
+    # XXX (ncoghlan): The following code attempts to make
+    # this class tolerant of the module nulling out process
+    # that happens during CPython interpreter shutdown
+    # Alas, it doesn't actually manage it. See issue #10188
+    _listdir = staticmethod(_os.listdir)
+    _path_join = staticmethod(_os.path.join)
+    _isdir = staticmethod(_os.path.isdir)
+    _islink = staticmethod(_os.path.islink)
+    _remove = staticmethod(_os.remove)
+    _rmdir = staticmethod(_os.rmdir)
+    _warn = _warnings.warn
+
+    def _rmtree(self, path):
+        # Essentially a stripped down version of shutil.rmtree.  We can't
+        # use globals because they may be None'ed out at shutdown.
+        for name in self._listdir(path):
+            fullname = self._path_join(path, name)
+            try:
+                isdir = self._isdir(fullname) and not self._islink(fullname)
+            except OSError:
+                isdir = False
+            if isdir:
+                self._rmtree(fullname)
+            else:
+                try:
+                    self._remove(fullname)
+                except OSError:
+                    pass
+        try:
+            self._rmdir(path)
+        except OSError:
+            pass
+
+
+
+
+
+
 
 def get_local_hostport():
     return app_host, app_port
@@ -64,6 +181,18 @@ def elections_table():
         Column('pks', String),
         Column('results', String),
         Column('results_updated', String)
+    )
+    return elections
+
+def acls_table():
+    metadata = MetaData()
+    elections = Table('api_acl', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('perm', String),
+        Column('user_id', Integer),
+        Column('object_id', String),
+        Column('object_type', String),
+        Column('created', TIMESTAMP)
     )
     return elections
 
@@ -114,6 +243,43 @@ def get_db_connection():
     conn = engine.connect()
 
     return conn
+
+def get_authapi_db_connection():
+    engine = create_engine(
+        'postgresql+psycopg2://%s:%s@localhost:%d/%s' % (
+            authapi_db_user,
+            authapi_db_password,
+            authapi_db_port,
+            authapi_db_name
+        )
+    )
+    conn = engine.connect()
+
+    return conn
+
+def authapi_ensure_acls(cfg, args):
+    conn = get_authapi_db_connection()
+    acls = []
+    with codecs.open(args.acls_path, encoding='utf-8', mode='w+') as f:
+        acls = [line.split(',') for line in f.read().splitlines()]
+
+    '(email|tlf),(email@example.com|+34666777888),permission_name,object_type,object_id,user_election_id'
+
+    # TODO: do an UPSERT
+    for (user_type, user_id, perm_name, obj_type, obj_id, user_eid) in acls:
+        if user_type == tlf:
+            q_uid = '''SELECT'''
+        else:
+            q = '''
+            '''
+        q_insert = '''
+        INSERT INTO api_acl(perm,user_id,object_id,object_type)
+        SELECT ('%s',%s,%s,'%s')
+        ''' % (
+            perm, user_id,object_id,object_type
+        )
+        conn.execute(q_insert)
+
 
 # writes the votes in the format expected by eo
 def write_node_votes(votesData, filePath):
@@ -215,7 +381,7 @@ def cast_votes(cfg, args):
                 vote_string = json.dumps(vote)
                 vote_hash = hashlib.sha256(vote_string).hexdigest()
                 vote = {
-                    "vote": json.dumps(vote),
+                    "vote": vote_string,
                     "vote_hash": vote_hash
                 }
 
@@ -374,18 +540,20 @@ def tally_no_dump(cfg, args):
 
 def calculate_results(cfg, args):
     path = args.results_config
+    jconfig = None
     if path != None and os.path.isfile(path):
         with open(path) as config_file:
             config = json.load(config_file)
-
-            auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
-            host,port = get_local_hostport()
-            headers = {'Authorization': auth, 'content-type': 'application/json'}
-            url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
-            r = requests.post(url, headers=headers, data=json.dumps(config))
-            print(r.status_code, r.text)
+            jconfig = json.dumps(config)
     else:
-        print("no config file %s" % path)
+        print("continuing with no config file %s" % path)
+
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth, 'content-type': 'application/json'}
+    url = 'http://%s:%d/api/election/%d/calculate-results' % (host, port, cfg['election_id'])
+    r = request_post(url, headers=headers, data=jconfig)
+    print(r.status_code, r.text)
 
 def publish_results(cfg, args):
 
@@ -393,8 +561,48 @@ def publish_results(cfg, args):
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/publish-results' % (host, port, cfg['election_id'])
-    r = requests.post(url, headers=headers)
-    print(r.status_code, r.text)
+    r = request_post(url, headers=headers)
+
+def request_post(url, *args, **kwargs):
+    print("POST %s" % url)
+    kwargs['verify'] = False
+    req = requests.post(url, *args, **kwargs)
+    print(req.status_code, req.text)
+    return req
+
+def get_authapi_auth_headers():
+    '''
+    Returns logged in headers
+    '''
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    event_id = authapi_admin_eid
+    req = request_post(
+        base_url + 'auth-event/%d/authenticate/' % event_id,
+        data=json.dumps(authapi_credentials)
+    )
+    if req.status_code != 200:
+        raise Exception("authapi login failed")
+
+    auth_token = req.json()['auth-token']
+    return {'AUTH': auth_token}
+
+def send_codes(eid, payload):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/census/send_auth/' % eid
+    r = request_post(url, headers=headers, data=payload)
+
+def auth_start(eid):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/started/' % eid
+    r = request_post(url, headers=headers)
+
+def auth_stop(eid):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/stopped/' % eid
+    r = request_post(url, headers=headers)
 
 def list_votes(cfg, args):
     conn = get_db_connection()
@@ -494,7 +702,7 @@ def encrypt(cfg, args):
         output, error = subprocess.Popen(["bash", "encrypt.sh", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
 
         print("Received encrypt.sh output (" + str(len(output)) + " chars)")
-        parsed = json.loads(output)
+        parsed = json.loads(output.decode('utf-8'))
 
         print("Writing file to " + ctextsPath)
         with codecs.open(ctextsPath, encoding='utf-8', mode='w+') as votes_file:
@@ -505,13 +713,31 @@ def encrypt(cfg, args):
         print("No public key or votes file, exiting..")
         exit(1)
 
+def change_social(cfg, args):
+
+    if args.share_config != None and os.path.isfile(args.share_config):
+        with open(args.share_config) as share_config_file:
+            share_config = json.load(share_config_file)
+
+        for election in cfg['election_id']:
+            electionId = int(election)
+            auth = get_hmac(cfg, "", "AuthEvent", electionId, "edit")
+            host,port = get_local_hostport()
+            headers = {'Authorization': auth, 'content-type': 'application/json'}
+            url = 'http://%s:%d/api/election/%d/update-share' % (host, port, electionId)
+            r = requests.post(url, data=json.dumps(share_config), headers=headers)
+            print(r.status_code, r.text)
+    else:
+        print("invalid share-config file %s" % args.share_config)
+        return 400
+
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
 
     secret = shared_secret
-    now = 1000*long(time.time())
+    now = 1000*int(time.time())
     message = "%s:%s:%d:%s:%d" % (userId, objType, objId, perm, now)
-    _hmac = hmac.new(str(secret), str(message), hashlib.sha256).hexdigest()
+    _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
     ret  = 'khmac:///sha-256;%s/%s' % (_hmac, message)
 
     return ret
@@ -540,18 +766,24 @@ count_votes [election_id, [election_id], ...]: count votes
 dump_votes [election_id, [election_id], ...]: dump voter ids
 list_votes <election_dir>: list votes
 list_elections: list elections
+cast_votes <election_dir>: cast votes from ciphertetxs
 dump_pks <election_id>: dumps pks for an election (public datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 dump_votes <election_id>: dumps votes for an election (private datastore)
+change_social <election_id>: changes the social netoworks share buttons configuration
+authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
+    parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
     parser.add_argument('--plaintexts', help='json file to read votes from when encrypting', default = 'votes.json')
     parser.add_argument('--filter-config', help='file with filter configuration', default = None)
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
+    parser.add_argument('--vote-count', help='number of votes to generate', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('--ips-log', help='')
+    parser.add_argument('--share-config', help='json file with the social netoworks share buttons configuration')
     # remove
     parser.add_argument('--elections-file', help='file with grouped elections')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
@@ -563,7 +795,7 @@ dump_votes <election_id>: dumps votes for an election (private datastore)
 
         # commands that use an election id
         if len(args.command) == 2:
-            if command in ['count_votes', 'dump_ids']:
+            if command in ['count_votes', 'dump_ids', 'change_social']:
                 if is_int(args.command[1]) or ',' in args.command[1]:
                     config['election_id'] = args.command[1].split(',')
                 else:

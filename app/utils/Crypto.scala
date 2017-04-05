@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package utils
 
 import models._
@@ -87,9 +103,18 @@ import java.math.BigInteger
   }
 
   /** encode and then encrypt a plaintext */
-  def encrypt(pk: PublicKey, value: Long) = {
-    val encoded = encode(pk, value)
-    encryptEncoded(pk, encoded)
+  def encrypt(pks: Array[PublicKey], values: Array[Long]) = {
+    val encoded = pks.view.zipWithIndex.map( t =>
+      encode(t._1, values(t._2))
+    ).toArray
+    encryptEncoded(pks, encoded)
+  }
+
+  def encryptBig(pks: Array[PublicKey], values: Array[BigInt]) = {
+    val encoded = pks.view.zipWithIndex.map( t =>
+      encodeBig(t._1, values(t._2))
+    ).toArray
+    encryptEncoded(pks, encoded)
   }
 
   /** return a random bigint between 0 and max - 1 */
@@ -115,23 +140,42 @@ import java.math.BigInteger
     }
   }
 
+  /** encode plaintext into subgroup defined by pk */
+  def encodeBig(pk: PublicKey, value: BigInt) = {
+    val one = BigInt(1)
+    val m = value + one
+    val test = m.modPow(pk.q, pk.p)
+    if (test.equals(one)) {
+      m
+    } else {
+      -m.mod(pk.p)
+    }
+  }
+
   /** encrypt an encoded plaintext */
-  def encryptEncoded(pk: PublicKey, value: BigInt) = {
-    val r = randomBigInt(pk.q)
-    val alpha = pk.g.modPow(r, pk.p)
-    val beta = (value * (pk.y.modPow(r, pk.p))).mod(pk.p)
+  def encryptEncoded(pks: Array[PublicKey], values: Array[BigInt]) = {
+    var choices = Array[Choice]()
+    var proofs = Array[Popk]()
+    for ( index <- 0 until pks.length ) {
+      val pk = pks(index)
+      val value = values(index)
+      val r = randomBigInt(pk.q)
+      val alpha = pk.g.modPow(r, pk.p)
+      val beta = (value * (pk.y.modPow(r, pk.p))).mod(pk.p)
 
-    // prove knowledge
-    val w = randomBigInt(pk.q)
+      // prove knowledge
+      val w = randomBigInt(pk.q)
 
-    val commitment = pk.g.modPow(w, pk.p)
+      val commitment = pk.g.modPow(w, pk.p)
 
-    val toHash = s"${alpha.toString}/${commitment.toString}"
-    val challenge = BigInt(sha256(toHash), 16)
+      val toHash = s"${alpha.toString}/${commitment.toString}"
+      val challenge = BigInt(sha256(toHash), 16)
 
-    // compute response = w +  randomness * challenge
-    val response = (w + (r * challenge)).mod(pk.q)
-
-    EncryptedVote(Array(Choice(alpha, beta)), "now", Array(Popk(challenge, commitment, response)))
+      // compute response = w +  randomness * challenge
+      val response = (w + (r * challenge)).mod(pk.q)
+      choices :+= Choice(alpha, beta)
+      proofs :+= Popk(challenge, commitment, response)
+    }
+    EncryptedVote(choices, "now", proofs)
   }
 }

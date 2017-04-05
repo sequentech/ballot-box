@@ -40,6 +40,7 @@ application.local.conf
 
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
+    app.datastore.ssl_root="https://94.23.34.20:14453"
 
     app.api.max_revotes=5
 
@@ -98,6 +99,7 @@ test.local.conf
 
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
+    app.datastore.ssl_root="https://94.23.34.20:14453"
 
     app.eopeers.dir=./test
 
@@ -265,7 +267,11 @@ You must first create an election config json file. Here's an example
             "min": 0,
             "num_winners": 1,
             "title": "My question",
-            "randomize_answer_order": true,
+            "extra_options": {
+                "shuffle_categories": true,
+                "shuffle_all_options": true,
+                "shuffle_category_list": []
+            }
             "tally_type": "plurality-at-large",
             "answer_total_votes_percentage": "over-total-valid-votes",
             "answers": [
@@ -448,7 +454,7 @@ Running (production mode)
     exit
     target/universal/stage/bin/agora-elections -v
 
-you probably want to pass in a configuraiton file
+you probably want to pass in a configuration file
 
     target/universal/stage/bin/agora-elections -Dconfig.file=/full/path/to/conf/application-prod.conf
 

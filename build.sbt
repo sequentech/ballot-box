@@ -1,6 +1,29 @@
+// This file is part of agora_elections.
+// Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+// agora_elections is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License.
+
+// agora_elections  is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+
+// You should have received a copy of the GNU Affero General Public License
+// along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+
 name := """agora-elections"""
 
 version := "1.0-SNAPSHOT"
+
+fork in run := true
+
+fork in Test := true
+
+javaOptions in Test += "-Dconfig.file=conf/application.test.conf"
+
+trapExit in run := false
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 

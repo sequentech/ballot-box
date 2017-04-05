@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package controllers
 
 import models._
@@ -7,7 +23,6 @@ import utils.Response
 
 import play.api._
 import play.api.mvc._
-import play.api.libs.json._
 import play.api.Play.current
 import play.api.db.slick.DB
 import play.libs.Akka
@@ -72,7 +87,18 @@ object BallotboxApi extends Controller with Response {
 
                     val validated = vote.validate(pks, true, electionId, voterId)
                     val result = DAL.votes.insertWithSession(validated)
-                    voteCallbackUrl.map { url => postVoteCallback(url, voterId) }
+                    val now: Long = System.currentTimeMillis / 1000
+                    val message = s"$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
+                    voteCallbackUrl.map {
+                      url => postVoteCallback(
+                        url
+                          .replace("${eid}", electionId+"")
+                          .replace("${uid}", voterId)
+                        ,
+                        message,
+                        vote.vote_hash
+                      )
+                    }
                     Ok(response(result))
                   }
                 )
@@ -172,20 +198,22 @@ object BallotboxApi extends Controller with Response {
     }
   }
 
-  private def postVoteCallback(url: String, message: String) = {
-    try{
+  private def postVoteCallback(url: String, message: String, vote_hash: String) = {
+    try {
       println(s"posting to $url")
       val hmac = Crypto.hmac(boothSecret, message)
       val khmac = s"khmac:///sha-256;$hmac/$message"
-      val data = Json.obj(
-        "message" -> message,
-        "credentials" -> khmac
-      )
-      val f = WS.url(url).post(data).map { resp =>
-        if(resp.status != HTTP.ACCEPTED) {
-          Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body}")
+      val f = WS.url(url)
+        .withHeaders(
+          "Accept" -> "application/json",
+          "Authorization" -> khmac,
+          "BallotTracker" -> vote_hash)
+        .post(Results.EmptyContent())
+        .map { resp =>
+          if(resp.status != HTTP.ACCEPTED) {
+            Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body} and khmac ${khmac}")
+          }
         }
-      }
       f.recover {
         case t: Throwable => {
           Logger.warn(s"Exception caught when posting to callback $t")

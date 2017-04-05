@@ -1,5 +1,20 @@
 #!/usr/bin/env python
 
+# This file is part of agora_elections.
+# Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+# agora_elections is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License.
+
+# agora_elections  is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+
 import admin
 import cycle
 
@@ -31,12 +46,20 @@ def get_results_configs(dir, start_id, end_id):
 def main(argv):
     parser = argparse.ArgumentParser(description='batch admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('-c', '--command', help='command, <create|tally|results>', required=True)
-    parser.add_argument('-d', '--directory', help='configurations directory', required=True)
+    parser.add_argument('-d', '--directory', help='configurations directory')
+    parser.add_argument('-mb', '--message-body', help='send message body')
+    parser.add_argument('-ms', '--message-subject', help='send message subject')
+    parser.add_argument(
+        '--election-ids',
+        metavar='ID',
+        type=int,
+        nargs='*',
+        help='list of election ids to which the command should be applied')
     parser.add_argument('-s', '--start-id', help='start id', type=int, default=0)
     parser.add_argument('-e', '--end-id', help='end id', type=int, default=100000000000)
     args = parser.parse_args()
 
-    if not os.path.isdir(args.directory):
+    if args.directory is not None and not os.path.isdir(args.directory):
         print("not a directory %s" % args.directory)
 
     if args.command == 'create':
@@ -54,6 +77,84 @@ def main(argv):
                 cycle.wait_for_state(cfg['id'], 'created', 300)
                 cycle.start(cfg['id'])
                 cycle.wait_for_state(cfg['id'], 'started', 5)
+
+    elif args.command == 'list-start':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+            print('next id %d' % cfg['id'])
+
+            cycle.start(cfg['id'])
+            cycle.wait_for_state(cfg['id'], 'started', 5)
+
+    elif args.command == 'list-stop':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, stopping election' % cfg['id'])
+            ret = cycle.stop(cfg['id'])
+            cycle.wait_for_state(cfg['id'], ['stopped'], 4)
+
+    elif args.command == 'list-tally':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, tallying' % cfg['id'])
+            cycle.tally(cfg['id'])
+            cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 10000)
+
+    elif args.command == 'list-tally-with-ids':
+        for eid in args.election_ids:
+            print('next id %d, stopping election' % eid)
+            ret = cycle.stop(eid)
+            if ret in [400, 500]:
+                  print("stop returned %d, continuing without it" % ret)
+                  continue
+
+            print('next id %d, tallying' % eid)
+            ret = cycle.tally_no_dump(eid)
+            cycle.wait_for_state(eid, ['tally_ok', 'results_ok'], 10000)
+            if ret in [400, 500]:
+                  print("tally_no_dump ids returned %d, continuing without it" % ret)
+                  continue
+
+    elif args.command == 'list-results':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, calculating results' % cfg['id'])
+            cycle.calculate_results(cfg['id'])
+            cycle.wait_for_state(cfg['id'], 'results_ok', 5)
+
+    elif args.command == 'list-auth-message':
+        for eid in args.election_ids:
+            print('next id %d, sending message' % eid)
+            payload = {
+              "msg":args.message_body,
+              "user-ids": None
+            }
+            if args.message_subject:
+                payload['subject'] = args.message_subject
+            print('> sending message..')
+            print('payload = %s' % json.dumps(payload))
+            admin.send_codes(eid, json.dumps(payload))
+
+    elif args.command == 'list-auth-start':
+        for eid in args.election_ids:
+            print('next id %d, starting auth event' % eid)
+            admin.auth_start(eid)
+
+    elif args.command == 'list-auth-stop':
+        for eid in args.election_ids:
+            print('next id %d, stopping auth event' % eid)
+            admin.auth_stop(eid)
+
+    elif args.command == 'list-publish':
+        for eid in args.election_ids:
+            cfg = dict(id=eid)
+
+            print('next id %d, publishing results' % cfg['id'])
+            cycle.publish_results(cfg['id'])
+            cycle.wait_for_state(cfg['id'], 'results_pub', 5)
 
     elif args.command == 'count':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
@@ -115,12 +216,6 @@ def main(argv):
                     next_id = cfg['payload']['id']
                 else:
                     next_id = cfg['id']
-
-                print('next id %d, dumping votes with matching ids (in private datastore)' % next_id)
-                ret = cycle.dump_votes_with_ids(next_id)
-                if ret in [400, 500]:
-                     print("dump_votes_with_ids returned %d, continuing without it" % ret)
-                     continue
 
                 print('next id %d, stopping election' % next_id)
                 ret = cycle.stop(next_id)

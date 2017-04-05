@@ -1,3 +1,13 @@
+/**
+ * This file is part of Helios Voting, copyright (C) 2008 Ben Adida, 
+ * distributed to the public under the GPL v3 license. 
+ * 
+ * You should have received a copy of the GNU  General Public License v3
+ * along with Helios Voting.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Helios Voting can be downloaded at https://github.com/benadida/helios
+ * 
+**/
 /*
     json2.js
     2012-10-08

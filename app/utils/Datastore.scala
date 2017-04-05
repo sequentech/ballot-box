@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package utils
 
 import play.api.libs.json._
@@ -20,6 +36,7 @@ object Datastore {
 
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.datastore.root").get
+  val urlSSLRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
   val publicDs = Play.current.configuration.getString("app.datastore.public").get
   val privateDs = Play.current.configuration.getString("app.datastore.private").get
 
@@ -29,6 +46,7 @@ object Datastore {
   val TALLY = "tally.tar.gz"
   val CONFIG = "config.json"
   val RESULTS = "results.json"
+  val RESULTS_DIR_PREFIX = "results-"
 
   /** writes a file to an election's datastore */
   def writeFile(electionId: Long, fileName: String, content: String, public: Boolean = false, append: Boolean = false) = {
@@ -72,7 +90,7 @@ object Datastore {
 
   /** gets the ciphertext url that eo will use. requires proper configuration of nginx to match */
   def getCiphertextsUrl(electionId: Long) = {
-     s"$urlRoot" + s"/private/$electionId/ciphertexts"
+     s"$urlSSLRoot" + s"/private/$electionId/ciphertexts"
   }
 
   /** incrementally calculates sha256 hash of votes using java nio apis */
@@ -113,16 +131,23 @@ object Datastore {
   }
 
   /** makes results public: creates a symbolic link to the tally, and creates a file with the results */
-  def publishResults(electionId: Long, results: Option[String]) = {
+  def publishResults(
+    electionId: Long,
+    results: Option[String],
+    subtallies: Array[Long]
+  ) = {
     val tarLink = getPath(electionId, s"$electionId.tar", true)
     val tarTarget = getPath(electionId, s"$electionId.tar", false)
     val tallyLink = getPath(electionId, TALLY, true)
     val tallyTarget = getPath(electionId, TALLY, false)
-    if(Files.exists(tallyTarget)) {
+
+    if(Files.exists(tallyTarget))
+    {
       Files.deleteIfExists(tallyLink)
       Files.createSymbolicLink(tallyLink, tallyTarget)
     }
-    else {
+    else if (subtallies.size == 0)
+    {
       Logger.warn(s"publishResults: tally does not exist for $electionId")
       throw new java.io.FileNotFoundException("tally does not exist")
     }

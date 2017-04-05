@@ -1,3 +1,19 @@
+/**
+ * This file is part of agora_elections.
+ * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+
+ * agora_elections is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+
+ * agora_elections  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+**/
 package models
 
 import utils.Crypto
@@ -74,40 +90,100 @@ object Votes {
 }
 
 /** election object */
-case class Election(id: Long, configuration: String, state: String, startDate: Timestamp, endDate: Timestamp,
-  pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean) {
+case class Election(
+  id: Long,
+  configuration: String,
+  state: String,
+  startDate: Timestamp,
+  endDate: Timestamp,
+  pks: Option[String],
+  resultsConfig: Option[String],
+  results: Option[String],
+  resultsUpdated: Option[Timestamp],
+  real: Boolean,
+  virtual: Boolean,
+  logo_url: Option[String])
+{
 
-  def getDTO = {
+  def getDTO =
+  {
     var configJson = Json.parse(configuration)
     if (!configJson.as[JsObject].keys.contains("layout")) {
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
+
     if (!configJson.as[JsObject].keys.contains("real")) {
         configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
     }
+
+    if (!configJson.as[JsObject].keys.contains("virtual")) {
+        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(real))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
+        configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("logo_url")) {
+        configJson = configJson.as[JsObject] + ("logo_url" -> Json.toJson(logo_url))
+    }
+
     var config = configJson.validate[ElectionConfig].get
     var res = None: Option[String]
     var resUp = None: Option[Timestamp]
+
     if (state == Elections.RESULTS_PUB) {
         res = results
         resUp = resultsUpdated
     }
-    ElectionDTO(id, config, state, startDate, endDate, pks, res, resUp, real)
+
+    ElectionDTO(
+      id,
+      config,
+      state,
+      startDate,
+      endDate,
+      pks,
+      resultsConfig,
+      res,
+      resUp,
+      real,
+      virtual,
+      logo_url)
   }
 }
 
 /** relational representation of elections */
-class Elections(tag: Tag) extends Table[Election](tag, "election") {
+class Elections(tag: Tag)
+  extends Table[Election](tag, "election")
+{
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
   def state = column[String]("state", O.NotNull)
   def startDate = column[Timestamp]("start_date", O.NotNull)
   def endDate = column[Timestamp]("end_date", O.NotNull)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
+  def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
   def real = column[Boolean]("real")
-  def * = (id, configuration, state, startDate, endDate, pks.?, results.?, resultsUpdated.?, real) <> (Election.tupled, Election.unapply _)
+  def virtual = column[Boolean]("virtual")
+  def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
+
+  def * = (
+    id,
+    configuration,
+    state,
+    startDate,
+    endDate,
+    pks.?,
+    resultsConfig.?,
+    results.?,
+    resultsUpdated.?,
+    real,
+    virtual,
+    logo_url.?
+  ) <> (Election.tupled, Election.unapply _)
 }
 
 /** data access object for elections */
@@ -139,7 +215,11 @@ object Elections {
   }
 
   def updateState(id: Long, state: String)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => e.state).update(state)
+    state match {
+      case STARTED => elections.filter(_.id === id).map(e => (e.state, e.startDate)).update(state, new Timestamp(new Date().getTime))
+      case STOPPED => elections.filter(_.id === id).map(e => (e.state, e.endDate)).update(state, new Timestamp(new Date().getTime))
+      case _ => elections.filter(_.id === id).map(e => e.state).update(state)
+    }
   }
 
   def updateResults(id: Long, results: String)(implicit s: Session) = {
@@ -166,12 +246,25 @@ case class StatDay(day: String, votes: Long)
 case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
 /** used to return an election with config in structured form */
-case class ElectionDTO(id: Long, configuration: ElectionConfig, state: String, startDate: Timestamp,
-  endDate: Timestamp, pks: Option[String], results: Option[String], resultsUpdated: Option[Timestamp], real: Boolean)
+case class ElectionDTO(
+  id: Long,
+  configuration: ElectionConfig,
+  state: String,
+  startDate: Timestamp,
+  endDate: Timestamp,
+  pks: Option[String],
+  resultsConfig: Option[String],
+  results: Option[String],
+  resultsUpdated: Option[Timestamp],
+  real: Boolean,
+  virtual: Boolean,
+  logo_url: Option[String]
+)
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String]) {
+  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
+{
 
   /**
     * validates an election config, this does two things:
@@ -218,6 +311,38 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 
     val presentationOk = presentation.validate()
 
+    // virtualSubelections setting only makes sense currently in dedicated
+    // installations because we do not check the admin ownership of those,
+    // and that's why support for subelections can be disabled via a config
+    // setting
+    val virtualElectionsAllowed = Play.current.configuration
+      .getBoolean("election.virtualElectionsAllowed")
+      .getOrElse(false)
+
+    assert(
+      !virtual || virtualElectionsAllowed,
+      "virtual elections are not allowed"
+    )
+
+    assert(
+      (
+        !virtual &&
+        (!virtualSubelections.isDefined || virtualSubelections.get.size == 0)
+      ) ||
+      (
+        virtual &&
+        virtualSubelections.isDefined &&
+        virtualSubelections.get.size > 0
+      ),
+      "inconsistent virtuality configuration of the election"
+    )
+
+    assert(
+      !virtualSubelections.isDefined ||
+      (virtualSubelections.get.sorted.deep == virtualSubelections.get.deep),
+      "subelections must be sorted"
+    )
+
     this.copy(description = descriptionOk, questions = questionsOk, presentation = presentationOk)
   }
 
@@ -229,7 +354,7 @@ case class ElectionConfig(id: Long, layout: String, director: String, authoritie
 
 /** defines a question asked in an election */
 case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
-  randomize_answer_order: Boolean, tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
+  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
 
   def validate() = {
 
@@ -263,6 +388,17 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
+    // validate shuffle categories
+    if (extra_options.isDefined && 
+        extra_options.get.shuffle_category_list.isDefined &&
+        extra_options.get.shuffle_category_list.get.size > 0) {
+      val categories = answers.map{ x => x.category } toSet
+
+      extra_options.get.shuffle_category_list.get.map { x =>
+        assert(categories.contains(x), s"category $x in shuffle_category_list not found is invalid")
+      }
+    }
+
     this.copy(description = descriptionOk, answers = answersOk)
   }
 }
@@ -273,6 +409,7 @@ case class QuestionExtra(
   next_button: Option[String],
   shuffled_categories: Option[String],
   shuffling_policy: Option[String],
+  ballot_parity_criteria: Option[String],
   restrict_choices_by_tag__name: Option[String],
   restrict_choices_by_tag__max: Option[String],
   restrict_choices_by_tag__max_error_msg: Option[String],
@@ -283,6 +420,12 @@ case class QuestionExtra(
   recommended_preset__title: Option[String],
   recommended_preset__accept_text: Option[String],
   recommended_preset__deny_text: Option[String],
+  shuffle_categories: Option[Boolean],
+  shuffle_all_options: Option[Boolean],
+  shuffle_category_list: Option[Array[String]],
+  show_points: Option[Boolean],
+  default_selected_option_ids: Option[Array[Int]],
+  select_categories_1click: Option[Boolean]),
   answer_columns_size: Option[String],
   group_answer_pairs: Option[String])
 {
@@ -292,6 +435,7 @@ case class QuestionExtra(
     assert(!next_button.isDefined || next_button.get.length <= SHORT_STRING, "next_button too long")
     assert(!shuffled_categories.isDefined || shuffled_categories.get.length <= LONG_STRING, "shuffled_categories too long")
     assert(!shuffling_policy.isDefined || shuffling_policy.get.length <= SHORT_STRING, "shuffling_policy too long")
+    assert(!ballot_parity_criteria.isDefined || ballot_parity_criteria.get.length <= SHORT_STRING, "ballot_parity_criteria too long")
 
     assert(!restrict_choices_by_tag__name.isDefined || restrict_choices_by_tag__name.get.length <= SHORT_STRING, "restrict_choices_by_tag__name too long")
     assert(!restrict_choices_by_tag__max.isDefined || restrict_choices_by_tag__max.get.toInt >= 1, "invalid restrict_choices_by_tag__max")
@@ -306,9 +450,33 @@ case class QuestionExtra(
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
 
+
     assert(!answer_columns_size.isDefined || List(12,6,4,3).contains(answer_columns_size.get.toInt), "invalid answer_columns_size, can only be a string with 12,6,4,3")
 
     assert(!group_answer_pairs.isDefined || group_answer_pairs.get.length <= SHORT_STRING, "group_answer_pairs too long")
+    
+    assert(!(shuffle_all_options.isDefined && shuffle_category_list.isDefined &&
+           shuffle_all_options.get) || 0 == shuffle_category_list.get.size,
+           "shuffle_all_options is true but shuffle_category_list is not empty")
+  }
+}
+
+/** Defines a possible list of conditions under which a question is shown */
+case class ConditionalQuestion(
+  question_id: Int,
+  when_any: Array[QuestionCondition])
+{
+  def validate() =
+  {
+  }
+}
+
+case class QuestionCondition(
+  question_id: Int,
+  answer_id: Int)
+{
+  def validate() =
+  {
   }
 }
 
@@ -331,17 +499,47 @@ case class Answer(id: Int, category: String, details: String, sort_order: Int, u
   }
 }
 
+case class ShareTextItem(
+  network: String,
+  button_text: String,
+  social_message: String
+)
+{
+  def validate = {
+    this
+  }
+}
+
 /** defines presentation options for an election */
-case class ElectionPresentation(share_text: String, theme: String, urls: Array[Url], theme_css: String, extra_options: Option[ElectionExtra]) {
+case class ElectionPresentation(
+  share_text: Option[Array[ShareTextItem]],
+  theme: String,
+  urls: Array[Url],
+  theme_css: String,
+  extra_options: Option[ElectionExtra],
+  conditional_questions: Option[Array[ConditionalQuestion]])
+{
+  def shareTextConfig() : Option[Array[ShareTextItem]]  = {
+    val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
+    if (allow_edit) {
+      share_text
+    } else {
+      Play.current.configuration.getConfigSeq("share_social.default") map { seq =>
+        (seq map { item =>
+            ShareTextItem ( item.getString("network").get, item.getString("button_text").get, item.getString("social_message").get )
+        }).toArray
+      }
+    }
+  }
 
   def validate() = {
 
-    validateStringLength(share_text, LONG_STRING, s"share_text too large $share_text")
     validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
     validateIdentifier(theme_css, "invalid theme_css")
+    val shareText = shareTextConfig()
 
-    this.copy(urls = urlsOk)
+    this.copy(urls = urlsOk, share_text = shareText)
   }
 }
 
@@ -353,7 +551,7 @@ case class Url(title: String, url: String) {
 
   def validate() = {
     validateStringLength(title, SHORT_STRING, s"invalid url title $title")
-    validateUrl(url, s"invalid url $url")
+    validateStringLength(url, SHORT_STRING, s"too long url $url")
 
     this
   }
@@ -455,3 +653,17 @@ case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
 
 /** data describing an authority, used in admin interface */
 case class AuthData(name: Option[String], description: Option[String], url: Option[String], image: Option[String])
+
+case class PlaintextAnswer(options: Array[Long] = Array[Long]())
+// id is the election ID
+case class PlaintextBallot(id: Long = -1, answers: Array[PlaintextAnswer] = Array[PlaintextAnswer]())
+
+/**
+ * This object contains the states required for reading a plaintext ballot
+ * It's used on Console.processPlaintextLine
+ */
+object PlaintextBallot
+{
+  val ID = 0 // reading election ID
+  val ANSWER = 1 // reading answers
+}
