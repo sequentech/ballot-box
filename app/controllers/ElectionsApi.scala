@@ -718,6 +718,7 @@ object ElectionsApi
 
     Logger.info(s"downloading tally from $url")
 
+    // function to retry the http request a number of times
     def retryWrapper(
       wsRequest: WSRequestHolder,
       f: Future[(WSResponseHeaders, Enumerator[Array[Byte]])],
@@ -741,7 +742,9 @@ object ElectionsApi
     }
 
     // taken from https://www.playframework.com/documentation/2.3.x/ScalaWS
+    // configure http request
     val wsRequest = WS.url(url).withRequestTimeout(download_tally_timeout)
+    // http request future (including retries)
     val futureResponse: Future[(WSResponseHeaders, Enumerator[Array[Byte]])] =
       retryWrapper(wsRequest, wsRequest.getStream(), download_tally_retries)
 
