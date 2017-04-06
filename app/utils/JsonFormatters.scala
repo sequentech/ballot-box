@@ -22,6 +22,13 @@ import models._
 import java.sql.Timestamp
 import scala.math.BigInt
 
+
+import play.api.libs._
+import json._
+
+import shapeless.{ `::` => :#:, _ }
+import poly._
+
 /**
   * Formatters for json parsing and writing
   *
@@ -66,106 +73,71 @@ object JsonFormatters {
 
   //////////////////////////////////////////////////////////////////////////////
   // this is not pretty but at least it works
-  // it's necessary for case classes with >= 22 fields 
+  // it's necessary for case classes with >= 22 fields
   // for this version of Play (2.3.6)
-  // implicit val questionExtraF = Json.format[QuestionExtra]
-  // See http://stackoverflow.com/questions/28167971/scala-case-having-22-fields-but-having-issue-with-play-json-in-scala-2-11-5
-  val questionExtraFirstF
-    : 
-      OFormat[(
-        Option[String], Option[String], Option[String], Option[String],
-        Option[String], Option[String], Option[String], Option[String],
-        Option[String], Option[String], Option[String], Option[String],
-        Option[String], Option[String], Option[String])
-      ] =
-    (
-      (__ \ "group").format[Option[String]] and
-      (__ \ "next_button").format[Option[String]] and
-      (__ \ "shuffled_categories").format[Option[String]] and
-      (__ \ "shuffling_policy").format[Option[String]] and
-      (__ \ "ballot_parity_criteria").format[Option[String]] and
-      (__ \ "restrict_choices_by_tag__name").format[Option[String]] and
-      (__ \ "restrict_choices_by_tag__max").format[Option[String]] and
-      (__ \ "restrict_choices_by_tag__max_error_msg").format[Option[String]] and
-      (__ \ "accordion_folding_policy").format[Option[String]] and
-      (__ \ "restrict_choices_by_no_tag__max").format[Option[String]] and
-      (__ \ "force_allow_blank_vote").format[Option[String]] and
-      (__ \ "recommended_preset__tag").format[Option[String]] and
-      (__ \ "recommended_preset__title").format[Option[String]] and
-      (__ \ "recommended_preset__accept_text").format[Option[String]] and
-      (__ \ "recommended_preset__deny_text").format[Option[String]]
-    ).tupled
+  // it requires shapeless 2.0.0 (newer shapelessversions may not be compatible 
+  // with this code)
+  // from https://gist.github.com/negator/5139ddb5f6d91cbe7b0c
+  // http://stackoverflow.com/questions/23571677/22-fields-limit-in-scala-2-11-play-framework-2-3-case-classes-and-functions
 
-  val questionExtraSecondF
-    :
-      OFormat[(
-        Option[Boolean], Option[Boolean], Option[Array[String]],
-        Option[Boolean], Option[Array[Int]], Option[Boolean], Option[String],
-        Option[String])
-      ] =
-    (
-      (__ \ "shuffle_categories").format[Option[Boolean]] and
-      (__ \ "shuffle_all_options").format[Option[Boolean]] and
-      (__ \ "shuffle_category_list").format[Option[Array[String]]] and
-      (__ \ "show_points").format[Option[Boolean]] and
-      (__ \ "default_selected_option_ids").format[Option[Array[Int]]] and
-      (__ \ "select_categories_1click").format[Option[Boolean]] and
-      (__ \ "answer_columns_size").format[Option[String]] and
-      (__ \ "group_answer_pairs").format[Option[String]]
-    ).tupled
 
-  implicit val questionExtraF : Format[QuestionExtra] =
-  ( questionExtraFirstF and questionExtraSecondF ).apply(
-    {
-      case (
-        (
-          group, next_button, shuffled_categories, shuffling_policy,
-          ballot_parity_criteria, restrict_choices_by_tag__name,
-          restrict_choices_by_tag__max, restrict_choices_by_tag__max_error_msg,
-          accordion_folding_policy, restrict_choices_by_no_tag__max,
-          force_allow_blank_vote, recommended_preset__tag,
-          recommended_preset__title, recommended_preset__accept_text,
-          recommended_preset__deny_text
-        ),
-        (
-          shuffle_categories, shuffle_all_options, shuffle_category_list,
-          show_points, default_selected_option_ids, select_categories_1click,
-          answer_columns_size, group_answer_pairs
-        )
-      ) =>
-        QuestionExtra(
-          group, next_button, shuffled_categories, shuffling_policy,
-          ballot_parity_criteria, restrict_choices_by_tag__name,
-          restrict_choices_by_tag__max, restrict_choices_by_tag__max_error_msg,
-          accordion_folding_policy, restrict_choices_by_no_tag__max,
-          force_allow_blank_vote, recommended_preset__tag,
-          recommended_preset__title, recommended_preset__accept_text,
-          recommended_preset__deny_text,
-          shuffle_categories, shuffle_all_options, shuffle_category_list,
-          show_points, default_selected_option_ids, select_categories_1click,
-          answer_columns_size, group_answer_pairs
-        )
-    },
-    q
-    =>
-      (
-        (
-          q.group, q.next_button, q.shuffled_categories, q.shuffling_policy,
-          q.ballot_parity_criteria, q.restrict_choices_by_tag__name,
-          q.restrict_choices_by_tag__max, q.restrict_choices_by_tag__max_error_msg,
-          q.accordion_folding_policy, q.restrict_choices_by_no_tag__max,
-          q.force_allow_blank_vote, q.recommended_preset__tag,
-          q.recommended_preset__title, q.recommended_preset__accept_text,
-          q.recommended_preset__deny_text
-        ),
-        (
-          q.shuffle_categories, q.shuffle_all_options, q.shuffle_category_list,
-          q.show_points, q.default_selected_option_ids, q.select_categories_1click,
-          q.answer_columns_size, q.group_answer_pairs
-        )
+  implicit val writesInstance: LabelledProductTypeClass[Writes] = new LabelledProductTypeClass[Writes] {
+
+      def emptyProduct: Writes[HNil] = Writes(_ => Json.obj())
+
+      def product[F, T <: HList](name: String, FHead: Writes[F], FTail: Writes[T]) = Writes[F :#: T] {
+          case head :#: tail =>
+              val h = FHead.writes(head)
+              val t = FTail.writes(tail)
+
+              (h, t) match {
+                  case (JsNull, t: JsObject)     => t
+                  case (h: JsValue, t: JsObject) => Json.obj(name -> h) ++ t
+                  case _                         => Json.obj()
+              }
+      }
+      def project[F, G](instance: => Writes[G], to: F => G, from: G => F) = Writes[F](f => instance.writes(to(f)))
+  }
+  object SWrites extends LabelledProductTypeClassCompanion[Writes]
+
+  implicit val readsInstance: LabelledProductTypeClass[Reads] = new LabelledProductTypeClass[Reads] {
+
+      def emptyProduct: Reads[HNil] = Reads(_ => JsSuccess(HNil))
+
+      def product[F, T <: HList](name: String, FHead: Reads[F], FTail: Reads[T]) = Reads[F :#: T] {
+          case obj @ JsObject(fields) =>
+              for {
+                  head <- FHead.reads(obj \ name)
+                  tail <- FTail.reads(obj - name)
+              } yield head :: tail
+
+          case _ => JsError("Json object required")
+      }
+
+      def project[F, G](instance: => Reads[G], to: F => G, from: G => F) = Reads[F](instance.map(from).reads)
+  }
+  object SReads extends LabelledProductTypeClassCompanion[Reads]
+
+  implicit val formatInstance: LabelledProductTypeClass[Format] = new LabelledProductTypeClass[Format] {
+      def emptyProduct: Format[HNil] = Format(
+          readsInstance.emptyProduct,
+          writesInstance.emptyProduct
       )
-  )
 
+      def product[F, T <: HList](name: String, FHead: Format[F], FTail: Format[T]) = Format[F :#: T] (
+          readsInstance.product[F, T](name, FHead, FTail),
+          writesInstance.product[F, T](name, FHead, FTail)
+      )
+
+      def project[F, G](instance: => Format[G], to: F => G, from: G => F) = Format[F](
+          readsInstance.project(instance, to, from),
+          writesInstance.project(instance, to, from)
+      )
+  }
+  object SFormats extends LabelledProductTypeClassCompanion[Format]
+  
+  implicit val questionExtraWrites : Writes[QuestionExtra] = SWrites.auto.derive[QuestionExtra]
+  implicit val questionExtraReads : Reads[QuestionExtra] = SReads.auto.derive[QuestionExtra]
   //////////////////////////////////////////////////////////////////////////////
 
 
