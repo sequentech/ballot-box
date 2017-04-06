@@ -425,7 +425,9 @@ case class QuestionExtra(
   shuffle_category_list: Option[Array[String]],
   show_points: Option[Boolean],
   default_selected_option_ids: Option[Array[Int]],
-  select_categories_1click: Option[Boolean])
+  select_categories_1click: Option[Boolean],
+  answer_columns_size: Option[Int],
+  group_answer_pairs: Option[Boolean])
 {
 
   def validate() = {
@@ -447,6 +449,9 @@ case class QuestionExtra(
     assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
+
+
+    assert(!answer_columns_size.isDefined || List(12,6,4,3).contains(answer_columns_size.get), "invalid answer_columns_size, can only be a string with 12,6,4,3")
 
     assert(!(shuffle_all_options.isDefined && shuffle_category_list.isDefined &&
            shuffle_all_options.get) || 0 == shuffle_category_list.get.size,
