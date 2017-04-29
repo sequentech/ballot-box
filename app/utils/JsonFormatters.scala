@@ -22,6 +22,13 @@ import models._
 import java.sql.Timestamp
 import scala.math.BigInt
 
+
+import play.api.libs._
+import json._
+
+import shapeless.{ `::` => :#:, _ }
+import poly._
+
 /**
   * Formatters for json parsing and writing
   *
@@ -63,7 +70,77 @@ object JsonFormatters {
 
   implicit val urlF = Json.format[Url]
   implicit val answerF = Json.format[Answer]
-  implicit val questionExtraF = Json.format[QuestionExtra]
+
+  //////////////////////////////////////////////////////////////////////////////
+  // this is not pretty but at least it works
+  // it's necessary for case classes with >= 22 fields
+  // for this version of Play (2.3.6)
+  // it requires shapeless 2.0.0 (newer shapelessversions may not be compatible 
+  // with this code)
+  // from https://gist.github.com/negator/5139ddb5f6d91cbe7b0c
+  // http://stackoverflow.com/questions/23571677/22-fields-limit-in-scala-2-11-play-framework-2-3-case-classes-and-functions
+
+
+  implicit val writesInstance: LabelledProductTypeClass[Writes] = new LabelledProductTypeClass[Writes] {
+
+      def emptyProduct: Writes[HNil] = Writes(_ => Json.obj())
+
+      def product[F, T <: HList](name: String, FHead: Writes[F], FTail: Writes[T]) = Writes[F :#: T] {
+          case head :#: tail =>
+              val h = FHead.writes(head)
+              val t = FTail.writes(tail)
+
+              (h, t) match {
+                  case (JsNull, t: JsObject)     => t
+                  case (h: JsValue, t: JsObject) => Json.obj(name -> h) ++ t
+                  case _                         => Json.obj()
+              }
+      }
+      def project[F, G](instance: => Writes[G], to: F => G, from: G => F) = Writes[F](f => instance.writes(to(f)))
+  }
+  object SWrites extends LabelledProductTypeClassCompanion[Writes]
+
+  implicit val readsInstance: LabelledProductTypeClass[Reads] = new LabelledProductTypeClass[Reads] {
+
+      def emptyProduct: Reads[HNil] = Reads(_ => JsSuccess(HNil))
+
+      def product[F, T <: HList](name: String, FHead: Reads[F], FTail: Reads[T]) = Reads[F :#: T] {
+          case obj @ JsObject(fields) =>
+              for {
+                  head <- FHead.reads(obj \ name)
+                  tail <- FTail.reads(obj - name)
+              } yield head :: tail
+
+          case _ => JsError("Json object required")
+      }
+
+      def project[F, G](instance: => Reads[G], to: F => G, from: G => F) = Reads[F](instance.map(from).reads)
+  }
+  object SReads extends LabelledProductTypeClassCompanion[Reads]
+
+  implicit val formatInstance: LabelledProductTypeClass[Format] = new LabelledProductTypeClass[Format] {
+      def emptyProduct: Format[HNil] = Format(
+          readsInstance.emptyProduct,
+          writesInstance.emptyProduct
+      )
+
+      def product[F, T <: HList](name: String, FHead: Format[F], FTail: Format[T]) = Format[F :#: T] (
+          readsInstance.product[F, T](name, FHead, FTail),
+          writesInstance.product[F, T](name, FHead, FTail)
+      )
+
+      def project[F, G](instance: => Format[G], to: F => G, from: G => F) = Format[F](
+          readsInstance.project(instance, to, from),
+          writesInstance.project(instance, to, from)
+      )
+  }
+  object SFormats extends LabelledProductTypeClassCompanion[Format]
+  
+  implicit val questionExtraWrites : Writes[QuestionExtra] = SWrites.auto.derive[QuestionExtra]
+  implicit val questionExtraReads : Reads[QuestionExtra] = SReads.auto.derive[QuestionExtra]
+  //////////////////////////////////////////////////////////////////////////////
+
+
   implicit val questionF = Json.format[Question]
   implicit val ShareTextItemF = Json.format[ShareTextItem]
 
@@ -85,4 +162,12 @@ object JsonFormatters {
   implicit val tallyResponseF = Json.format[TallyResponse]
 
   implicit val authDataF = Json.format[AuthData]
+
+  implicit val plaintextAnswerW : Writes[PlaintextAnswer] =
+    (JsPath \ "options").write[Array[Long]] contramap { (t: PlaintextAnswer) => t.options }
+
+  implicit val plaintextAnswerR : Reads[PlaintextAnswer] =
+    (JsPath \ "options").read[Array[Long]] map (PlaintextAnswer.apply )
+
+  implicit val PlaintextBallotF = Json.format[PlaintextBallot]
 }

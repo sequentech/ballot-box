@@ -215,7 +215,11 @@ object Elections {
   }
 
   def updateState(id: Long, state: String)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => e.state).update(state)
+    state match {
+      case STARTED => elections.filter(_.id === id).map(e => (e.state, e.startDate)).update(state, new Timestamp(new Date().getTime))
+      case STOPPED => elections.filter(_.id === id).map(e => (e.state, e.endDate)).update(state, new Timestamp(new Date().getTime))
+      case _ => elections.filter(_.id === id).map(e => e.state).update(state)
+    }
   }
 
   def updateResults(id: Long, results: String)(implicit s: Session) = {
@@ -420,7 +424,10 @@ case class QuestionExtra(
   shuffle_all_options: Option[Boolean],
   shuffle_category_list: Option[Array[String]],
   show_points: Option[Boolean],
-  default_selected_option_ids: Option[Array[Int]])
+  default_selected_option_ids: Option[Array[Int]],
+  select_categories_1click: Option[Boolean],
+  answer_columns_size: Option[Int],
+  group_answer_pairs: Option[Boolean])
 {
 
   def validate() = {
@@ -442,6 +449,9 @@ case class QuestionExtra(
     assert(!recommended_preset__title.isDefined || recommended_preset__title.get.length <= LONG_STRING, "recommended_preset__title too long")
     assert(!recommended_preset__accept_text.isDefined || recommended_preset__accept_text.get.length <= LONG_STRING, "recommended_preset__accept_text too long")
     assert(!recommended_preset__deny_text.isDefined || recommended_preset__deny_text.get.length <= LONG_STRING, "recommended_preset__deny_text too long")
+
+
+    assert(!answer_columns_size.isDefined || List(12,6,4,3).contains(answer_columns_size.get), "invalid answer_columns_size, can only be a string with 12,6,4,3")
 
     assert(!(shuffle_all_options.isDefined && shuffle_category_list.isDefined &&
            shuffle_all_options.get) || 0 == shuffle_category_list.get.size,
@@ -641,3 +651,17 @@ case class Popk(challenge: BigInt, commitment: BigInt, response: BigInt)
 
 /** data describing an authority, used in admin interface */
 case class AuthData(name: Option[String], description: Option[String], url: Option[String], image: Option[String])
+
+case class PlaintextAnswer(options: Array[Long] = Array[Long]())
+// id is the election ID
+case class PlaintextBallot(id: Long = -1, answers: Array[PlaintextAnswer] = Array[PlaintextAnswer]())
+
+/**
+ * This object contains the states required for reading a plaintext ballot
+ * It's used on Console.processPlaintextLine
+ */
+object PlaintextBallot
+{
+  val ID = 0 // reading election ID
+  val ANSWER = 1 // reading answers
+}

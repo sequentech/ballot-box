@@ -17,6 +17,14 @@ name := """agora-elections"""
 
 version := "1.0-SNAPSHOT"
 
+fork in run := true
+
+fork in Test := true
+
+javaOptions in Test += "-Dconfig.file=conf/application.test.conf"
+
+trapExit in run := false
+
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.1"
@@ -30,7 +38,8 @@ libraryDependencies ++= Seq(
   "org.bouncycastle" % "bcprov-jdk16" % "1.45",
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
-  "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0"
+  "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
+  "com.chuusai" %% "shapeless" % "2.0.0"
 )
 
 resolvers += "Spy Repository" at "http://files.couchbase.com/maven2" // required to resolve `spymemcached`, the plugin's dependency.
