@@ -17,6 +17,7 @@
 package utils
 
 import play.api.libs.json._
+import java.util.Date
 
 /**
   * Utilities for json messaging
@@ -48,7 +49,7 @@ trait Response {
   /** need to manually write reads/writes for generic types */
   implicit def responseWrites[T: Format]: Writes[Response[T]] = new Writes[Response[T]] {
     def writes(response: Response[T]) = JsObject(Seq(
-        "date" -> JsString(new java.sql.Timestamp(System.currentTimeMillis()).toString),
+        "date" -> JsString(new java.sql.Timestamp(new Date().getTime).toString),
         "payload" -> Json.toJson(response.payload)
     ))
   }
