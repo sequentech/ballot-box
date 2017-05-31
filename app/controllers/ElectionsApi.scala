@@ -20,6 +20,7 @@ import models._
 import utils._
 import utils.JsonFormatters._
 import utils.Response
+import java.util.Date
 
 import play.api._
 import play.api.mvc._
@@ -489,7 +490,8 @@ object ElectionsApi
       config =>
       {
         try {
-          val validated = config.validate(authorities, id)
+          val now = new java.sql.Timestamp(new Date().getTime)
+          val validated = config.validate(authorities, id).copy(start_date=now, end_date=now)
           DB.withSession
           {
             implicit session =>
