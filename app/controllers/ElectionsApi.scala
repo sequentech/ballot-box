@@ -82,6 +82,24 @@ object ElectionsApi
   val authorities = getAuthorityData
   val download_tally_timeout = Play.current.configuration.getInt("app.download_tally_timeout").get
   val download_tally_retries = Play.current.configuration.getInt("app.download_tally_retries").get
+  val always_publish = Play.current.configuration.getBoolean("app.always_publish").getOrElse(false)
+  val startedCallbackUrl = Play.current.configuration.getString("app.callbacks.started").
+    flatMap { started =>
+      if (started.length > 0) {
+        Some(started)
+      } else {
+        None
+      }
+    }
+  val publishedCallbackUrl = Play.current.configuration.getString("app.callbacks.published").
+    flatMap { published =>
+      if (published.length > 0) {
+        Some(published)
+      } else {
+        None
+      }
+    }
+  val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
 
   /** inserts election into the db in the registered state */
   def register(id: Long) = HAction("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
@@ -127,6 +145,11 @@ object ElectionsApi
   def start(id: Long) = HAction("", "AuthEvent", id, "edit|start").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STARTED)
+    Future {
+      startedCallbackUrl map { callback_url =>
+        callCallback(id, callback_url, Elections.STARTED)
+      }
+    }
     Ok(response(ret))
 
   }(slickExecutionContext)}
@@ -287,21 +310,27 @@ object ElectionsApi
               }
             )
         }
+
+        if  (always_publish) {
+          future map { done =>
+            publishResultsLogic(id)
+          }
+        }
+
         future.recover {
           case e:NoSuchElementException =>
             BadRequest(error(s"Election $id not found"))
         }
     }
 
-  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit|publish-results").async {
+  private def publishResultsLogic(id: Long) = {
 
     Logger.info(s"publishing results for election $id")
 
     val future = getElection(id).flatMap
     {
       e =>
-        if( Elections.TALLY_OK    == e.state ||
-            Elections.RESULTS_OK  == e.state)
+        if(Elections.RESULTS_OK  == e.state)
         {
           var electionConfigStr = Json.parse(e.configuration).as[JsObject]
           if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
@@ -344,6 +373,10 @@ object ElectionsApi
       case i:IllegalStateException => BadRequest(error(s"Election had no results"))
       case f:java.io.FileNotFoundException => BadRequest(error(s"Election had no tally"))
     }
+  }
+
+  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit|publish-results").async {
+    publishResultsLogic(id)
   }
 
   def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view-results").async { request =>
@@ -611,6 +644,35 @@ object ElectionsApi
     )
 
   }(slickExecutionContext)
+  
+  private def callCallback(electionId: Long, url1: String, message: String) = {
+    try {
+      val url = url1.replace("${eid}", electionId+"")
+      println(s"posting to $url")
+      val hmac = Crypto.hmac(boothSecret, message)
+      val khmac = s"khmac:///sha-256;$hmac/$message"
+      val f = WS.url(url)
+        .withHeaders(
+          "Accept" -> "application/json",
+          "Authorization" -> khmac)
+        .post(message)
+        .map { resp =>
+          if(resp.status != HTTP.ACCEPTED) {
+            Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body} and khmac ${khmac}")
+          }
+        }
+      f.recover {
+        case t: Throwable => {
+          Logger.warn(s"Exception caught when posting to callback $t")
+        }
+      }
+    }
+    catch {
+      case t:Throwable => {
+        Logger.warn(s"Exception caught when posting to callback $t")
+      }
+    }
+  }
 
   /** Future: links tally and copies results into public datastore */
   private def pubResults(
@@ -619,6 +681,11 @@ object ElectionsApi
   {
     Datastore.publishResults(id, results, subtallies)
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
+    Future {
+      publishedCallbackUrl map { callback_url =>
+        callCallback(id, callback_url, Elections.RESULTS_PUB)
+      }
+    }
     Ok(response("ok"))
 
   }(slickExecutionContext)
