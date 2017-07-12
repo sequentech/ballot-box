@@ -656,6 +656,8 @@ case class PlaintextAnswer(options: Array[Long] = Array[Long]())
 // id is the election ID
 case class PlaintextBallot(id: Long = -1, answers: Array[PlaintextAnswer] = Array[PlaintextAnswer]())
 
+case class Callback(name: String, payload: String)
+
 /**
  * This object contains the states required for reading a plaintext ballot
  * It's used on Console.processPlaintextLine

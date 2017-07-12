@@ -147,7 +147,7 @@ object ElectionsApi
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Future {
       startedCallbackUrl map { callback_url =>
-        callCallback(id, callback_url, Elections.STARTED)
+        postCallback(id, callback_url, Callback(Elections.STARTED, ""))
       }
     }
     Ok(response(ret))
@@ -645,17 +645,19 @@ object ElectionsApi
 
   }(slickExecutionContext)
   
-  private def callCallback(electionId: Long, url1: String, message: String) = {
+  private def postCallback(electionId: Long, url1: String, message: Callback, voterId: String = "") = {
     try {
       val url = url1.replace("${eid}", electionId+"")
       println(s"posting to $url")
-      val hmac = Crypto.hmac(boothSecret, message)
-      val khmac = s"khmac:///sha-256;$hmac/$message"
+      val now: Long = System.currentTimeMillis / 1000
+      val timedAuth = s"$voterId:AuthEvent:$electionId:Callback:$now"
+      val hmac = Crypto.hmac(boothSecret, timedAuth)
+      val khmac = s"khmac:///sha-256;$hmac/$timedAuth"
       val f = WS.url(url)
         .withHeaders(
           "Accept" -> "application/json",
           "Authorization" -> khmac)
-        .post(message)
+        .post(Json.toJson(message))
         .map { resp =>
           if(resp.status != HTTP.ACCEPTED) {
             Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body} and khmac ${khmac}")
@@ -683,7 +685,7 @@ object ElectionsApi
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
     Future {
       publishedCallbackUrl map { callback_url =>
-        callCallback(id, callback_url, Elections.RESULTS_PUB)
+        postCallback(id, callback_url, Callback(Elections.RESULTS_PUB,""))
       }
     }
     Ok(response("ok"))
