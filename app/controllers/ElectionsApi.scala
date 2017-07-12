@@ -147,7 +147,7 @@ object ElectionsApi
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Future {
       startedCallbackUrl map { callback_url =>
-        postCallback(id, callback_url, Callback(Elections.STARTED, ""))
+        postCallback(id, callback_url, Callback(Elections.STARTED, ""), 1)
       }
     }
     Ok(response(ret))
@@ -645,12 +645,12 @@ object ElectionsApi
 
   }(slickExecutionContext)
   
-  private def postCallback(electionId: Long, url1: String, message: Callback, voterId: String = "") = {
+  private def postCallback(electionId: Long, url1: String, message: Callback, userId: Long) = {
     try {
       val url = url1.replace("${eid}", electionId+"")
       println(s"posting to $url")
       val now: Long = System.currentTimeMillis / 1000
-      val timedAuth = s"$voterId:AuthEvent:$electionId:Callback:$now"
+      val timedAuth = s"$userId:AuthEvent:$electionId:Callback:$now"
       val hmac = Crypto.hmac(boothSecret, timedAuth)
       val khmac = s"khmac:///sha-256;$hmac/$timedAuth"
       val f = WS.url(url)
@@ -685,7 +685,7 @@ object ElectionsApi
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
     Future {
       publishedCallbackUrl map { callback_url =>
-        postCallback(id, callback_url, Callback(Elections.RESULTS_PUB,""))
+        postCallback(id, callback_url, Callback(Elections.RESULTS_PUB,""), 1)
       }
     }
     Ok(response("ok"))
