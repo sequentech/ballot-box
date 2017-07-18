@@ -170,4 +170,6 @@ object JsonFormatters {
     (JsPath \ "options").read[Array[Long]] map (PlaintextAnswer.apply )
 
   implicit val PlaintextBallotF = Json.format[PlaintextBallot]
+  
+  implicit val callbackF = Json.format[Callback]
 }
