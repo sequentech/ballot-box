@@ -50,26 +50,6 @@ object JsonFormatters {
     }
   }
 
-  /*
-  implicit val formatOptTimestamp = new Format[Option[Timestamp]] {
-    def writes(ts: Option[Timestamp]): JsValue = {
-      JsString(dateFormat.format(ts))
-    }
-    def reads(ts: JsValue): JsResult[Option[Timestamp]] = {
-      try {
-        val date = dateFormat.parse(ts.as[String])
-        val dateStr = ts.as[String]
-        if (dateStr.length > 0) {
-          JsSuccess(Some(new Timestamp(date.getTime)))
-        } else {
-          JsSuccess(None)
-        }
-      } catch {
-        case e: IllegalArgumentException => JsError("Unable to parse timestamp")
-      }
-    }
-  }*/
-
   implicit val formatBigInt = new Format[BigInt] {
     def writes(bi: BigInt): JsValue = JsString(bi.toString())
     def reads(bi: JsValue): JsResult[BigInt] = {
