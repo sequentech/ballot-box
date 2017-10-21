@@ -523,8 +523,7 @@ object ElectionsApi
       config =>
       {
         try {
-          val now = new java.sql.Timestamp(new Date().getTime)
-          val validated = config.validate(authorities, id).copy(start_date=now, end_date=now)
+          val validated = config.validate(authorities, id).copy(start_date=None, end_date=None)
           DB.withSession
           {
             implicit session =>

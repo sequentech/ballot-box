@@ -94,8 +94,8 @@ case class Election(
   id: Long,
   configuration: String,
   state: String,
-  startDate: Timestamp,
-  endDate: Timestamp,
+  startDate: Option[Timestamp],
+  endDate: Option[Timestamp],
   pks: Option[String],
   resultsConfig: Option[String],
   results: Option[String],
@@ -160,8 +160,8 @@ class Elections(tag: Tag)
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
   def state = column[String]("state", O.NotNull)
-  def startDate = column[Timestamp]("start_date", O.NotNull)
-  def endDate = column[Timestamp]("end_date", O.NotNull)
+  def startDate = column[Timestamp]("start_date", O.Nullable)
+  def endDate = column[Timestamp]("end_date", O.Nullable)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
   def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
@@ -174,8 +174,8 @@ class Elections(tag: Tag)
     id,
     configuration,
     state,
-    startDate,
-    endDate,
+    startDate.?,
+    endDate.?,
     pks.?,
     resultsConfig.?,
     results.?,
@@ -227,8 +227,17 @@ object Elections {
     .update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
   }
 
-  def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start, end)
+  def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp])(implicit s: Session) = {
+    if (start.isEmpty && end.isEmpty) {
+      elections.filter(_.id === id).map(e => (e.configuration)).update(config)
+    } else if (start.isDefined && end.isEmpty) {
+      elections.filter(_.id === id).map(e => (e.configuration, e.startDate)).update(config, start.get)
+    } else if (start.isEmpty && end.isDefined) {
+      elections.filter(_.id === id).map(e => (e.configuration,  e.endDate)).update(config, end.get)
+    } else {
+      elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start.get, end.get)
+    }
+    
   }
 
   def setPublicKeys(id: Long, pks: String)(implicit s: Session) = {
@@ -250,8 +259,8 @@ case class ElectionDTO(
   id: Long,
   configuration: ElectionConfig,
   state: String,
-  startDate: Timestamp,
-  endDate: Timestamp,
+  startDate: Option[Timestamp],
+  endDate: Option[Timestamp],
   pks: Option[String],
   resultsConfig: Option[String],
   results: Option[String],
@@ -263,7 +272,7 @@ case class ElectionDTO(
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
+  questions: Array[Question], start_date: Option[Timestamp], end_date: Option[Timestamp], presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
 {
 
   /**
