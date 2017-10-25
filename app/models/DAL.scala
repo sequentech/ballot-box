@@ -139,7 +139,7 @@ object DAL {
       Elections.updateResults(id, results)
     }
 
-    def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp) = DB.withSession { implicit session =>
+    def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp]) = DB.withSession { implicit session =>
       Cache.remove(key(id))
       Elections.updateConfig(id, config, start, end)
     }
