@@ -890,10 +890,24 @@ object ElectionsApi
     val authData = getAuthData(auths)
     // add the callback and auth data fields to the original config
     val jsObject = configJson.as[JsObject]
+
+    // add start date if missing
+    val withStartDate = if (!jsObject.keys.contains("start_date")) {
+      jsObject + ("start_date" -> JsString("2000-01-01T00:00:00.001"))
+    } else {
+      jsObject
+    }
+    // add end date if missing
+    val withEndDate = if (!withStartDate.keys.contains("end_date")) {
+      withStartDate + ("end_date" -> JsString("2000-01-01T00:00:00.001"))
+    } else {
+      withStartDate
+    }
+
     val callback = "callback_url" -> JsString(apiSslUrl(routes.ElectionsApi.keydone(election.id).url))
     Logger.info("create callback is " + callback)
 
-    val withCallback = (jsObject + callback)
+    val withCallback = (withEndDate + callback)
     val withAuthorities = withCallback - "authorities" + ("authorities" -> authData)
 
     Logger.info(s"creating election with\n$withAuthorities")
