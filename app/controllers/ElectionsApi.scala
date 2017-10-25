@@ -511,6 +511,14 @@ object ElectionsApi
     if (!body.as[JsObject].keys.contains("logo_url")) {
         body = body.as[JsObject] + ("logo_url" -> Json.toJson(""))
     }
+    if (body.as[JsObject].keys.contains("start_date") && 
+        0 == (body.as[JsObject] \ "start_date").toString.length) {
+        body = body.as[JsObject] - "start_date"
+    }
+    if (body.as[JsObject].keys.contains("end_date") && 
+        0 == (body.as[JsObject] \ "end_date").toString.length) {
+        body = body.as[JsObject] - "end_date"
+    }
 
     val electionConfig = body.validate[ElectionConfig]
 
