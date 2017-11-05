@@ -518,7 +518,7 @@ object ElectionsApi
     }
     if (body.as[JsObject].keys.contains("end_date") && 
         (0 == (body.as[JsObject] \ "end_date").toString.length ||
-        "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
+        "\"\"" == (body.as[JsObject] \ "end_date").toString)) {
         body = body.as[JsObject] - "end_date"
     }
 
