@@ -512,11 +512,13 @@ object ElectionsApi
         body = body.as[JsObject] + ("logo_url" -> Json.toJson(""))
     }
     if (body.as[JsObject].keys.contains("start_date") && 
-        0 == (body.as[JsObject] \ "start_date").toString.length) {
+        (0 == (body.as[JsObject] \ "start_date").toString.length ||
+         "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
         body = body.as[JsObject] - "start_date"
     }
     if (body.as[JsObject].keys.contains("end_date") && 
-        0 == (body.as[JsObject] \ "end_date").toString.length) {
+        (0 == (body.as[JsObject] \ "end_date").toString.length ||
+        "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
         body = body.as[JsObject] - "end_date"
     }
 
