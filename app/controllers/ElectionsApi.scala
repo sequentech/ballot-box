@@ -511,6 +511,16 @@ object ElectionsApi
     if (!body.as[JsObject].keys.contains("logo_url")) {
         body = body.as[JsObject] + ("logo_url" -> Json.toJson(""))
     }
+    if (body.as[JsObject].keys.contains("start_date") && 
+        (0 == (body.as[JsObject] \ "start_date").toString.length ||
+         "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
+        body = body.as[JsObject] - "start_date"
+    }
+    if (body.as[JsObject].keys.contains("end_date") && 
+        (0 == (body.as[JsObject] \ "end_date").toString.length ||
+        "\"\"" == (body.as[JsObject] \ "end_date").toString)) {
+        body = body.as[JsObject] - "end_date"
+    }
 
     val electionConfig = body.validate[ElectionConfig]
 
@@ -523,8 +533,7 @@ object ElectionsApi
       config =>
       {
         try {
-          val now = new java.sql.Timestamp(new Date().getTime)
-          val validated = config.validate(authorities, id).copy(start_date=now, end_date=now)
+          val validated = config.validate(authorities, id).copy(start_date=None, end_date=None)
           DB.withSession
           {
             implicit session =>
@@ -891,10 +900,24 @@ object ElectionsApi
     val authData = getAuthData(auths)
     // add the callback and auth data fields to the original config
     val jsObject = configJson.as[JsObject]
+
+    // add start date if missing
+    val withStartDate = if (!jsObject.keys.contains("start_date")) {
+      jsObject + ("start_date" -> JsString("2000-01-01T00:00:00.001"))
+    } else {
+      jsObject
+    }
+    // add end date if missing
+    val withEndDate = if (!withStartDate.keys.contains("end_date")) {
+      withStartDate + ("end_date" -> JsString("2000-01-01T00:00:00.001"))
+    } else {
+      withStartDate
+    }
+
     val callback = "callback_url" -> JsString(apiSslUrl(routes.ElectionsApi.keydone(election.id).url))
     Logger.info("create callback is " + callback)
 
-    val withCallback = (jsObject + callback)
+    val withCallback = (withEndDate + callback)
     val withAuthorities = withCallback - "authorities" + ("authorities" -> authData)
 
     Logger.info(s"creating election with\n$withAuthorities")
