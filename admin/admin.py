@@ -742,6 +742,58 @@ def get_hmac(cfg, userId, objType, objId, perm):
 
     return ret
 
+class JClient(Client):
+    def __init__(self, *args, **kwargs):
+        self.auth_token = ''
+        super(JClient, self).__init__(*args, **kwargs)
+
+    def set_auth_token(self, token):
+        self.auth_token = token
+
+    def post(self, url, data):
+        base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+        jdata = json.dumps(data)
+        auth = get_hmac(cfg, "", "AuthEvent", cfg['electionConfig']['id'], "edit")
+        headers = {'content-type': 'application/json', 'Authorization': auth}
+        r = requests.post(base_url + url, data=jdata, headers=headers)
+
+    def authenticate(self, authevent, data):
+        response = self.post('auth-event/%d/authenticate/' % authevent, data)
+        r = json.loads(response.content.decode('utf-8'))
+        self.set_auth_token(r.get('auth-token'))
+        return response
+
+def deregister(cfg, args):
+    '''
+    deregister admin user
+    '''
+    if args.tel is None and args.email is None:
+        raise Exception("missing email/tel parameter")
+    if args.code is None:
+        raise Exception("missing auth code parameter")
+    credentials = {
+      'code': args.code
+    }
+    if args.tel:
+        credentials['tel'] = args.tel
+    else:
+        credentials['email'] = args.email
+
+    event_id = authapi_admin_eid
+    
+    c = JClient()
+    req = c.authenticate(event_id, credentials)
+
+    if req.status_code != 200:
+        raise Exception("authapi login failed")
+
+    req = c.post("user/deregister",{})
+
+    if req.status_code != 200:
+        raise Exception("authapi deregister failed")
+
+    print("user deregistration successful")
+
 def is_int(s):
     try:
         int(s)
@@ -773,6 +825,7 @@ encryptNode <election_id>: encrypts votes using node (public key must be in data
 dump_votes <election_id>: dumps votes for an election (private datastore)
 change_social <election_id>: changes the social netoworks share buttons configuration
 authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
+deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
@@ -782,8 +835,11 @@ authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path
     parser.add_argument('--vote-count', help='number of votes to generate', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
+    parser.add_argument('--email', help='User email ')
+    parser.add_argument('--tel', help='User telephone number ')
+    parser.add_argument('--code', help='User code for authentication')
     parser.add_argument('--ips-log', help='')
-    parser.add_argument('--share-config', help='json file with the social netoworks share buttons configuration')
+    parser.add_argument('--share-config', help='json file with the social networks share buttons configuration')
     # remove
     parser.add_argument('--elections-file', help='file with grouped elections')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
