@@ -492,10 +492,6 @@ object ElectionsApi
 
     var body = request.body.as[JsObject]
 
-    if (!body.as[JsObject].keys.contains("real")) {
-        body = body.as[JsObject] + ("real" -> Json.toJson(false))
-    }
-
     if (!body.as[JsObject].keys.contains("virtual")) {
         body = body.as[JsObject] + ("virtual" -> Json.toJson(false))
     }
@@ -573,7 +569,6 @@ object ElectionsApi
                           validated.resultsConfig,
                           None,
                           None,
-                          validated.real,
                           validated.virtual,
                           validated.logo_url
                         )
@@ -627,9 +622,6 @@ object ElectionsApi
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
 
     var body = request.body.as[JsObject]
-    if (!body.as[JsObject].keys.contains("real")) {
-        body = body.as[JsObject] + ("real" -> Json.toJson(false))
-    }
 
     if (!body.as[JsObject].keys.contains("extra_data")) {
         body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
