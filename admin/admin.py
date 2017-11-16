@@ -742,10 +742,9 @@ def get_hmac(cfg, userId, objType, objId, perm):
 
     return ret
 
-class JClient(Client):
-    def __init__(self, *args, **kwargs):
+class JClient:
+    def __init__(self):
         self.auth_token = ''
-        super(JClient, self).__init__(*args, **kwargs)
 
     def set_auth_token(self, token):
         self.auth_token = token
@@ -753,11 +752,13 @@ class JClient(Client):
     def post(self, url, data):
         base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
         jdata = json.dumps(data)
-        auth = get_hmac(cfg, "", "AuthEvent", cfg['electionConfig']['id'], "edit")
-        headers = {'content-type': 'application/json', 'Authorization': auth}
+        headers = {'content-type': 'application/json', 'Authorization': self.auth_token}
         r = requests.post(base_url + url, data=jdata, headers=headers)
+        return r
 
     def authenticate(self, authevent, data):
+        auth = get_hmac(None, "", "AuthEvent", 1, "edit")
+        self.set_auth_token(auth)
         response = self.post('auth-event/%d/authenticate/' % authevent, data)
         r = json.loads(response.content.decode('utf-8'))
         self.set_auth_token(r.get('auth-token'))
@@ -775,7 +776,7 @@ def deregister(cfg, args):
       'code': args.code
     }
     if args.tel:
-        credentials['tel'] = args.tel
+        credentials['tlf'] = args.tel
     else:
         credentials['email'] = args.email
 
@@ -787,7 +788,7 @@ def deregister(cfg, args):
     if req.status_code != 200:
         raise Exception("authapi login failed")
 
-    req = c.post("user/deregister",{})
+    req = c.post("user/deregister/",{})
 
     if req.status_code != 200:
         raise Exception("authapi deregister failed")
