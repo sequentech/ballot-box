@@ -100,7 +100,6 @@ case class Election(
   resultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
-  real: Boolean,
   virtual: Boolean,
   logo_url: Option[String])
 {
@@ -112,12 +111,8 @@ case class Election(
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
 
-    if (!configJson.as[JsObject].keys.contains("real")) {
-        configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
-    }
-
     if (!configJson.as[JsObject].keys.contains("virtual")) {
-        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(real))
+        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(virtual))
     }
 
     if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
@@ -147,7 +142,6 @@ case class Election(
       resultsConfig,
       res,
       resUp,
-      real,
       virtual,
       logo_url)
   }
@@ -166,7 +160,6 @@ class Elections(tag: Tag)
   def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
-  def real = column[Boolean]("real")
   def virtual = column[Boolean]("virtual")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
 
@@ -180,7 +173,6 @@ class Elections(tag: Tag)
     resultsConfig.?,
     results.?,
     resultsUpdated.?,
-    real,
     virtual,
     logo_url.?
   ) <> (Election.tupled, Election.unapply _)
@@ -265,14 +257,13 @@ case class ElectionDTO(
   resultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
-  real: Boolean,
   virtual: Boolean,
   logo_url: Option[String]
 )
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Option[Timestamp], end_date: Option[Timestamp], presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
+  questions: Array[Question], start_date: Option[Timestamp], end_date: Option[Timestamp], presentation: ElectionPresentation, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
 {
 
   /**
