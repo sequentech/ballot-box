@@ -29,6 +29,7 @@ POST    /api/election/:id/tally                               controllers.Electi
 POST    /api/election/:id/tally-voter-ids                     controllers.ElectionsApi.tallyWithVoterIds(id: Long)
 POST    /api/election/:id/tally-no-dump                       controllers.ElectionsApi.tallyNoDump(id: Long)
 POST    /api/election/:id/calculate-results                   controllers.ElectionsApi.calculateResults(id: Long)
+POST    /api/election/:id/update-ballot-boxes                 controllers.ElectionsApi.updateBallotBoxesResultsConfig(id: Long)
 POST    /api/election/:id/publish-results                     controllers.ElectionsApi.publishResults(id: Long)
 GET     /api/election/:id/results                             controllers.ElectionsApi.getResults(id: Long)
 GET     /api/election/:id/voters                              controllers.ElectionsApi.getElectionVoters(id: Long)

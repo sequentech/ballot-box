@@ -98,6 +98,7 @@ case class Election(
   endDate: Option[Timestamp],
   pks: Option[String],
   resultsConfig: Option[String],
+  ballotBoxesResultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
@@ -158,6 +159,7 @@ class Elections(tag: Tag)
   def endDate = column[Timestamp]("end_date", O.Nullable)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
   def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
+  def ballotBoxesResultsConfig = column[String]("ballot_boxes_results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
   def virtual = column[Boolean]("virtual")
@@ -171,6 +173,7 @@ class Elections(tag: Tag)
     endDate.?,
     pks.?,
     resultsConfig.?,
+    ballotBoxesResultsConfig.?,
     results.?,
     resultsUpdated.?,
     virtual,
@@ -230,6 +233,13 @@ object Elections {
       elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start.get, end.get)
     }
     
+  }
+
+  def updateBallotBoxesResultsConfig(id: Long, ballotBoxesResultsConfig: String)
+  (implicit s: Session) =
+  {
+    elections.filter(_.id === id).map(e => (e.ballotBoxesResultsConfig))
+      .update(ballotBoxesResultsConfig)
   }
 
   def setPublicKeys(id: Long, pks: String)(implicit s: Session) = {

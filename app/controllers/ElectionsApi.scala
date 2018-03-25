@@ -177,6 +177,21 @@ object ElectionsApi
     tally.recover(tallyErrorHandler)
   }
 
+  /** update the ballot box results configuration and update the results */
+  def updateBallotBoxesResultsConfig(id: Long) =
+    HAction("", "AuthEvent", id, "edit|update-ballot-boxes-results-config")
+    .async(BodyParsers.parse.json)
+  {
+    request => Future
+    {
+      val config = request.body.toString
+      val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
+      calculateResults(id)
+
+      Ok(response("ok"))
+    }(slickExecutionContext)
+  }
+
   /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
   def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async(BodyParsers.parse.json) { request =>
 
@@ -221,11 +236,19 @@ object ElectionsApi
           e =>
             // if no config is provided and one is available in the election
             // use that one
-            val config =
+            val configBase =
               if (e.resultsConfig.isDefined)
                 e.resultsConfig.get
               else
                 request.body.toString
+            val config =
+              if (e.ballotBoxesResultsConfig.isDefined)
+                configBase.replaceFirst(
+                  "__ballotBoxesResultsConfig__",
+                  e.ballotBoxesResultsConfig.get
+                )
+              else
+                configBase
 
             var electionConfigStr = Json.parse(e.configuration).as[JsObject]
             if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
@@ -567,6 +590,7 @@ object ElectionsApi
                           validated.end_date,
                           None,
                           validated.resultsConfig,
+                          None,
                           None,
                           None,
                           validated.virtual,
