@@ -515,6 +515,7 @@ case class ElectionPresentation(
   urls: Array[Url],
   theme_css: String,
   extra_options: Option[ElectionExtra],
+  show_login_link_on_home: Option[Boolean],
   conditional_questions: Option[Array[ConditionalQuestion]])
 {
   def shareTextConfig() : Option[Array[ShareTextItem]]  = {
