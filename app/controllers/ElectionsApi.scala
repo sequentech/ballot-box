@@ -37,7 +37,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.sys.process._
 
+import java.io.File
 import java.nio.file.{Paths, Files}
+import java.nio.charset.StandardCharsets
+import java.nio.file.StandardOpenOption._
 
 /**
   * Elections api
@@ -76,6 +79,7 @@ object ElectionsApi
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
+  val createEmptyTally = Play.current.configuration.getString("app.results.script").getOrElse("./admin/create_empty_tally.py")
   val pipesWhitelist = Play.current.configuration.getString("app.agoraResults.pipesWhitelist").getOrElse("")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
@@ -182,14 +186,38 @@ object ElectionsApi
     HAction("", "AuthEvent", id, "edit|update-ballot-boxes-results-config")
     .async(BodyParsers.parse.json)
   {
-    request => Future
-    {
-      val config = request.body.toString
-      val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
-      calculateResults(id)
+    request =>
+      val future = getElection(id).map { election =>
+        val config = request.body.toString
+        val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
+        DAL.elections.updateState(id, Elections.TALLY_OK)
 
-      Ok(response("ok"))
-    }(slickExecutionContext)
+        // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
+        // results can be calculated
+        val tallyLink = Datastore.getTallyPath(id)
+        if (!Files.exists(tallyLink))
+        {
+          val configfile = File.createTempFile("config", ".json")
+          val tempPath = configfile.getAbsolutePath()
+          Files.write(
+            Paths.get(tempPath),
+            election.configuration.getBytes(StandardCharsets.UTF_8),
+            CREATE,
+            TRUNCATE_EXISTING
+          )
+          val cmd = s"$createEmptyTally -c $tempPath -o $tallyLink"
+
+          Logger.info(s"executing '$cmd'")
+          val output = cmd.!!
+          Logger.info(s"command returns\n$output")
+        }
+        calculateResults(id)
+        Ok(response("ok"))
+      }
+      future.recover {
+        case e: NoSuchElementException =>
+          BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+      }
   }
 
   /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
