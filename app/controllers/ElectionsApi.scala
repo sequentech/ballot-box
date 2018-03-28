@@ -221,10 +221,10 @@ object ElectionsApi
   }
 
    /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async
+  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async(BodyParsers.parse.tolerantText)
   {
     request =>
-      calcResultsLogic(id, request.body.asText.get)
+      calcResultsLogic(id, request.body)
   }
 
   /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
