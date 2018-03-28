@@ -196,7 +196,7 @@ object ElectionsApi
         // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
         // results can be calculated
         val tallyLink = Datastore.getTallyPath(id)
-        if (Files.exists(tallyLink))
+        if (!Files.exists(tallyLink))
         {
           val configfile = File.createTempFile("config", ".json")
           val tempPath = configfile.getAbsolutePath()
