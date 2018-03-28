@@ -45,7 +45,7 @@ def main(argv):
     questions_f.close()
 
     tar = tarfile.open(args.output, mode="w|gz")
-    tinfo = tar.gettarinfo(questions_f.name, "question_json")
+    tinfo = tar.gettarinfo(questions_f.name, "questions_json")
     with open(questions_f.name, 'rb') as questions_f2:
         tar.addfile(tinfo, questions_f2)
     tar.close()

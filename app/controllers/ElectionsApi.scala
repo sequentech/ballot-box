@@ -188,14 +188,15 @@ object ElectionsApi
   {
     request =>
       val future = getElection(id).flatMap { election =>
-        val config = request.body.toString
+        val config = request.body.as[String]
+        Logger.info(s"updateBallotBoxesResultsConfig with config='config'")
         val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
         DAL.elections.updateState(id, Elections.TALLY_OK)
 
         // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
         // results can be calculated
         val tallyLink = Datastore.getTallyPath(id)
-        if (!Files.exists(tallyLink))
+        if (Files.exists(tallyLink))
         {
           val configfile = File.createTempFile("config", ".json")
           val tempPath = configfile.getAbsolutePath()
@@ -224,7 +225,7 @@ object ElectionsApi
     .async(BodyParsers.parse.json)
   {
     request =>
-      calcResultsLogic(id, request.body.toString)
+      calcResultsLogic(id, request.body.as[String])
   }
 
   /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
