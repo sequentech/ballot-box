@@ -196,7 +196,7 @@ object ElectionsApi
         // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
         // results can be calculated
         val tallyLink = Datastore.getTallyPath(id)
-        if (Files.exists(tallyLink))
+        if (!Files.exists(tallyLink))
         {
           val configfile = File.createTempFile("config", ".json")
           val tempPath = configfile.getAbsolutePath()
@@ -221,11 +221,10 @@ object ElectionsApi
   }
 
    /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results")
-    .async(BodyParsers.parse.json)
+  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async(BodyParsers.parse.tolerantText)
   {
     request =>
-      calcResultsLogic(id, request.body.as[String])
+      calcResultsLogic(id, request.body)
   }
 
   /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
