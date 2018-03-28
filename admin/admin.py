@@ -555,6 +555,23 @@ def calculate_results(cfg, args):
     r = request_post(url, headers=headers, data=jconfig)
     print(r.status_code, r.text)
 
+def update_ballot_boxes_config(cfg, args):
+    path = args.results_config
+    jconfig = None
+    if path != None and os.path.isfile(path):
+        with open(path) as config_file:
+            config = json.load(config_file)
+            jconfig = json.dumps(config)
+    else:
+        print("continuing with no config file %s" % path)
+
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth, 'content-type': 'application/json'}
+    url = 'http://%s:%d/api/election/%d/update-ballot-boxes-config' % (host, port, cfg['election_id'])
+    r = request_post(url, headers=headers, data=jconfig)
+    print(r.status_code, r.text)
+
 def publish_results(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
@@ -813,6 +830,7 @@ tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
 calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
+update_ballot_boxes_config <election_id>: uses agora-results to calculate the election's results (stored in db)
 publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
 show_column <election_id>: shows a column for an election
 count_votes [election_id, [election_id], ...]: count votes
