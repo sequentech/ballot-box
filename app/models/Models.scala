@@ -558,7 +558,7 @@ case class ElectionExtra(
   success_screen__hide_ballot_tracker: Option[Boolean],
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
-  success_screen__redirect_to_login__auto_seconds: Option[Int],
+  success_screen__redirect_to_login__auto_seconds: Option[Int]
 )
 
 /** an url to be shown when presenting election data */
