@@ -371,7 +371,7 @@ def set_start_date(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
-    headers = {'Authorization': auth}
+    headers = {'content-type': 'application/json', 'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/set-start-date' % (host, port, cfg['election_id'])
     r = requests.post(
         url,
@@ -384,7 +384,7 @@ def set_stop_date(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
-    headers = {'Authorization': auth}
+    headers = {'content-type': 'application/json', 'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/set-stop-date' % (host, port, cfg['election_id'])
     r = requests.post(
         url,
