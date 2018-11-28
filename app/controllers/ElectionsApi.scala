@@ -20,7 +20,6 @@ import models._
 import utils._
 import utils.JsonFormatters._
 import utils.Response
-import java.util.Date
 
 import play.api._
 import play.api.mvc._
@@ -37,6 +36,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.sys.process._
 
+import java.util.Date
+import java.text.SimpleDateFormat
+import java.text.ParseException
+import java.sql.Timestamp
 import java.io.File
 import java.nio.file.{Paths, Files}
 import java.nio.charset.StandardCharsets
@@ -120,6 +123,16 @@ object ElectionsApi
     updateShareElection(id, request)
   }
 
+  /** updates an election's social share buttons config */
+  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
+    updateShareElection(id, request)
+  }
+
+  /** updates an election's social share buttons config */
+  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
+    updateShareElection(id, request)
+  }
+
   /** gets an election */
   def get(id: Long) = Action.async { request =>
 
@@ -143,6 +156,52 @@ object ElectionsApi
         InternalServerError(error(t.toString, ErrorCodes.EO_ERROR))
       }
     }
+  }
+
+  /** Set start date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async
+  {
+    request => Future
+    {
+      val dateValue = request.body.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            Date parsedDate = format.parse(date.date);
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+          val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
+          Ok(response(ret))
+        }
+      )
+    }(slickExecutionContext)
+  }
+
+  /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setstopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async
+  {
+    request => Future
+    {
+      val dateValue = request.body.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            Date parsedDate = format.parse(date.date);
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+          val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
+          Ok(response(ret))
+        }
+      )
+    }(slickExecutionContext)
   }
 
   /** sets election in started state, votes will be accepted */

@@ -367,6 +367,32 @@ def stop(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def set_start_date(cfg, args):
+
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/set-start-date' % (host, port, cfg['election_id'])
+    r = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps(dict(date=args.date))
+    )
+    print(r.status_code, r.text)
+
+def set_stop_date(cfg, args):
+
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/set-stop-date' % (host, port, cfg['election_id'])
+    r = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps(dict(date=args.date))
+    )
+    print(r.status_code, r.text)
+
 def cast_votes(cfg, args):
     ctexts = cfg['ciphertexts']
     electionId = cfg['election_id']
@@ -826,6 +852,8 @@ update <election_id>: updates an election (uses local <id>.json file)
 create <election_id>: creates an election
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
+set_start_date <election_id> --date <start_date>: set start date, start_date in format "yyyy-MM-dd HH:mm:ss"
+set_stop_date <election_id> --date <stop_date>: set start date, stop-_date in format "yyyy-MM-dd HH:mm:ss"
 tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
@@ -856,6 +884,7 @@ deregister [--email <email>] [--tel <telephone number>] --code <code>: deregiste
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('--email', help='User email ')
     parser.add_argument('--tel', help='User telephone number ')
+    parser.add_argument('--date', help='Date to update')
     parser.add_argument('--code', help='User code for authentication')
     parser.add_argument('--ips-log', help='')
     parser.add_argument('--share-config', help='json file with the social networks share buttons configuration')
