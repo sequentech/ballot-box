@@ -159,7 +159,7 @@ object ElectionsApi
         date =>
         {
           try {
-            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
             Date parsedDate = format.parse(date.date);
           } catch {
             case e: ParseException => BadRequest(error(e.getMessage))
@@ -182,7 +182,7 @@ object ElectionsApi
         date =>
         {
           try {
-            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
             Date parsedDate = format.parse(date.date);
           } catch {
             case e: ParseException => BadRequest(error(e.getMessage))
