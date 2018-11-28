@@ -124,6 +124,16 @@ object DAL {
       Elections.insert(election)
     }
 
+    def setStartDate(id: Long, startDate: Timestamp) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.setStartDate(id, startDate)
+    }
+
+    def setStopDate(id: Long, endDate: Timestamp) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.setStopDate(id, endDate)
+    }
+
     def insertWithSession(election: Election)(implicit s:Session) = DB.withSession { implicit session =>
       Cache.remove(key(election.id))
       Elections.insert(election)

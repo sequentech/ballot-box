@@ -217,6 +217,14 @@ object Elections {
     }
   }
 
+  def setStartDate(id: Long, startDate: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.startDate).update(startDate)
+  }
+
+  def setStopDate(id: Long, endDate: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.endDate).update(endDate)
+  }
+
   def updateResults(id: Long, results: String)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated))
     .update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
@@ -255,6 +263,14 @@ object Elections {
 
 case class StatDay(day: String, votes: Long)
 case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
+
+/** Used to receive dates in setStartDate and setStopDate APIs */
+case class DateDTO(date: String)
+{
+  def validate() = {
+    validateStringLength(date, SHORT_STRING, s"date string too large: $date")
+  }
+}
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(

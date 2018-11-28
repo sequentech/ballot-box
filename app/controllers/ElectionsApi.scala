@@ -20,7 +20,6 @@ import models._
 import utils._
 import utils.JsonFormatters._
 import utils.Response
-import java.util.Date
 
 import play.api._
 import play.api.mvc._
@@ -37,6 +36,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.sys.process._
 
+import java.util.Date
+import java.text.SimpleDateFormat
+import java.text.ParseException
+import java.sql.Timestamp
 import java.io.File
 import java.nio.file.{Paths, Files}
 import java.nio.charset.StandardCharsets
@@ -142,6 +145,52 @@ object ElectionsApi
         Logger.error("Error creating election", t)
         InternalServerError(error(t.toString, ErrorCodes.EO_ERROR))
       }
+    }
+  }
+
+  /** Set start date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async(BodyParsers.parse.json)
+  {
+    request => Future {
+      val dateValueJs = request.body.as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+        }
+      )
+    }
+  }
+
+  /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setStopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
+  {
+    request => Future {
+      val dateValueJs = request.body.as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+        }
+      )
     }
   }
 
