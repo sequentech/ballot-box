@@ -153,7 +153,8 @@ object ElectionsApi
   {
     request => Future
     {
-      val dateValue = request.body.validate[DateDTO]
+      var dateValueJs = Json.parse(request.body).as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
       dateValue.fold (
         errors => BadRequest(response(s"Invalid date json $errors")),
         date =>
@@ -176,7 +177,8 @@ object ElectionsApi
   {
     request => Future
     {
-      val dateValue = request.body.validate[DateDTO]
+      var dateValueJs = Json.parse(request.body).as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
       dateValue.fold (
         errors => BadRequest(response(s"Invalid date json $errors")),
         date =>
