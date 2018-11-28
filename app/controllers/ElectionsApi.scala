@@ -151,7 +151,7 @@ object ElectionsApi
   /** Set start date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
   def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async(BodyParsers.parse.json)
   {
-    request =>
+    request => Future {
       val dateValueJs = request.body.as[JsObject]
       val dateValue = dateValueJs.validate[DateDTO]
       dateValue.fold (
@@ -168,12 +168,13 @@ object ElectionsApi
           Ok(response(ret))
         }
       )
+    }
   }
 
   /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
   def setstopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
   {
-    request =>
+    request => Future {
       val dateValueJs = request.body.as[JsObject]
       val dateValue = dateValueJs.validate[DateDTO]
       dateValue.fold (
@@ -190,6 +191,7 @@ object ElectionsApi
           Ok(response(ret))
         }
       )
+    }
   }
 
   /** sets election in started state, votes will be accepted */
