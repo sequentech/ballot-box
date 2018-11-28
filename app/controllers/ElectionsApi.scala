@@ -149,7 +149,7 @@ object ElectionsApi
   }
 
   /** Set start date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
-  def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async
+  def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async(BodyParsers.parse.json)
   {
     request =>
       val dateValueJs = request.body.as[JsObject]
@@ -171,7 +171,7 @@ object ElectionsApi
   }
 
   /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
-  def setstopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async
+  def setstopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
   {
     request =>
       val dateValueJs = request.body.as[JsObject]
