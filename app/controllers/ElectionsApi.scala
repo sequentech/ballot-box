@@ -161,11 +161,11 @@ object ElectionsApi
           try {
             val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
             val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
           } catch {
             case e: ParseException => BadRequest(error(e.getMessage))
           }
-          val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
-          Ok(response(ret))
         }
       )
     }
@@ -184,11 +184,11 @@ object ElectionsApi
           try {
             val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
             val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
           } catch {
             case e: ParseException => BadRequest(error(e.getMessage))
           }
-          val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
-          Ok(response(ret))
         }
       )
     }
