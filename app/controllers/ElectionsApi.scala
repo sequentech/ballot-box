@@ -123,16 +123,6 @@ object ElectionsApi
     updateShareElection(id, request)
   }
 
-  /** updates an election's social share buttons config */
-  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
-    updateShareElection(id, request)
-  }
-
-  /** updates an election's social share buttons config */
-  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
-    updateShareElection(id, request)
-  }
-
   /** gets an election */
   def get(id: Long) = Action.async { request =>
 

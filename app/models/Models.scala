@@ -234,7 +234,6 @@ object Elections {
     if (start.isEmpty && end.isEmpty) {
       elections.filter(_.id === id).map(e => (e.configuration)).update(config)
     } else if (start.isDefined && end.isEmpty) {
-      Logger.warn("updateConfig, startDate");
       elections.filter(_.id === id).map(e => (e.configuration, e.startDate)).update(config, start.get)
     } else if (start.isEmpty && end.isDefined) {
       elections.filter(_.id === id).map(e => (e.configuration,  e.endDate)).update(config, end.get)
