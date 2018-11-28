@@ -217,12 +217,12 @@ object Elections {
     }
   }
 
-  def setStartDate(id: Long, startDate: Timestamp) = {
+  def setStartDate(id: Long, startDate: Timestamp)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => e.startDate).update(startDate)
   }
 
-  def setStopDate(id: Long, startDate: Timestamp) = {
-    elections.filter(_.id === id).map(e => e.startDate).update(startDate)
+  def setStopDate(id: Long, endDate: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.endDate).update(endDate)
   }
 
   def updateResults(id: Long, results: String)(implicit s: Session) = {
