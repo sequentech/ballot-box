@@ -172,7 +172,7 @@ object ElectionsApi
   }
 
   /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
-  def setstopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
+  def setStopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
   {
     request => Future {
       val dateValueJs = request.body.as[JsObject]
