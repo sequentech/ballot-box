@@ -124,6 +124,16 @@ object DAL {
       Elections.insert(election)
     }
 
+    def setStartDate(id: Long, startDate: Timestamp) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.setStartDate(id, startDate)
+    }
+
+    def setStopDate(id: Long, endDate: Timestamp) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.setStopDate(id, endDate)
+    }
+
     def insertWithSession(election: Election)(implicit s:Session) = DB.withSession { implicit session =>
       Cache.remove(key(election.id))
       Elections.insert(election)
@@ -139,7 +149,15 @@ object DAL {
       Elections.updateResults(id, results)
     }
 
-    def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp) = DB.withSession { implicit session =>
+    def updateBallotBoxesResultsConfig(id: Long, config: String)
+    = DB.withSession
+    {
+      implicit session =>
+        Cache.remove(key(id))
+        Elections.updateBallotBoxesResultsConfig(id, config)
+    }
+
+    def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp]) = DB.withSession { implicit session =>
       Cache.remove(key(id))
       Elections.updateConfig(id, config, start, end)
     }

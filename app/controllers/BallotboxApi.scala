@@ -47,7 +47,14 @@ object BallotboxApi extends Controller with Response {
 
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val maxRevotes = Play.current.configuration.getInt("app.api.max_revotes").getOrElse(20)
-  val voteCallbackUrl = Play.current.configuration.getString("app.vote_callback_url")
+  val voteCallbackUrl = Play.current.configuration.getString("app.callbacks.vote").
+    flatMap { vote_str =>
+      if (vote_str.length > 0) {
+        Some(vote_str)
+      } else {
+        None
+      }
+    }
   val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
 
   /** cast a vote, performs several validations, see vote.validate */
