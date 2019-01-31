@@ -203,7 +203,7 @@ def main(argv):
                 print('next id %d' % elid)
 
                 cycle.tally(elid)
-                cycle.wait_for_state(elid, ['tally_ok', 'results_ok'], 500)
+                cycle.wait_for_state(elid, ['tally_ok', 'results_ok', 'stopped'], 10000)
 
     elif args.command == 'tally_with_ids':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
@@ -225,7 +225,7 @@ def main(argv):
 
                 print('next id %d, tallying' % next_id)
                 ret = cycle.tally_no_dump(next_id)
-                cycle.wait_for_state(next_id, ['tally_ok', 'results_ok'], 10000)
+                cycle.wait_for_state(next_id, ['tally_ok', 'results_ok', 'stopped'], 10000)
                 if ret in [400, 500]:
                      print("tally_no_dump ids returned %d, continuing without it" % ret)
                      continue
