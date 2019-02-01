@@ -202,8 +202,17 @@ def main(argv):
                     elid = cfg['id']
                 print('next id %d' % elid)
 
+                ciphertexts_path = publicPath = os.path.join(
+                    admin.datastore,
+                    'private',
+                    str(next_id),
+                    'ciphertexts'))
+                if len(open(ciphertexts_path, 'r').readlines()) == 0:
+                    print("no votes in election %s, continuing to the next" % next_id)
+                    continue
+
                 cycle.tally(elid)
-                cycle.wait_for_state(elid, ['tally_ok', 'results_ok', 'stopped'], 10000)
+                cycle.wait_for_state(elid, ['tally_ok', 'results_ok'], 10000)
 
     elif args.command == 'tally_with_ids':
         election_configs = get_election_configs(args.directory, args.start_id, args.end_id)
@@ -222,6 +231,15 @@ def main(argv):
                 if ret in [400, 500]:
                      print("stop returned %d, continuing without it" % ret)
                      continue
+
+                ciphertexts_path = publicPath = os.path.join(
+                    admin.datastore,
+                    'private',
+                    str(next_id),
+                    'ciphertexts'))
+                if len(open(ciphertexts_path, 'r').readlines()) == 0:
+                    print("no votes in election %s, continuing to the next" % next_id)
+                    continue
 
                 print('next id %d, tallying' % next_id)
                 ret = cycle.tally_no_dump(next_id)
