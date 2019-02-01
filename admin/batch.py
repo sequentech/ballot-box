@@ -98,6 +98,15 @@ def main(argv):
         for eid in args.election_ids:
             cfg = dict(id=eid)
 
+            ciphertexts_path = publicPath = os.path.join(
+                admin.datastore,
+                'private',
+                str(cfg['id']),
+                'ciphertexts'))
+            if len(open(ciphertexts_path, 'r').readlines()) == 0:
+                print("no votes in election %s, continuing to the next" % cfg['id'])
+                continue
+
             print('next id %d, tallying' % cfg['id'])
             cycle.tally(cfg['id'])
             cycle.wait_for_state(cfg['id'], ['tally_ok', 'results_ok'], 10000)
@@ -120,6 +129,15 @@ def main(argv):
     elif args.command == 'list-results':
         for eid in args.election_ids:
             cfg = dict(id=eid)
+
+            ciphertexts_path = publicPath = os.path.join(
+                admin.datastore,
+                'private',
+                str(cfg['id']),
+                'ciphertexts'))
+            if len(open(ciphertexts_path, 'r').readlines()) == 0:
+                print("no votes in election %s, continuing to the next" % cfg['id'])
+                continue
 
             print('next id %d, calculating results' % cfg['id'])
             cycle.calculate_results(cfg['id'])
@@ -151,6 +169,15 @@ def main(argv):
     elif args.command == 'list-publish':
         for eid in args.election_ids:
             cfg = dict(id=eid)
+
+            ciphertexts_path = publicPath = os.path.join(
+                admin.datastore,
+                'private',
+                str(cfg['id']),
+                'ciphertexts'))
+            if len(open(ciphertexts_path, 'r').readlines()) == 0:
+                print("no votes in election %s, continuing to the next" % cfg['id'])
+                continue
 
             print('next id %d, publishing results' % cfg['id'])
             cycle.publish_results(cfg['id'])
