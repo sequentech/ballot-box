@@ -102,7 +102,7 @@ def main(argv):
                 admin.datastore,
                 'private',
                 str(cfg['id']),
-                'ciphertexts'))
+                'ciphertexts')
             if len(open(ciphertexts_path, 'r').readlines()) == 0:
                 print("no votes in election %s, continuing to the next" % cfg['id'])
                 continue
@@ -134,7 +134,7 @@ def main(argv):
                 admin.datastore,
                 'private',
                 str(cfg['id']),
-                'ciphertexts'))
+                'ciphertexts')
             if len(open(ciphertexts_path, 'r').readlines()) == 0:
                 print("no votes in election %s, continuing to the next" % cfg['id'])
                 continue
@@ -174,7 +174,7 @@ def main(argv):
                 admin.datastore,
                 'private',
                 str(cfg['id']),
-                'ciphertexts'))
+                'ciphertexts')
             if len(open(ciphertexts_path, 'r').readlines()) == 0:
                 print("no votes in election %s, continuing to the next" % cfg['id'])
                 continue
@@ -233,7 +233,7 @@ def main(argv):
                     admin.datastore,
                     'private',
                     str(next_id),
-                    'ciphertexts'))
+                    'ciphertexts')
                 if len(open(ciphertexts_path, 'r').readlines()) == 0:
                     print("no votes in election %s, continuing to the next" % next_id)
                     continue
@@ -263,7 +263,7 @@ def main(argv):
                     admin.datastore,
                     'private',
                     str(next_id),
-                    'ciphertexts'))
+                    'ciphertexts')
                 if len(open(ciphertexts_path, 'r').readlines()) == 0:
                     print("no votes in election %s, continuing to the next" % next_id)
                     continue
