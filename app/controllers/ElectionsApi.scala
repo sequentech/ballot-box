@@ -20,6 +20,7 @@ import models._
 import utils._
 import utils.JsonFormatters._
 import utils.Response
+import java.util.Date
 
 import play.api._
 import play.api.mvc._
@@ -36,7 +37,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.sys.process._
 
-import java.util.Date
 import java.text.SimpleDateFormat
 import java.text.ParseException
 import java.sql.Timestamp
