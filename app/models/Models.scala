@@ -94,13 +94,13 @@ case class Election(
   id: Long,
   configuration: String,
   state: String,
-  startDate: Timestamp,
-  endDate: Timestamp,
+  startDate: Option[Timestamp],
+  endDate: Option[Timestamp],
   pks: Option[String],
   resultsConfig: Option[String],
+  ballotBoxesResultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
-  real: Boolean,
   virtual: Boolean,
   logo_url: Option[String])
 {
@@ -112,12 +112,8 @@ case class Election(
         configJson = configJson.as[JsObject] + ("layout" -> Json.toJson("simple"))
     }
 
-    if (!configJson.as[JsObject].keys.contains("real")) {
-        configJson = configJson.as[JsObject] + ("real" -> Json.toJson(real))
-    }
-
     if (!configJson.as[JsObject].keys.contains("virtual")) {
-        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(real))
+        configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(virtual))
     }
 
     if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
@@ -147,7 +143,6 @@ case class Election(
       resultsConfig,
       res,
       resUp,
-      real,
       virtual,
       logo_url)
   }
@@ -160,13 +155,13 @@ class Elections(tag: Tag)
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
   def state = column[String]("state", O.NotNull)
-  def startDate = column[Timestamp]("start_date", O.NotNull)
-  def endDate = column[Timestamp]("end_date", O.NotNull)
+  def startDate = column[Timestamp]("start_date", O.Nullable)
+  def endDate = column[Timestamp]("end_date", O.Nullable)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
   def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
+  def ballotBoxesResultsConfig = column[String]("ballot_boxes_results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
-  def real = column[Boolean]("real")
   def virtual = column[Boolean]("virtual")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
 
@@ -174,13 +169,13 @@ class Elections(tag: Tag)
     id,
     configuration,
     state,
-    startDate,
-    endDate,
+    startDate.?,
+    endDate.?,
     pks.?,
     resultsConfig.?,
+    ballotBoxesResultsConfig.?,
     results.?,
     resultsUpdated.?,
-    real,
     virtual,
     logo_url.?
   ) <> (Election.tupled, Election.unapply _)
@@ -222,13 +217,37 @@ object Elections {
     }
   }
 
+  def setStartDate(id: Long, startDate: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.startDate).update(startDate)
+  }
+
+  def setStopDate(id: Long, endDate: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.endDate).update(endDate)
+  }
+
   def updateResults(id: Long, results: String)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated))
     .update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
   }
 
-  def updateConfig(id: Long, config: String, start: Timestamp, end: Timestamp)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start, end)
+  def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp])(implicit s: Session) = {
+    if (start.isEmpty && end.isEmpty) {
+      elections.filter(_.id === id).map(e => (e.configuration)).update(config)
+    } else if (start.isDefined && end.isEmpty) {
+      elections.filter(_.id === id).map(e => (e.configuration, e.startDate)).update(config, start.get)
+    } else if (start.isEmpty && end.isDefined) {
+      elections.filter(_.id === id).map(e => (e.configuration,  e.endDate)).update(config, end.get)
+    } else {
+      elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start.get, end.get)
+    }
+    
+  }
+
+  def updateBallotBoxesResultsConfig(id: Long, ballotBoxesResultsConfig: String)
+  (implicit s: Session) =
+  {
+    elections.filter(_.id === id).map(e => (e.ballotBoxesResultsConfig))
+      .update(ballotBoxesResultsConfig)
   }
 
   def setPublicKeys(id: Long, pks: String)(implicit s: Session) = {
@@ -245,25 +264,32 @@ object Elections {
 case class StatDay(day: String, votes: Long)
 case class Stats(totalVotes: Long, votes: Long, days: Array[StatDay])
 
+/** Used to receive dates in setStartDate and setStopDate APIs */
+case class DateDTO(date: String)
+{
+  def validate() = {
+    validateStringLength(date, SHORT_STRING, s"date string too large: $date")
+  }
+}
+
 /** used to return an election with config in structured form */
 case class ElectionDTO(
   id: Long,
   configuration: ElectionConfig,
   state: String,
-  startDate: Timestamp,
-  endDate: Timestamp,
+  startDate: Option[Timestamp],
+  endDate: Option[Timestamp],
   pks: Option[String],
   resultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
-  real: Boolean,
   virtual: Boolean,
   logo_url: Option[String]
 )
 
 /** an election configuration defines an election */
 case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Timestamp, end_date: Timestamp, presentation: ElectionPresentation, real: Boolean, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
+  questions: Array[Question], start_date: Option[Timestamp], end_date: Option[Timestamp], presentation: ElectionPresentation, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
 {
 
   /**
@@ -515,6 +541,7 @@ case class ElectionPresentation(
   urls: Array[Url],
   theme_css: String,
   extra_options: Option[ElectionExtra],
+  show_login_link_on_home: Option[Boolean],
   conditional_questions: Option[Array[ConditionalQuestion]])
 {
   def shareTextConfig() : Option[Array[ShareTextItem]]  = {
@@ -542,7 +569,13 @@ case class ElectionPresentation(
 }
 
 /** defines election presentation extra options for an election */
-case class ElectionExtra(foo: Option[Int])
+case class ElectionExtra(
+  start_screen__skip: Option[Boolean],
+  success_screen__hide_ballot_tracker: Option[Boolean],
+  success_screen__redirect_to_login: Option[Boolean],
+  success_screen__redirect_to_login__text: Option[String],
+  success_screen__redirect_to_login__auto_seconds: Option[Int]
+)
 
 /** an url to be shown when presenting election data */
 case class Url(title: String, url: String) {
@@ -655,6 +688,8 @@ case class AuthData(name: Option[String], description: Option[String], url: Opti
 case class PlaintextAnswer(options: Array[Long] = Array[Long]())
 // id is the election ID
 case class PlaintextBallot(id: Long = -1, answers: Array[PlaintextAnswer] = Array[PlaintextAnswer]())
+
+case class Callback(name: String, payload: String)
 
 /**
  * This object contains the states required for reading a plaintext ballot

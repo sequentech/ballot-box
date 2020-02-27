@@ -20,6 +20,7 @@ import models._
 import utils._
 import utils.JsonFormatters._
 import utils.Response
+import java.util.Date
 
 import play.api._
 import play.api.mvc._
@@ -36,7 +37,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.sys.process._
 
+import java.text.SimpleDateFormat
+import java.text.ParseException
+import java.sql.Timestamp
+import java.io.File
 import java.nio.file.{Paths, Files}
+import java.nio.charset.StandardCharsets
+import java.nio.file.StandardOpenOption._
 
 /**
   * Elections api
@@ -75,12 +82,31 @@ object ElectionsApi
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
   val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
+  val createEmptyTally = Play.current.configuration.getString("app.results.script").getOrElse("./admin/create_empty_tally.py")
   val pipesWhitelist = Play.current.configuration.getString("app.agoraResults.pipesWhitelist").getOrElse("")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
   val authorities = getAuthorityData
   val download_tally_timeout = Play.current.configuration.getInt("app.download_tally_timeout").get
   val download_tally_retries = Play.current.configuration.getInt("app.download_tally_retries").get
+  val always_publish = Play.current.configuration.getBoolean("app.always_publish").getOrElse(false)
+  val startedCallbackUrl = Play.current.configuration.getString("app.callbacks.started").
+    flatMap { started =>
+      if (started.length > 0) {
+        Some(started)
+      } else {
+        None
+      }
+    }
+  val publishedCallbackUrl = Play.current.configuration.getString("app.callbacks.published").
+    flatMap { published =>
+      if (published.length > 0) {
+        Some(published)
+      } else {
+        None
+      }
+    }
+  val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
 
   /** inserts election into the db in the registered state */
   def register(id: Long) = HAction("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
@@ -122,10 +148,61 @@ object ElectionsApi
     }
   }
 
+  /** Set start date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async(BodyParsers.parse.json)
+  {
+    request => Future {
+      val dateValueJs = request.body.as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+        }
+      )
+    }
+  }
+
+  /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setStopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
+  {
+    request => Future {
+      val dateValueJs = request.body.as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+        }
+      )
+    }
+  }
+
   /** sets election in started state, votes will be accepted */
   def start(id: Long) = HAction("", "AuthEvent", id, "edit|start").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STARTED)
+    Future {
+      startedCallbackUrl map { callback_url =>
+        postCallback(id, callback_url, Callback(Elections.STARTED, ""))
+      }
+    }
     Ok(response(ret))
 
   }(slickExecutionContext)}
@@ -153,7 +230,53 @@ object ElectionsApi
     tally.recover(tallyErrorHandler)
   }
 
-  /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
+  /** update the ballot box results configuration and update the results */
+  def updateBallotBoxesResultsConfig(id: Long) =
+    HAction("", "AuthEvent", id, "edit|update-ballot-boxes-results-config")
+    .async(BodyParsers.parse.json)
+  {
+    request =>
+      val future = getElection(id).flatMap { election =>
+        val config = request.body.as[String]
+        Logger.info(s"updateBallotBoxesResultsConfig with config='config'")
+        val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
+        DAL.elections.updateState(id, Elections.TALLY_OK)
+
+        // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
+        // results can be calculated
+        val tallyLink = Datastore.getTallyPath(id)
+        if (!Files.exists(tallyLink))
+        {
+          val configfile = File.createTempFile("config", ".json")
+          val tempPath = configfile.getAbsolutePath()
+          Files.write(
+            Paths.get(tempPath),
+            election.configuration.getBytes(StandardCharsets.UTF_8),
+            CREATE,
+            TRUNCATE_EXISTING
+          )
+          val cmd = s"$createEmptyTally -c $tempPath -o $tallyLink"
+
+          Logger.info(s"executing '$cmd'")
+          val output = cmd.!!
+          Logger.info(s"command returns\n$output")
+        }
+        calcResultsLogic(id, "")
+      }
+      future.recover {
+        case e: NoSuchElementException =>
+          BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+      }
+  }
+
+   /** calculate the results for a tally using agora-results */
+  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async(BodyParsers.parse.tolerantText)
+  {
+    request =>
+      calcResultsLogic(id, request.body)
+  }
+
+  /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
   def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async(BodyParsers.parse.json) { request =>
 
     val validIds = request.body.asOpt[List[String]].map(_.toSet)
@@ -185,122 +308,123 @@ object ElectionsApi
     tally.recover(tallyErrorHandler)
   }
 
-  /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results")
-    .async(BodyParsers.parse.json)
+  private def calcResultsLogic(id: Long, requestConfig: String) = Future[Result] {
+    Logger.info(s"calculating results for election $id")
+    val future = getElection(id).flatMap
     {
-      request =>
-        Logger.info(s"calculating results for election $id")
+      e =>
+        // if no config use the one stored in the election
+        val configBase =
+          if (requestConfig.isEmpty)
+            e.resultsConfig.get
+          else
+            requestConfig
 
-        val future = getElection(id).flatMap
+        val config =
+          if (e.ballotBoxesResultsConfig.isDefined)
+            configBase.replaceFirst(
+              "__ballotBoxesResultsConfig__",
+              e.ballotBoxesResultsConfig.get
+            )
+          else
+            configBase
+
+        var electionConfigStr = Json.parse(e.configuration).as[JsObject]
+        if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
         {
-          e =>
-            // if no config is provided and one is available in the election
-            // use that one
-            val config =
-              if (e.resultsConfig.isDefined)
-                e.resultsConfig.get
-              else
-                request.body.toString
+            electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> JsArray())
+        }
+        val electionConfig = electionConfigStr.validate[ElectionConfig]
 
-            var electionConfigStr = Json.parse(e.configuration).as[JsObject]
-            if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
-            {
-                electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> JsArray())
+        electionConfig.fold(
+          errors =>
+          {
+            Logger.warn(s"Invalid config json, $errors")
+            Future {
+              BadRequest(
+                error(s"Invalid config json " + JsError.toFlatJson(errors))
+              )
             }
-            val electionConfig = electionConfigStr.validate[ElectionConfig]
-
-            electionConfig.fold(
-              errors =>
+          },
+          configJson =>
+          {
+            try
+            {
+              val validated = configJson.validate(authorities, id)
+              DB.withSession
               {
-                Logger.warn(s"Invalid config json, $errors")
-                Future {
-                  BadRequest(
-                    error(s"Invalid config json " + JsError.toFlatJson(errors))
-                  )
-                }
-              },
-              configJson =>
-              {
-                try
-                {
-                  val validated = configJson.validate(authorities, id)
-                  DB.withSession
-                  {
-                    implicit session =>
-                      // check that related subelections exist and have a tally
-                      val notTalliedSubelections = validated.virtualSubelections.get.filter(
-                        (eid) =>
-                        {
-                          val el = DAL.elections.findByIdWithSession(eid)
+                implicit session =>
+                  // check that related subelections exist and have a tally
+                  val notTalliedSubelections = validated.virtualSubelections.get.filter(
+                    (eid) =>
+                    {
+                      val el = DAL.elections.findByIdWithSession(eid)
 
-                          !el.isDefined ||
-                          (
-                            el.get.state != Elections.TALLY_OK &&
-                            el.get.state != Elections.RESULTS_OK &&
-                            el.get.state != Elections.RESULTS_PUB
-                          )
-
-                        }
+                      !el.isDefined ||
+                      (
+                        el.get.state != Elections.TALLY_OK &&
+                        el.get.state != Elections.RESULTS_OK &&
+                        el.get.state != Elections.RESULTS_PUB
                       )
-                      notTalliedSubelections match
-                      {
-                        case l if l.length > 0 =>
-                          Future {
-                            BadRequest(
-                              error(
-                                s"election depends on some virtualSubelections that " +
-                                s"do not exist. The list of not tallied elections " +
-                                s"is: ${notTalliedSubelections}."
-                              )
-                            )
-                          }
-                        case _ =>
-                          if(
-                            (Elections.TALLY_OK == e.state || Elections.RESULTS_OK == e.state) ||
-                            (e.virtual && e.state != Elections.RESULTS_PUB)
-                          ) {
-                            calcResults(id, config, validated.virtualSubelections.get).flatMap( r => updateResults(e, r) )
-                          }
-                          else
-                          {
-                            Logger.warn(
-                              s"Cannot calculate results for election $id in wrong state " +
-                              s"${e.state}")
 
-                            Future {
-                              BadRequest(
-                                error(
-                                  s"Cannot calculate results for election $id in wrong " +
-                                  s"state ${e.state}"))
-                            }
-                          }
+                    }
+                  )
+                  notTalliedSubelections match
+                  {
+                    case l if l.length > 0 =>
+                      Future {
+                        BadRequest(
+                          error(
+                            s"election depends on some virtualSubelections that " +
+                            s"do not exist. The list of not tallied elections " +
+                            s"is: ${notTalliedSubelections}."
+                          )
+                        )
+                      }
+                    case _ =>
+                      if(
+                        (Elections.TALLY_OK == e.state || Elections.RESULTS_OK == e.state) ||
+                        (e.virtual && e.state != Elections.RESULTS_PUB)
+                      ) {
+                        calcResults(id, config, validated.virtualSubelections.get).flatMap( r => updateResults(e, r) )
+                        Future { Ok(response("ok")) }
+                      }
+                      else
+                      {
+                        Logger.warn(
+                          s"Cannot calculate results for election $id in wrong state " +
+                          s"${e.state}")
+
+                        Future {
+                          BadRequest(
+                            error(
+                              s"Cannot calculate results for election $id in wrong " +
+                              s"state ${e.state}"
+                            )
+                          )
+                        }
                       }
                   }
-                }
-                catch {
-                  case e: ValidationException => Future {
-                    BadRequest(error(e.getMessage))
-                  }
-                }
               }
-            )
-        }
-        future.recover {
-          case e:NoSuchElementException =>
-            BadRequest(error(s"Election $id not found"))
-        }
+            }
+            catch {
+              case e: ValidationException =>
+                Future { BadRequest(error(e.getMessage)) }
+            }
+          }
+        )
     }
+    Ok(response("ok"))
+  }
 
-  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit|publish-results").async {
+  private def publishResultsLogic(id: Long) = {
 
     Logger.info(s"publishing results for election $id")
 
     val future = getElection(id).flatMap
     {
       e =>
-        if( Elections.TALLY_OK    == e.state ||
-            Elections.RESULTS_OK  == e.state)
+        if(Elections.RESULTS_OK  == e.state)
         {
           var electionConfigStr = Json.parse(e.configuration).as[JsObject]
           if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
@@ -343,6 +467,10 @@ object ElectionsApi
       case i:IllegalStateException => BadRequest(error(s"Election had no results"))
       case f:java.io.FileNotFoundException => BadRequest(error(s"Election had no tally"))
     }
+  }
+
+  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit|publish-results").async {
+    publishResultsLogic(id)
   }
 
   def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view-results").async { request =>
@@ -458,10 +586,6 @@ object ElectionsApi
 
     var body = request.body.as[JsObject]
 
-    if (!body.as[JsObject].keys.contains("real")) {
-        body = body.as[JsObject] + ("real" -> Json.toJson(false))
-    }
-
     if (!body.as[JsObject].keys.contains("virtual")) {
         body = body.as[JsObject] + ("virtual" -> Json.toJson(false))
     }
@@ -477,6 +601,16 @@ object ElectionsApi
     if (!body.as[JsObject].keys.contains("logo_url")) {
         body = body.as[JsObject] + ("logo_url" -> Json.toJson(""))
     }
+    if (body.as[JsObject].keys.contains("start_date") && 
+        (0 == (body.as[JsObject] \ "start_date").toString.length ||
+         "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
+        body = body.as[JsObject] - "start_date"
+    }
+    if (body.as[JsObject].keys.contains("end_date") && 
+        (0 == (body.as[JsObject] \ "end_date").toString.length ||
+        "\"\"" == (body.as[JsObject] \ "end_date").toString)) {
+        body = body.as[JsObject] - "end_date"
+    }
 
     val electionConfig = body.validate[ElectionConfig]
 
@@ -489,7 +623,7 @@ object ElectionsApi
       config =>
       {
         try {
-          val validated = config.validate(authorities, id)
+          val validated = config.validate(authorities, id).copy(start_date=None, end_date=None)
           DB.withSession
           {
             implicit session =>
@@ -529,7 +663,7 @@ object ElectionsApi
                           validated.resultsConfig,
                           None,
                           None,
-                          validated.real,
+                          None,
                           validated.virtual,
                           validated.logo_url
                         )
@@ -583,9 +717,6 @@ object ElectionsApi
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
 
     var body = request.body.as[JsObject]
-    if (!body.as[JsObject].keys.contains("real")) {
-        body = body.as[JsObject] + ("real" -> Json.toJson(false))
-    }
 
     if (!body.as[JsObject].keys.contains("extra_data")) {
         body = body.as[JsObject] + ("extra_data" -> Json.toJson("{}"))
@@ -609,6 +740,38 @@ object ElectionsApi
     )
 
   }(slickExecutionContext)
+  
+  private def postCallback(electionId: Long, url1: String, message: Callback) = {
+    try {
+      val url = url1.replace("${eid}", electionId+"")
+      println(s"posting to $url")
+      val userId: String = "admin"
+      val now: Long = System.currentTimeMillis / 1000
+      val timedAuth = s"$userId:AuthEvent:$electionId:Callback:$now"
+      val hmac = Crypto.hmac(boothSecret, timedAuth)
+      val khmac = s"khmac:///sha-256;$hmac/$timedAuth"
+      val f = WS.url(url)
+        .withHeaders(
+          "Accept" -> "application/json",
+          "Authorization" -> khmac)
+        .post(Json.toJson(message))
+        .map { resp =>
+          if(resp.status != HTTP.ACCEPTED) {
+            Logger.warn(s"callback url returned status ${resp.status} with body ${resp.body} and khmac ${khmac}")
+          }
+        }
+      f.recover {
+        case t: Throwable => {
+          Logger.warn(s"Exception caught when posting to callback $t")
+        }
+      }
+    }
+    catch {
+      case t:Throwable => {
+        Logger.warn(s"Exception caught when posting to callback $t")
+      }
+    }
+  }
 
   /** Future: links tally and copies results into public datastore */
   private def pubResults(
@@ -617,6 +780,11 @@ object ElectionsApi
   {
     Datastore.publishResults(id, results, subtallies)
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
+    Future {
+      publishedCallbackUrl map { callback_url =>
+        postCallback(id, callback_url, Callback(Elections.RESULTS_PUB,""))
+      }
+    }
     Ok(response("ok"))
 
   }(slickExecutionContext)
@@ -819,10 +987,24 @@ object ElectionsApi
     val authData = getAuthData(auths)
     // add the callback and auth data fields to the original config
     val jsObject = configJson.as[JsObject]
+
+    // add start date if missing
+    val withStartDate = if (!jsObject.keys.contains("start_date")) {
+      jsObject + ("start_date" -> JsString("2000-01-01T00:00:00.001"))
+    } else {
+      jsObject
+    }
+    // add end date if missing
+    val withEndDate = if (!withStartDate.keys.contains("end_date")) {
+      withStartDate + ("end_date" -> JsString("2000-01-01T00:00:00.001"))
+    } else {
+      withStartDate
+    }
+
     val callback = "callback_url" -> JsString(apiSslUrl(routes.ElectionsApi.keydone(election.id).url))
     Logger.info("create callback is " + callback)
 
-    val withCallback = (jsObject + callback)
+    val withCallback = (withEndDate + callback)
     val withAuthorities = withCallback - "authorities" + ("authorities" -> authData)
 
     Logger.info(s"creating election with\n$withAuthorities")
