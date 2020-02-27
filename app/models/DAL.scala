@@ -134,6 +134,11 @@ object DAL {
       Elections.setStopDate(id, endDate)
     }
 
+    def setTallyDate(id: Long, tallyDate: Timestamp) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.setTallyDate(id, tallyDate)
+    }
+
     def insertWithSession(election: Election)(implicit s:Session) = DB.withSession { implicit session =>
       Cache.remove(key(election.id))
       Elections.insert(election)

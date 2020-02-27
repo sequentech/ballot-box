@@ -194,6 +194,29 @@ object ElectionsApi
     }
   }
 
+  /** Set results_updated date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
+  def setTallyDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
+  {
+    request => Future {
+      val dateValueJs = request.body.as[JsObject]
+      val dateValue = dateValueJs.validate[DateDTO]
+      dateValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        date =>
+        {
+          try {
+            val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setTallyDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))
+          } catch {
+            case e: ParseException => BadRequest(error(e.getMessage))
+          }
+        }
+      )
+    }
+  }
+
   /** sets election in started state, votes will be accepted */
   def start(id: Long) = HAction("", "AuthEvent", id, "edit|start").async { request => Future {
 
@@ -1030,6 +1053,7 @@ object ElectionsApi
   }(slickExecutionContext)
 
   private def getStats(id: Long): Future[Stats] = Future {
+    println("getStats")
     val total = DAL.votes.countForElection(id)
     val count = DAL.votes.countUniqueForElection(id)
     val byday = DAL.votes.byDay(id)

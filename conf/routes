@@ -27,6 +27,7 @@ POST    /api/election/:id/start                               controllers.Electi
 POST    /api/election/:id/stop                                controllers.ElectionsApi.stop(id: Long)
 POST    /api/election/:id/set-start-date                      controllers.ElectionsApi.setStartDate(id: Long)
 POST    /api/election/:id/set-stop-date                       controllers.ElectionsApi.setStopDate(id: Long)
+POST    /api/election/:id/set-tally-date                      controllers.ElectionsApi.setTallyDate(id: Long)
 POST    /api/election/:id/tally                               controllers.ElectionsApi.tally(id: Long)
 POST    /api/election/:id/tally-voter-ids                     controllers.ElectionsApi.tallyWithVoterIds(id: Long)
 POST    /api/election/:id/tally-no-dump                       controllers.ElectionsApi.tallyNoDump(id: Long)

@@ -393,6 +393,19 @@ def set_stop_date(cfg, args):
     )
     print(r.status_code, r.text)
 
+def set_tally_date(cfg, args):
+
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'content-type': 'application/json', 'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/set-tally-date' % (host, port, cfg['election_id'])
+    r = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps(dict(date=args.date))
+    )
+    print(r.status_code, r.text)
+
 def cast_votes(cfg, args):
     ctexts = cfg['ciphertexts']
     electionId = cfg['election_id']
@@ -853,7 +866,8 @@ create <election_id>: creates an election
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
 set_start_date <election_id> --date <start_date>: set start date, start_date in format "yyyy-MM-dd HH:mm:ss"
-set_stop_date <election_id> --date <stop_date>: set start date, stop-_date in format "yyyy-MM-dd HH:mm:ss"
+set_stop_date <election_id> --date <stop_date>: set stop date, stop_date in format "yyyy-MM-dd HH:mm:ss"
+set_tally_date <election_id> --date <stop_date>: set tally date, tally_date in format "yyyy-MM-dd HH:mm:ss"
 tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)

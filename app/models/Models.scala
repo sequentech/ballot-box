@@ -225,6 +225,10 @@ object Elections {
     elections.filter(_.id === id).map(e => e.endDate).update(endDate)
   }
 
+  def setTallyDate(id: Long, tallyDate: Timestamp)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.resultsUpdated).update(tallyDate)
+  }
+
   def updateResults(id: Long, results: String)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated))
     .update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
