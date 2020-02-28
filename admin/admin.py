@@ -367,6 +367,18 @@ def stop(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def archive(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/archive/' % cfg['election_id']
+    r = request_post(url, headers=headers)
+
+def unarchive(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/unarchive/' % cfg['election_id']
+    r = request_post(url, headers=headers)
+
 def set_start_date(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
@@ -642,22 +654,22 @@ def get_authapi_auth_headers():
     auth_token = req.json()['auth-token']
     return {'AUTH': auth_token}
 
-def send_codes(eid, payload):
+def send_auth(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
-    url = base_url + 'auth-event/%d/census/send_auth/' % eid
-    r = request_post(url, headers=headers, data=payload)
+    url = base_url + 'auth-event/%d/census/send_auth/' % cfg['election_id']
+    r = request_post(url, headers=headers, data=cfg['payload'])
 
-def auth_start(eid):
+def auth_start(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
-    url = base_url + 'auth-event/%d/started/' % eid
+    url = base_url + 'auth-event/%d/started/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
-def auth_stop(eid):
+def auth_stop(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
-    url = base_url + 'auth-event/%d/stopped/' % eid
+    url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
 def list_votes(cfg, args):
@@ -860,33 +872,37 @@ def is_int(s):
 
 def main(argv):
     parser = argparse.ArgumentParser(description='agora-elections admin script', formatter_class=RawTextHelpFormatter)
-    parser.add_argument('command', nargs='+', help='''register <election_json>: registers an election (uses local <id>.json file)
-update <election_id>: updates an election (uses local <id>.json file)
+    parser.add_argument('command', nargs='+', help='''
+authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
+calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
+cast_votes <election_dir>: cast votes from ciphertetxs
+change_social <election_id>: changes the social netoworks share buttons configuration
+count_votes [election_id, [election_id], ...]: count votes
 create <election_id>: creates an election
+deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
+dump_pks <election_id>: dumps pks for an election (public datastore)
+dump_votes <election_id>: dumps votes for an election (private datastore)
+dump_votes [election_id, [election_id], ...]: dump voter ids
+encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
+encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
+list_votes <election_dir>: list votes
+list_elections: list elections
+publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
+register <election_json>: registers an election (uses local <id>.json file)
+update <election_id>: updates an election (uses local <id>.json file)
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
+archive <election_id>: archive an election
+unarchive <election_id>: unarchive an election
+send_auth <election_id>: Send authentication
 set_start_date <election_id> --date <start_date>: set start date, start_date in format "yyyy-MM-dd HH:mm:ss"
 set_stop_date <election_id> --date <stop_date>: set stop date, stop_date in format "yyyy-MM-dd HH:mm:ss"
 set_tally_date <election_id> --date <stop_date>: set tally date, tally_date in format "yyyy-MM-dd HH:mm:ss"
+show_column <election_id>: shows a column for an election
 tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
-calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
 update_ballot_boxes_config <election_id>: uses agora-results to calculate the election's results (stored in db)
-publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
-show_column <election_id>: shows a column for an election
-count_votes [election_id, [election_id], ...]: count votes
-dump_votes [election_id, [election_id], ...]: dump voter ids
-list_votes <election_dir>: list votes
-list_elections: list elections
-cast_votes <election_dir>: cast votes from ciphertetxs
-dump_pks <election_id>: dumps pks for an election (public datastore)
-encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
-encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
-dump_votes <election_id>: dumps votes for an election (private datastore)
-change_social <election_id>: changes the social netoworks share buttons configuration
-authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
-deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
@@ -896,8 +912,9 @@ deregister [--email <email>] [--tel <telephone number>] --code <code>: deregiste
     parser.add_argument('--vote-count', help='number of votes to generate', type=int, default = 0)
     parser.add_argument('--results-config', help='config file for agora-results')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
-    parser.add_argument('--email', help='User email ')
-    parser.add_argument('--tel', help='User telephone number ')
+    parser.add_argument('--email', help='User email')
+    parser.add_argument('--payload', help='Payload')
+    parser.add_argument('--tel', help='User telephone number')
     parser.add_argument('--date', help='Date to update')
     parser.add_argument('--code', help='User code for authentication')
     parser.add_argument('--ips-log', help='')
@@ -942,6 +959,7 @@ deregister [--email <email>] [--tel <telephone number>] --code <code>: deregiste
         config['plaintexts'] = args.plaintexts
         config['encrypt-count'] = args.encrypt_count
         config['filters'] = args.filters
+        config['payload'] = args.payload
 
         eval(command + "(config, args)")
 
