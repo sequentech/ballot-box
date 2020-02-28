@@ -367,6 +367,18 @@ def stop(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def archive(eid):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/archive/' % eid
+    r = request_post(url, headers=headers)
+
+def unarchive(eid):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/unarchive/' % eid
+    r = request_post(url, headers=headers)
+
 def set_start_date(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
@@ -865,6 +877,8 @@ update <election_id>: updates an election (uses local <id>.json file)
 create <election_id>: creates an election
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
+archive <election_id>: archive an election
+unarchive <election_id>: unarchive an election
 set_start_date <election_id> --date <start_date>: set start date, start_date in format "yyyy-MM-dd HH:mm:ss"
 set_stop_date <election_id> --date <stop_date>: set stop date, stop_date in format "yyyy-MM-dd HH:mm:ss"
 set_tally_date <election_id> --date <stop_date>: set tally date, tally_date in format "yyyy-MM-dd HH:mm:ss"
