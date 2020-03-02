@@ -578,6 +578,8 @@ case class ElectionPresentation(
 case class ElectionExtra(
   start_screen__skip: Option[Boolean],
   success_screen__hide_ballot_tracker: Option[Boolean],
+  success_screen__hide_qr_code: Option[Boolean],
+  success_screen__hide_download_ballot_ticket: Option[Boolean],
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
   success_screen__redirect_to_login__auto_seconds: Option[Int]
