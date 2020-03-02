@@ -106,7 +106,7 @@ object BallotboxApi extends Controller with Response {
                         vote.vote_hash
                       )
                     }
-                    Ok(response(result))
+                    Ok(response(validated))
                   }
                 )
               }
