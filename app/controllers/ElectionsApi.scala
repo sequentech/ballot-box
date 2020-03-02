@@ -263,7 +263,6 @@ object ElectionsApi
         val config = request.body.as[String]
         Logger.info(s"updateBallotBoxesResultsConfig with config='$config'")
         val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
-        DAL.elections.updateState(id, Elections.TALLY_OK)
 
         // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
         // results can be calculated
@@ -331,12 +330,12 @@ object ElectionsApi
     tally.recover(tallyErrorHandler)
   }
 
-  private def calcResultsLogic(id: Long, requestConfig: String, updateDatabse: Boolean) = Future[Result] {
+  private def calcResultsLogic(id: Long, requestConfig: String, updateDatabase: Boolean) = Future[Result] {
     Logger.info(s"calculating results for election $id")
     val future = getElection(id).flatMap
     {
       e =>
-        if (updateDatabse) {
+        if (updateDatabase) {
           if (requestConfig.isEmpty) {
             Future {
               BadRequest(
@@ -418,10 +417,21 @@ object ElectionsApi
                       }
                     case _ =>
                       if(
-                        (Elections.TALLY_OK == e.state || Elections.RESULTS_OK == e.state) ||
-                        (e.virtual && e.state != Elections.RESULTS_PUB)
+                        (
+                          Elections.TALLY_OK == e.state || 
+                          Elections.RESULTS_OK == e.state || 
+                          Elections.STOPPED == e.state
+                        ) || (
+                          e.virtual && e.state != Elections.RESULTS_PUB
+                        )
                       ) {
-                        calcResults(id, config, validated.virtualSubelections.get).flatMap( r => updateResults(e, r) )
+                        val updateResults = if (Elections.STOPPED == e.state) {
+                          false
+                        } else {
+                          updateDatabase
+                        }
+                        calcResults(id, config, validated.virtualSubelections.get)
+                          .flatMap( r => updateResults(e, r, updateResults) )
                         Future { Ok(response("ok")) }
                       }
                       else
@@ -908,9 +918,9 @@ object ElectionsApi
   }
 
   /** Future: updates an election's results */
-  private def updateResults(election: Election, results: String) = Future {
+  private def updateResults(election: Election, results: String, updateStatus: Boolean) = Future {
 
-    DAL.elections.updateResults(election.id, results)
+    DAL.elections.updateResults(election.id, results, updateStatus)
     Ok(Json.toJson("ok"))
 
   }(slickExecutionContext)
