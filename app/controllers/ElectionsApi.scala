@@ -338,14 +338,14 @@ object ElectionsApi
       e =>
         if (updateDatabse) {
           if (requestConfig.isEmpty) {
-            return Future {
+            Future {
               BadRequest(
-                error("Cannot update resultsConfig if the given one is empty")
+                error("Cannot update resultsConfig, the given one is empty: '$requestConfig'")
               )
             }
           }
 
-          val ret = DAL.elections.updateResultsConfig(id, resultsConfig)
+          val ret = DAL.elections.updateResultsConfig(id, requestConfig)
         }
 
         // if no config use the one stored in the election
