@@ -261,7 +261,7 @@ object ElectionsApi
     request =>
       val future = getElection(id).flatMap { election =>
         val config = request.body.as[String]
-        Logger.info(s"updateBallotBoxesResultsConfig with config='config'")
+        Logger.info(s"updateBallotBoxesResultsConfig with config='$config'")
         val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
         DAL.elections.updateState(id, Elections.TALLY_OK)
 
