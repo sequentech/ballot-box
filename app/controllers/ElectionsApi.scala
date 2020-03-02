@@ -343,9 +343,9 @@ object ElectionsApi
                 error("Cannot update resultsConfig, the given one is empty: '$requestConfig'")
               )
             }
+          } else {
+            val ret = DAL.elections.updateResultsConfig(id, requestConfig)
           }
-
-          val ret = DAL.elections.updateResultsConfig(id, requestConfig)
         }
 
         // if no config use the one stored in the election
