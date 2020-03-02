@@ -284,7 +284,7 @@ object ElectionsApi
           val output = cmd.!!
           Logger.info(s"command returns\n$output")
         }
-        calcResultsLogic(id, "")
+        calcResultsLogic(id, "", false)
       }
       future.recover {
         case e: NoSuchElementException =>
@@ -296,7 +296,7 @@ object ElectionsApi
   def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async(BodyParsers.parse.tolerantText)
   {
     request =>
-      calcResultsLogic(id, request.body)
+      calcResultsLogic(id, request.body, true)
   }
 
   /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
@@ -331,11 +331,23 @@ object ElectionsApi
     tally.recover(tallyErrorHandler)
   }
 
-  private def calcResultsLogic(id: Long, requestConfig: String) = Future[Result] {
+  private def calcResultsLogic(id: Long, requestConfig: String, updateDatabse: Boolean) = Future[Result] {
     Logger.info(s"calculating results for election $id")
     val future = getElection(id).flatMap
     {
       e =>
+        if (updateDatabse) {
+          if (requestConfig.isEmpty) {
+            return Future {
+              BadRequest(
+                error("Cannot update resultsConfig if the given one is empty")
+              )
+            }
+          }
+
+          val ret = DAL.elections.updateResultsConfig(id, resultsConfig)
+        }
+
         // if no config use the one stored in the election
         val configBase =
           if (requestConfig.isEmpty)

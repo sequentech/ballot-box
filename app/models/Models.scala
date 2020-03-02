@@ -246,6 +246,14 @@ object Elections {
     }
     
   }
+  def updateResultsConfig(id: Long, resultsConfig: String)
+  (implicit s: Session) =
+  {
+    elections
+      .filter(_.id === id)
+      .map(e => (e.resultsConfig))
+      .update(resultsConfig)
+  }
 
   def updateBallotBoxesResultsConfig(id: Long, ballotBoxesResultsConfig: String)
   (implicit s: Session) =
