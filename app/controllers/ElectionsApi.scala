@@ -425,13 +425,13 @@ object ElectionsApi
                           e.virtual && e.state != Elections.RESULTS_PUB
                         )
                       ) {
-                        val updateResults = if (Elections.STOPPED == e.state) {
-                          false
+                        if (Elections.STOPPED == e.state) {
+                          calcResults(id, config, validated.virtualSubelections.get)
+                            .flatMap( r => updateResults(e, r, false) )
                         } else {
-                          updateDatabase
+                          calcResults(id, config, validated.virtualSubelections.get)
+                            .flatMap( r => updateResults(e, r, updateDatabase) )
                         }
-                        calcResults(id, config, validated.virtualSubelections.get)
-                          .flatMap( r => updateResults(e, r, updateResults) )
                         Future { Ok(response("ok")) }
                       }
                       else

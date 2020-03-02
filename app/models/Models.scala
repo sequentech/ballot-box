@@ -230,11 +230,24 @@ object Elections {
   }
 
   def updateResults(id: Long, results: String, updateStatus: Boolean)(implicit s: Session) = {
-    val state = if (updateStatus) { Elections.RESULTS_OK } else { e.state }
-    elections
-      .filter(_.id === id)
-      .map(e => (e.state, e.results, e.resultsUpdated))
-      .update(state, results, new Timestamp(new Date().getTime))
+    if (updateStatus) {
+      elections
+        .filter(_.id === id)
+        .map(e => (e.state, e.results, e.resultsUpdated))
+        .update(
+          Elections.RESULTS_OK, 
+          results, 
+          new Timestamp(new Date().getTime)
+        )
+    } else {
+      elections
+        .filter(_.id === id)
+        .map(e => (e.results, e.resultsUpdated))
+        .update(
+          results,
+          new Timestamp(new Date().getTime)
+        )
+    }
   }
 
   def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp])(implicit s: Session) = {
