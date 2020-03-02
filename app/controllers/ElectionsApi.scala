@@ -343,6 +343,7 @@ object ElectionsApi
               )
             }
           } else {
+            Logger.info(s"Updating resultsConfig for election $id with = $requestConfig")
             val ret = DAL.elections.updateResultsConfig(id, requestConfig)
           }
         }
