@@ -149,9 +149,9 @@ object DAL {
       Elections.updateState(id, state)
     }
 
-    def updateResults(id: Long, results: String) = DB.withSession { implicit session =>
+    def updateResults(id: Long, results: String, updateStatus: Boolean) = DB.withSession { implicit session =>
       Cache.remove(key(id))
-      Elections.updateResults(id, results)
+      Elections.updateResults(id, results, updateStatus)
     }
 
     def updateBallotBoxesResultsConfig(id: Long, config: String)
@@ -160,6 +160,14 @@ object DAL {
       implicit session =>
         Cache.remove(key(id))
         Elections.updateBallotBoxesResultsConfig(id, config)
+    }
+
+    def updateResultsConfig(id: Long, config: String)
+    = DB.withSession
+    {
+      implicit session =>
+        Cache.remove(key(id))
+        Elections.updateResultsConfig(id, config)
     }
 
     def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp]) = DB.withSession { implicit session =>

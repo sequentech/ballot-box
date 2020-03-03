@@ -229,9 +229,25 @@ object Elections {
     elections.filter(_.id === id).map(e => e.resultsUpdated).update(tallyDate)
   }
 
-  def updateResults(id: Long, results: String)(implicit s: Session) = {
-    elections.filter(_.id === id).map(e => (e.state, e.results, e.resultsUpdated))
-    .update(Elections.RESULTS_OK, results, new Timestamp(new Date().getTime))
+  def updateResults(id: Long, results: String, updateStatus: Boolean)(implicit s: Session) = {
+    if (updateStatus) {
+      elections
+        .filter(_.id === id)
+        .map(e => (e.state, e.results, e.resultsUpdated))
+        .update(
+          Elections.RESULTS_OK, 
+          results, 
+          new Timestamp(new Date().getTime)
+        )
+    } else {
+      elections
+        .filter(_.id === id)
+        .map(e => (e.results, e.resultsUpdated))
+        .update(
+          results,
+          new Timestamp(new Date().getTime)
+        )
+    }
   }
 
   def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp])(implicit s: Session) = {
@@ -245,6 +261,14 @@ object Elections {
       elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start.get, end.get)
     }
     
+  }
+  def updateResultsConfig(id: Long, resultsConfig: String)
+  (implicit s: Session) =
+  {
+    elections
+      .filter(_.id === id)
+      .map(e => (e.resultsConfig))
+      .update(resultsConfig)
   }
 
   def updateBallotBoxesResultsConfig(id: Long, ballotBoxesResultsConfig: String)

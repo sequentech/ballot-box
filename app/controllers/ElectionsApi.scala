@@ -261,9 +261,8 @@ object ElectionsApi
     request =>
       val future = getElection(id).flatMap { election =>
         val config = request.body.as[String]
-        Logger.info(s"updateBallotBoxesResultsConfig with config='config'")
+        Logger.info(s"updateBallotBoxesResultsConfig with config='$config'")
         val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
-        DAL.elections.updateState(id, Elections.TALLY_OK)
 
         // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
         // results can be calculated
@@ -284,7 +283,7 @@ object ElectionsApi
           val output = cmd.!!
           Logger.info(s"command returns\n$output")
         }
-        calcResultsLogic(id, "")
+        calcResultsLogic(id, "", false)
       }
       future.recover {
         case e: NoSuchElementException =>
@@ -296,7 +295,7 @@ object ElectionsApi
   def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async(BodyParsers.parse.tolerantText)
   {
     request =>
-      calcResultsLogic(id, request.body)
+      calcResultsLogic(id, request.body, true)
   }
 
   /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
@@ -331,11 +330,24 @@ object ElectionsApi
     tally.recover(tallyErrorHandler)
   }
 
-  private def calcResultsLogic(id: Long, requestConfig: String) = Future[Result] {
+  private def calcResultsLogic(id: Long, requestConfig: String, updateDatabase: Boolean) = Future[Result] {
     Logger.info(s"calculating results for election $id")
     val future = getElection(id).flatMap
     {
       e =>
+        if (updateDatabase) {
+          if (requestConfig.isEmpty) {
+            Future {
+              BadRequest(
+                error("Cannot update resultsConfig, the given one is empty: '$requestConfig'")
+              )
+            }
+          } else {
+            Logger.info(s"Updating resultsConfig for election $id with = $requestConfig")
+            val ret = DAL.elections.updateResultsConfig(id, requestConfig)
+          }
+        }
+
         // if no config use the one stored in the election
         val configBase =
           if (requestConfig.isEmpty)
@@ -406,10 +418,21 @@ object ElectionsApi
                       }
                     case _ =>
                       if(
-                        (Elections.TALLY_OK == e.state || Elections.RESULTS_OK == e.state) ||
-                        (e.virtual && e.state != Elections.RESULTS_PUB)
+                        (
+                          Elections.TALLY_OK == e.state || 
+                          Elections.RESULTS_OK == e.state || 
+                          Elections.STOPPED == e.state
+                        ) || (
+                          e.virtual && e.state != Elections.RESULTS_PUB
+                        )
                       ) {
-                        calcResults(id, config, validated.virtualSubelections.get).flatMap( r => updateResults(e, r) )
+                        if (Elections.STOPPED == e.state) {
+                          calcResults(id, config, validated.virtualSubelections.get)
+                            .flatMap( r => updateResults(e, r, false) )
+                        } else {
+                          calcResults(id, config, validated.virtualSubelections.get)
+                            .flatMap( r => updateResults(e, r, updateDatabase) )
+                        }
                         Future { Ok(response("ok")) }
                       }
                       else
@@ -896,9 +919,9 @@ object ElectionsApi
   }
 
   /** Future: updates an election's results */
-  private def updateResults(election: Election, results: String) = Future {
+  private def updateResults(election: Election, results: String, updateStatus: Boolean) = Future {
 
-    DAL.elections.updateResults(election.id, results)
+    DAL.elections.updateResults(election.id, results, updateStatus)
     Ok(Json.toJson("ok"))
 
   }(slickExecutionContext)
