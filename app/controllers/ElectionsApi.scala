@@ -401,7 +401,7 @@ object ElectionsApi
             configBase
 
         // ensure a tally can be executed
-        ensureTally(id, election.get)
+        ensureTally(id, election)
 
         var electionConfigStr = Json.parse(election.configuration).as[JsObject]
         if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
