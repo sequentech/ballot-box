@@ -880,14 +880,14 @@ object ElectionsApi
     }
 
     val configPath = Datastore.writeResultsConfig(id, config)
-    // if there is a list of subelections, instead of the path to the tally of
-    // this election, we use the path to the tallies of the subelections
+    // if there is a list of subelections, append to the tally of this 
+    // election the tallies of the subelections
     val tallyPath = subelections match
     {
       case subelList if (subelList.length == 0) =>
         Datastore.getTallyPath(id)
       case _ =>
-        subelections.map(
+        Datastore.getTallyPath(id) + " " + subelections.map(
           (subElectionId) =>
             Datastore.getTallyPath(subElectionId)
         ).mkString(" ")
