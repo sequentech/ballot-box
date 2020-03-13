@@ -76,8 +76,8 @@ trait ErrorProcessing {
 object ElectionsApi 
   extends Controller
   with Response
-  with ErrorProcessing {
-
+  with ErrorProcessing 
+{
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
@@ -256,34 +256,18 @@ object ElectionsApi
   /** update the ballot box results configuration and update the results */
   def updateBallotBoxesResultsConfig(id: Long) =
     HAction("", "AuthEvent", id, "edit|update-ballot-boxes-results-config")
-    .async(BodyParsers.parse.json)
+      .async(BodyParsers.parse.json)
   {
     request =>
-      val future = getElection(id).flatMap { election =>
-        val config = request.body.as[String]
-        Logger.info(s"updateBallotBoxesResultsConfig with config='$config'")
-        val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
+      val future = getElection(id)
+        .flatMap 
+      {
+        election =>
+          val config = request.body.as[String]
+          Logger.info(s"updateBallotBoxesResultsConfig with config='$config'")
+          val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
 
-        // create tally.tar.gz with zero plaintexts if it doesn't exist, so that
-        // results can be calculated
-        val tallyLink = Datastore.getTallyPath(id)
-        if (!Files.exists(tallyLink))
-        {
-          val configfile = File.createTempFile("config", ".json")
-          val tempPath = configfile.getAbsolutePath()
-          Files.write(
-            Paths.get(tempPath),
-            election.configuration.getBytes(StandardCharsets.UTF_8),
-            CREATE,
-            TRUNCATE_EXISTING
-          )
-          val cmd = s"$createEmptyTally -c $tempPath -o $tallyLink"
-
-          Logger.info(s"executing '$cmd'")
-          val output = cmd.!!
-          Logger.info(s"command returns\n$output")
-        }
-        calcResultsLogic(id, "", false)
+          calcResultsLogic(id, "", false)
       }
       future.recover {
         case e: NoSuchElementException =>
@@ -292,58 +276,109 @@ object ElectionsApi
   }
 
    /** calculate the results for a tally using agora-results */
-  def calculateResults(id: Long) = HAction("", "AuthEvent", id, "edit|calculate-results").async(BodyParsers.parse.tolerantText)
-  {
-    request =>
-      calcResultsLogic(id, request.body, true)
-  }
-
-  /**-        Logger.info(s"calculating results for election $id") request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
-  def tallyWithVoterIds(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async(BodyParsers.parse.json) { request =>
-
-    val validIds = request.body.asOpt[List[String]].map(_.toSet)
-
-    val tally = getElection(id).flatMap { e =>
-      if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
-        BallotboxApi.dumpTheVotes(e.id, validIds).flatMap(_ => tallyElection(e))
-      }
-      else {
-        Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
-        Future { BadRequest(error(s"Cannot tally election $id in wrong state ${e.state}")) }
-      }
+  def calculateResults(id: Long) = 
+    HAction("", "AuthEvent", id, "edit|calculate-results")
+      .async(BodyParsers.parse.tolerantText)
+    {
+      request =>
+        calcResultsLogic(id, request.body, true)
     }
-    tally.recover(tallyErrorHandler)
-  }
+
+  /** equest a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
+  def tallyWithVoterIds(id: Long) = 
+    HAction("", "AuthEvent", id, "edit|tally")
+      .async(BodyParsers.parse.json) 
+    {
+      request =>
+        val validIds = request.body.asOpt[List[String]].map(_.toSet)
+
+        val tally = getElection(id).flatMap { e =>
+          if( (e.state == Elections.STOPPED) || allowPartialTallies ) 
+          {
+            BallotboxApi
+              .dumpTheVotes(e.id, validIds)
+              .flatMap(_ => tallyElection(e))
+          } else {
+            Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
+            Future { 
+              BadRequest(
+                error(s"Cannot tally election $id in wrong state ${e.state}")
+              )
+            }
+          }
+        }
+        tally.recover(tallyErrorHandler)
+    }
 
   /** request a tally, but do not dump votes, use those in the private ds */
-  def tallyNoDump(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async { request =>
-
-    val tally = getElection(id).flatMap { e =>
-      if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
-        tallyElection(e)
-      }
-      else {
-        Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
-        Future { BadRequest(error(s"Cannot tally election $id in wrong state ${e.state}")) }
-      }
+  def tallyNoDump(id: Long) = 
+    HAction("", "AuthEvent", id, "edit|tally").async 
+    {
+      request =>
+        val tally = getElection(id).flatMap { e =>
+          if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
+            tallyElection(e)
+          }
+          else {
+            Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
+            Future { BadRequest(error(s"Cannot tally election $id in wrong state ${e.state}")) }
+          }
+        }
+        tally.recover(tallyErrorHandler)
     }
-    tally.recover(tallyErrorHandler)
+  
+  /**
+   * Creates tally.tar.gz with zero plaintexts if it doesn't exist, so that
+   * results can be calculated.
+   */
+  private def ensureTally(id: Long, election: Election)
+  {
+    val tallyLink = Datastore.getTallyPath(id)
+    if (!Files.exists(tallyLink))
+    {
+      val configfile = File.createTempFile("config", ".json")
+      val tempPath = configfile.getAbsolutePath()
+      Files.write(
+        Paths.get(tempPath),
+        election.configuration.getBytes(StandardCharsets.UTF_8),
+        CREATE,
+        TRUNCATE_EXISTING
+      )
+      val cmd = s"$createEmptyTally -c $tempPath -o $tallyLink"
+
+      Logger.info(s"executing '$cmd'")
+      val output = cmd.!!
+      Logger.info(s"command returns\n$output")
   }
 
-  private def calcResultsLogic(id: Long, requestConfig: String, updateDatabase: Boolean) = Future[Result] {
+  /**
+   * Logic to calculate election results
+   */
+  private def calcResultsLogic(
+    id: Long, 
+    requestConfig: String, 
+    updateDatabase: Boolean
+  ) = Future[Result] 
+  {
     Logger.info(s"calculating results for election $id")
     val future = getElection(id).flatMap
     {
-      e =>
+      election =>
         if (updateDatabase) {
           if (requestConfig.isEmpty) {
             Future {
               BadRequest(
-                error("Cannot update resultsConfig, the given one is empty: '$requestConfig'")
+                error(
+                  "Cannot update resultsConfig, " + 
+                  s"the given one is empty: '$requestConfig'"
+                )
               )
             }
           } else {
-            Logger.info(s"Updating resultsConfig for election $id with = $requestConfig")
+            Logger.info(
+              "Updating resultsConfig for election " +
+              s"$id with = $requestConfig"
+            )
             val ret = DAL.elections.updateResultsConfig(id, requestConfig)
           }
         }
@@ -351,7 +386,7 @@ object ElectionsApi
         // if no config use the one stored in the election
         val configBase =
           if (requestConfig.isEmpty)
-            e.resultsConfig.get
+            election.resultsConfig.get
           else
             requestConfig
 
@@ -359,12 +394,15 @@ object ElectionsApi
           if (e.ballotBoxesResultsConfig.isDefined)
             configBase.replaceFirst(
               "__ballotBoxesResultsConfig__",
-              e.ballotBoxesResultsConfig.get
+              election.ballotBoxesResultsConfig.get
             )
           else
             configBase
 
-        var electionConfigStr = Json.parse(e.configuration).as[JsObject]
+        // ensure a tally can be executed
+        ensureTally(id, election)
+
+        var electionConfigStr = Json.parse(election.configuration).as[JsObject]
         if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
         {
             electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> JsArray())
@@ -389,67 +427,33 @@ object ElectionsApi
               DB.withSession
               {
                 implicit session =>
-                  // check that related subelections exist and have a tally
-                  val notTalliedSubelections = validated.virtualSubelections.get.filter(
+                  // check that related subelections exist and have results
+                  val talliedSubelections = validated.virtualSubelections.get.filter(
                     (eid) =>
                     {
-                      val el = DAL.elections.findByIdWithSession(eid)
-
-                      !el.isDefined ||
-                      (
-                        el.get.state != Elections.TALLY_OK &&
-                        el.get.state != Elections.RESULTS_OK &&
-                        el.get.state != Elections.RESULTS_PUB
-                      )
-
+                      val subelection = DAL.elections.findByIdWithSession(eid)
+                      subelection.isDefined  && subelection.get.results !=  null
                     }
                   )
-                  notTalliedSubelections match
-                  {
-                    case l if l.length > 0 =>
-                      Future {
-                        BadRequest(
-                          error(
-                            s"election depends on some virtualSubelections that " +
-                            s"do not exist. The list of not tallied elections " +
-                            s"is: ${notTalliedSubelections}."
-                          )
-                        )
-                      }
-                    case _ =>
-                      if(
-                        (
-                          Elections.TALLY_OK == e.state || 
-                          Elections.RESULTS_OK == e.state || 
-                          Elections.STOPPED == e.state
-                        ) || (
-                          e.virtual && e.state != Elections.RESULTS_PUB
-                        )
-                      ) {
-                        if (Elections.STOPPED == e.state) {
-                          calcResults(id, config, validated.virtualSubelections.get)
-                            .flatMap( r => updateResults(e, r, false) )
-                        } else {
-                          calcResults(id, config, validated.virtualSubelections.get)
-                            .flatMap( r => updateResults(e, r, updateDatabase) )
-                        }
-                        Future { Ok(response("ok")) }
-                      }
-                      else
-                      {
-                        Logger.warn(
-                          s"Cannot calculate results for election $id in wrong state " +
-                          s"${e.state}")
 
-                        Future {
-                          BadRequest(
-                            error(
-                              s"Cannot calculate results for election $id in wrong " +
-                              s"state ${e.state}"
-                            )
-                          )
-                        }
-                      }
+                  calcResults(
+                      id, 
+                      config, 
+                      validated.virtualSubelections.get
+                    )
+                    .flatMap( 
+                      r => updateResults(
+                        election,
+                        r,
+
+                        // update state only if election is not 
+                        // stopped and election is not virtual and
+                        // if was requested to be updated
+                        Elections.STOPPED != election.state &&
+                        !election.virtual &&
+                        updateDatabase
+                    ) 
+                    Future { Ok(response("ok")) }
                   }
               }
             }
