@@ -437,7 +437,7 @@ object ElectionsApi
                       val subelection = DAL.elections.findByIdWithSession(eid)
                       // ensure a tally can be executed
                       if (subelection.isDefined) {
-                        ensureTally(id, subelection)
+                        ensureTally(id, subelection.get)
                       }
                       subelection.isDefined && subelection.get.results !=  null
                     }
