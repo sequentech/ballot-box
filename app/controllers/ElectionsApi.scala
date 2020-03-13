@@ -406,7 +406,9 @@ object ElectionsApi
         var electionConfigStr = Json.parse(election.configuration).as[JsObject]
         if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
         {
-            electionConfigStr = electionConfigStr.as[JsObject] + ("virtualSubelections" -> JsArray())
+          electionConfigStr = 
+            electionConfigStr.as[JsObject] +
+            ("virtualSubelections" -> JsArray())
         }
         val electionConfig = electionConfigStr.validate[ElectionConfig]
 
@@ -459,10 +461,9 @@ object ElectionsApi
                         updateDatabase
                     ) 
                     Future { Ok(response("ok")) }
-                  }
               }
-            }
-            catch {
+            } catch 
+            {
               case e: ValidationException =>
                 Future { BadRequest(error(e.getMessage)) }
             }
