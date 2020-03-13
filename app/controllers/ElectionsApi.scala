@@ -444,23 +444,24 @@ object ElectionsApi
                   )
 
                   calcResults(
-                      id, 
-                      config, 
-                      validated.virtualSubelections.get
-                    )
-                    .flatMap( 
-                      r => updateResults(
-                        election,
-                        r,
+                    id, 
+                    config, 
+                    validated.virtualSubelections.get
+                  )
+                  .flatMap( 
+                    r => updateResults(
+                      election,
+                      r,
 
-                        // update state only if election is not 
-                        // stopped and election is not virtual and
-                        // if was requested to be updated
-                        Elections.STOPPED != election.state &&
-                        !election.virtual &&
-                        updateDatabase
-                    ) 
-                    Future { Ok(response("ok")) }
+                      // update state only if election is not 
+                      // stopped and election is not virtual and
+                      // if was requested to be updated
+                      Elections.STOPPED != election.state &&
+                      !election.virtual &&
+                      updateDatabase
+                    )
+                  )
+                  Future { Ok(response("ok")) }
               }
             } catch 
             {
