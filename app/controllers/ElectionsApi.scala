@@ -392,7 +392,7 @@ object ElectionsApi
             requestConfig
 
         val config =
-          if (e.ballotBoxesResultsConfig.isDefined)
+          if (election.ballotBoxesResultsConfig.isDefined)
             configBase.replaceFirst(
               "__ballotBoxesResultsConfig__",
               election.ballotBoxesResultsConfig.get
@@ -401,7 +401,7 @@ object ElectionsApi
             configBase
 
         // ensure a tally can be executed
-        ensureTally(id, election)
+        ensureTally(id, election.get)
 
         var electionConfigStr = Json.parse(election.configuration).as[JsObject]
         if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
