@@ -398,7 +398,10 @@ object ElectionsApi
               election.ballotBoxesResultsConfig.get
             )
           else
-            configBase
+            configBase.replaceFirst(
+              "__ballotBoxesResultsConfig__",
+              "[]"
+            )
 
         // ensure a tally can be executed
         ensureTally(id, election)
