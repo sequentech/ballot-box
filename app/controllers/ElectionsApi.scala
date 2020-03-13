@@ -393,12 +393,12 @@ object ElectionsApi
 
         val config =
           if (election.ballotBoxesResultsConfig.isDefined)
-            configBase.replaceFirst(
+            configBase.replaceAll(
               "__ballotBoxesResultsConfig__",
               election.ballotBoxesResultsConfig.get
             )
           else
-            configBase.replaceFirst(
+            configBase.replaceAll(
               "__ballotBoxesResultsConfig__",
               "[]"
             )
