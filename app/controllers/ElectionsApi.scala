@@ -349,6 +349,7 @@ object ElectionsApi
       Logger.info(s"executing '$cmd'")
       val output = cmd.!!
       Logger.info(s"command returns\n$output")
+    }
   }
 
   /**
@@ -432,7 +433,11 @@ object ElectionsApi
                     (eid) =>
                     {
                       val subelection = DAL.elections.findByIdWithSession(eid)
-                      subelection.isDefined  && subelection.get.results !=  null
+                      // ensure a tally can be executed
+                      if (subelection.isDefined) {
+                        ensureTally(id, subelection)
+                      }
+                      subelection.isDefined && subelection.get.results !=  null
                     }
                   )
 
