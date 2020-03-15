@@ -232,7 +232,8 @@ object ElectionsApi
 
   /** sets election in stopped state, votes will not be accepted */
   def stop(id: Long) =
-    HAction("", "AuthEvent", id, "edit|stop").async 
+    HAction("", "AuthEvent", id, "edit|stop")
+      .async 
   {
     request => 
       Future {
@@ -241,8 +242,7 @@ object ElectionsApi
             DAL.elections.updateState(id, Elections.STOPPED)
           )
         )
-      }
-      (slickExecutionContext)
+      } (slickExecutionContext)
   }
 
   /** sets a virtual election in TALLY_OK state */
