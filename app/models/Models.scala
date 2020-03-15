@@ -211,9 +211,27 @@ object Elections {
 
   def updateState(id: Long, state: String)(implicit s: Session) = {
     state match {
-      case STARTED => elections.filter(_.id === id).map(e => (e.state, e.startDate)).update(state, new Timestamp(new Date().getTime))
-      case STOPPED => elections.filter(_.id === id).map(e => (e.state, e.endDate)).update(state, new Timestamp(new Date().getTime))
-      case _ => elections.filter(_.id === id).map(e => e.state).update(state)
+      case STARTED => 
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.startDate))
+          .update(
+            state, 
+            new Timestamp(new Date().getTime)
+          )
+      case STOPPED => 
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.endDate))
+          .update(
+            state, 
+            new Timestamp(new Date().getTime)
+          )
+      case _ => 
+        elections
+          .filter(_.id === id)
+          .map(e => e.state)
+          .update(state)
     }
   }
 

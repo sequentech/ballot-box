@@ -231,12 +231,68 @@ object ElectionsApi
   }(slickExecutionContext)}
 
   /** sets election in stopped state, votes will not be accepted */
-  def stop(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async { request => Future {
+  def stop(id: Long) =
+    HAction("", "AuthEvent", id, "edit|stop").async 
+  {
+    request => 
+      Future {
+        getElection(id).flatMap { 
+          election =>
+            val newState = 
+              if (election.virtual)
+              {
+                Elections.TALLY_OK
+              } else {
+                Elections.STOPPED
+              }
 
-    val ret = DAL.elections.updateState(id, Elections.STOPPED)
-    Ok(response(ret))
+            val ret = DAL.elections.updateState(id, Elections.STOPPED)
+            Ok(response(ret))
+        }
+      }
+      (slickExecutionContext)
+  }
 
-  }(slickExecutionContext)}
+  /** sets a virtual election in TALLY_OK state */
+  def virtualTally(id: Long) =
+    HAction("", "AuthEvent", id, "edit|tally")
+      .async 
+  {
+    request => 
+      Future {
+        getElection(id).flatMap {
+          election =>
+            if (!election.virtual) 
+            {
+              Logger.warn(
+                s"Cannot virtual-tally election $id which is not virtual"
+              )
+              BadRequest(
+                error(
+                  s"Cannot virtual-tally election $id which is not virtual"
+                )
+              )
+            } else if (election.state != Elections.STOPPED) 
+            {
+              Logger.warn(
+                s"Cannot virtual-tally election $id in state ${e.state}"
+              )
+              BadRequest(
+                error(
+                  s"Cannot virtual-tally election $id in state ${e.state}"
+                )
+              )
+            } else {
+              Ok(
+                response(
+                  DAL.elections.updateState(id, Elections.STOPPED)
+                )
+              )
+            }
+        }
+      }
+      (slickExecutionContext)
+  }
 
   /** request a tally, dumps votes to the private ds */
   def tally(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async { request =>
@@ -264,7 +320,7 @@ object ElectionsApi
       {
         election =>
           val config = request.body.as[String]
-          Logger.info(s"updateBallotBoxesResultsConfig with config='$config'")
+          Logger.info(s"updateBallotBoxesResultsConfig with id=$id config='$config'")
           val ret = DAL.elections.updateBallotBoxesResultsConfig(id, config)
 
           calcResultsLogic(id, "", false)
@@ -346,9 +402,9 @@ object ElectionsApi
       )
       val cmd = s"$createEmptyTally -c $tempPath -o $tallyLink"
 
-      Logger.info(s"executing '$cmd'")
+      Logger.info(s"executing id=$id '$cmd'")
       val output = cmd.!!
-      Logger.info(s"command returns\n$output")
+      Logger.info(s"command id=$id returns\n$output")
     }
   }
 
@@ -460,7 +516,6 @@ object ElectionsApi
                       // stopped and election is not virtual and
                       // if was requested to be updated
                       Elections.STOPPED != election.state &&
-                      !election.virtual &&
                       updateDatabase
                     )
                   )

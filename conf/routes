@@ -25,6 +25,7 @@ POST    /api/election/:id/update-share                        controllers.Electi
 POST    /api/election/:id/create                              controllers.ElectionsApi.create(id: Long)
 POST    /api/election/:id/start                               controllers.ElectionsApi.start(id: Long)
 POST    /api/election/:id/stop                                controllers.ElectionsApi.stop(id: Long)
+POST    /api/election/:id/virtual-tally                       controllers.ElectionsApi.virtualTally(id: Long)
 POST    /api/election/:id/set-start-date                      controllers.ElectionsApi.setStartDate(id: Long)
 POST    /api/election/:id/set-stop-date                       controllers.ElectionsApi.setStopDate(id: Long)
 POST    /api/election/:id/set-tally-date                      controllers.ElectionsApi.setTallyDate(id: Long)
