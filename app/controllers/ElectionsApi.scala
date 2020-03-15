@@ -236,19 +236,11 @@ object ElectionsApi
   {
     request => 
       Future {
-        getElection(id).flatMap { 
-          election =>
-            val newState = 
-              if (election.virtual)
-              {
-                Elections.TALLY_OK
-              } else {
-                Elections.STOPPED
-              }
-
-            val ret = DAL.elections.updateState(id, Elections.STOPPED)
-            Ok(response(ret))
-        }
+        Ok(
+          response(
+            DAL.elections.updateState(id, Elections.STOPPED)
+          )
+        )
       }
       (slickExecutionContext)
   }
@@ -259,39 +251,43 @@ object ElectionsApi
       .async 
   {
     request => 
-      Future {
-        getElection(id).flatMap {
-          election =>
-            if (!election.virtual) 
-            {
-              Logger.warn(
-                s"Cannot virtual-tally election $id which is not virtual"
-              )
+      getElection(id).flatMap {
+        election =>
+          if (!election.virtual) 
+          {
+            Logger.warn(
+              s"Cannot virtual-tally election $id which is not virtual"
+            )
+            
+            Future {
               BadRequest(
                 error(
                   s"Cannot virtual-tally election $id which is not virtual"
                 )
               )
-            } else if (election.state != Elections.STOPPED) 
-            {
-              Logger.warn(
-                s"Cannot virtual-tally election $id in state ${e.state}"
-              )
+            } (slickExecutionContext)
+          } else if (election.state != Elections.STOPPED) 
+          {
+            Logger.warn(
+              s"Cannot virtual-tally election $id in state ${election.state}"
+            )
+            Future {
               BadRequest(
                 error(
-                  s"Cannot virtual-tally election $id in state ${e.state}"
+                  s"Cannot virtual-tally election $id in state ${election.state}"
                 )
               )
-            } else {
+            } (slickExecutionContext)
+          } else {
+            Future {
               Ok(
                 response(
                   DAL.elections.updateState(id, Elections.STOPPED)
                 )
               )
-            }
-        }
+            } (slickExecutionContext)
+          }
       }
-      (slickExecutionContext)
   }
 
   /** request a tally, dumps votes to the private ds */
