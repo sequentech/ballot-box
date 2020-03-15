@@ -282,7 +282,7 @@ object ElectionsApi
             Future {
               Ok(
                 response(
-                  DAL.elections.updateState(id, Elections.STOPPED)
+                  DAL.elections.updateState(id, Elections.TALLY_OK)
                 )
               )
             } (slickExecutionContext)
