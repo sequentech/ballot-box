@@ -417,23 +417,13 @@ object ElectionsApi
     val future = getElection(id).flatMap
     {
       election =>
-        if (updateDatabase) {
-          if (requestConfig.isEmpty) {
-            Future {
-              BadRequest(
-                error(
-                  "Cannot update resultsConfig, " + 
-                  s"the given one is empty: '$requestConfig'"
-                )
-              )
-            }
-          } else {
-            Logger.info(
-              "Updating resultsConfig for election " +
-              s"$id with = $requestConfig"
-            )
-            val ret = DAL.elections.updateResultsConfig(id, requestConfig)
-          }
+        if (updateDatabase && !requestConfig.isEmpty) 
+        {
+          Logger.info(
+            "Updating resultsConfig for election " +
+            s"$id with = $requestConfig"
+          )
+          val ret = DAL.elections.updateResultsConfig(id, requestConfig)
         }
 
         // if no config use the one stored in the election
