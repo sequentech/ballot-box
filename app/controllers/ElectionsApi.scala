@@ -498,10 +498,13 @@ object ElectionsApi
                       election,
                       r,
 
-                      // update state only if election is not 
-                      // stopped and election is not virtual and
+                      // update state only if election is in tally_ok
+                      // or results_ok state and election is not virtual and
                       // if was requested to be updated
-                      Elections.STOPPED != election.state &&
+                      (
+                        Elections.TALLY_OK == election.state ||
+                        Elections.RESULTS_OK == election.state
+                      ) &&
                       updateDatabase
                     )
                   )
