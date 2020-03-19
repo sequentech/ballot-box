@@ -913,7 +913,7 @@ object ElectionsApi
     results: Option[String], subtallies: Array[Long]) = Future
   {
     Datastore.publishResults(id, results, subtallies)
-    DAL.elections.updatePublishedResults(id, results)
+    DAL.elections.updatePublishedResults(id, results.get)
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
     Future {
       publishedCallbackUrl map { callback_url =>

@@ -100,8 +100,8 @@ case class Election(
   resultsConfig: Option[String],
   ballotBoxesResultsConfig: Option[String],
   results: Option[String],
-  publishedResults: Option[String],
   resultsUpdated: Option[Timestamp],
+  publishedResults: Option[String],
   virtual: Boolean,
   logo_url: Option[String])
 {
