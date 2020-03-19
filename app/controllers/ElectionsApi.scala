@@ -301,7 +301,8 @@ object ElectionsApi
           (
             e.state == Elections.RESULTS_OK ||
             e.state == Elections.RESULTS_PUB
-          ) || 
+          )
+        ) || 
         allowPartialTallies 
       ) {
         BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e))
@@ -361,7 +362,8 @@ object ElectionsApi
               (
                 e.state == Elections.RESULTS_OK ||
                 e.state == Elections.RESULTS_PUB
-              ) || 
+              )
+            ) || 
             allowPartialTallies 
           ) {
             BallotboxApi
@@ -392,7 +394,8 @@ object ElectionsApi
               (
                 e.state == Elections.RESULTS_OK ||
                 e.state == Elections.RESULTS_PUB
-              ) || 
+              )
+            ) || 
             allowPartialTallies 
           ) {
             tallyElection(e)
