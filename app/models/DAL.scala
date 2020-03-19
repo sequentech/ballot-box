@@ -149,6 +149,11 @@ object DAL {
       Elections.updateState(id, state)
     }
 
+    def updatePublishedResults(id: Long, results: String) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.updatePublishedResults(id, results)
+    }
+
     def updateResults(id: Long, results: String, updateStatus: Boolean) = DB.withSession { implicit session =>
       Cache.remove(key(id))
       Elections.updateResults(id, results, updateStatus)

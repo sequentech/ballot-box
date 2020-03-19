@@ -100,6 +100,7 @@ case class Election(
   resultsConfig: Option[String],
   ballotBoxesResultsConfig: Option[String],
   results: Option[String],
+  publishedResults: Option[String],
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
   logo_url: Option[String])
@@ -125,11 +126,9 @@ case class Election(
     }
 
     var config = configJson.validate[ElectionConfig].get
-    var res = None: Option[String]
     var resUp = None: Option[Timestamp]
 
     if (state == Elections.RESULTS_PUB) {
-        res = results
         resUp = resultsUpdated
     }
 
@@ -141,7 +140,7 @@ case class Election(
       endDate,
       pks,
       resultsConfig,
-      res,
+      publishedResults,
       resUp,
       virtual,
       logo_url)
@@ -162,6 +161,7 @@ class Elections(tag: Tag)
   def ballotBoxesResultsConfig = column[String]("ballot_boxes_results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
+  def publishedResults = column[String]("published_results", O.Nullable, O.DBType("text"))
   def virtual = column[Boolean]("virtual")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
 
@@ -176,6 +176,7 @@ class Elections(tag: Tag)
     ballotBoxesResultsConfig.?,
     results.?,
     resultsUpdated.?,
+    publishedResults.?,
     virtual,
     logo_url.?
   ) <> (Election.tupled, Election.unapply _)
@@ -245,6 +246,13 @@ object Elections {
 
   def setTallyDate(id: Long, tallyDate: Timestamp)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => e.resultsUpdated).update(tallyDate)
+  }
+
+  def updatePublishedResults(id: Long, results: String)(implicit s: Session) = {
+    elections
+      .filter(_.id === id)
+      .map(e => e.publishedResults)
+      .update(results)
   }
 
   def updateResults(id: Long, results: String, updateStatus: Boolean)(implicit s: Session) = {

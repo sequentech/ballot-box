@@ -528,7 +528,7 @@ object ElectionsApi
     val future = getElection(id).flatMap
     {
       e =>
-        if(Elections.RESULTS_OK  == e.state)
+        if(!e.results.isEmpty)
         {
           var electionConfigStr = Json.parse(e.configuration).as[JsObject]
           if (!electionConfigStr.as[JsObject].keys.contains("virtualSubelections"))
@@ -768,6 +768,7 @@ object ElectionsApi
                           None,
                           None,
                           None,
+                          None,
                           validated.virtual,
                           validated.logo_url
                         )
@@ -883,6 +884,7 @@ object ElectionsApi
     results: Option[String], subtallies: Array[Long]) = Future
   {
     Datastore.publishResults(id, results, subtallies)
+    DAL.elections.updatePublishedResults(id, results)
     DAL.elections.updateState(id, Elections.RESULTS_PUB)
     Future {
       publishedCallbackUrl map { callback_url =>
