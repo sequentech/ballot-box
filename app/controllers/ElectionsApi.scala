@@ -294,7 +294,16 @@ object ElectionsApi
   def tally(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async { request =>
 
     val tally = getElection(id).flatMap { e =>
-      if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
+      if(
+        e.state == Elections.STOPPED ||
+        (
+          e.results.isEmpty && 
+          (
+            e.state == Elections.RESULTS_OK ||
+            e.state == Elections.RESULTS_PUB
+          ) || 
+        allowPartialTallies 
+      ) {
         BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e))
       }
       else {
@@ -345,8 +354,16 @@ object ElectionsApi
         val validIds = request.body.asOpt[List[String]].map(_.toSet)
 
         val tally = getElection(id).flatMap { e =>
-          if( (e.state == Elections.STOPPED) || allowPartialTallies ) 
-          {
+          if(
+            e.state == Elections.STOPPED ||
+            (
+              e.results.isEmpty && 
+              (
+                e.state == Elections.RESULTS_OK ||
+                e.state == Elections.RESULTS_PUB
+              ) || 
+            allowPartialTallies 
+          ) {
             BallotboxApi
               .dumpTheVotes(e.id, validIds)
               .flatMap(_ => tallyElection(e))
@@ -368,7 +385,16 @@ object ElectionsApi
     {
       request =>
         val tally = getElection(id).flatMap { e =>
-          if( (e.state == Elections.STOPPED) || allowPartialTallies ) {
+          if(
+            e.state == Elections.STOPPED ||
+            (
+              e.results.isEmpty && 
+              (
+                e.state == Elections.RESULTS_OK ||
+                e.state == Elections.RESULTS_PUB
+              ) || 
+            allowPartialTallies 
+          ) {
             tallyElection(e)
           }
           else {
