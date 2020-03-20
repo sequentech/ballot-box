@@ -624,15 +624,15 @@ object ElectionsApi
             {
               DAL.elections.updateState(id, Elections.RESULTS_OK)
             }
-            Ok(response("ok"))
+            Future { Ok(response("ok")) }
           } else
           {
             Logger.warn(
-              s"results not published for $id, election state is ${e.state}"
+              s"results not published for $id, election state is ${election.state}"
             )
             BadRequest(
               error(
-                s"results not published for $id, election state is ${e.state}"
+                s"results not published for $id, election state is ${election.state}"
               )
             )
           }
