@@ -630,11 +630,13 @@ object ElectionsApi
             Logger.warn(
               s"results not published for $id, election state is ${election.state}"
             )
-            BadRequest(
-              error(
-                s"results not published for $id, election state is ${election.state}"
+            Future {
+              BadRequest(
+                error(
+                  s"results not published for $id, election state is ${election.state}"
+                )
               )
-            )
+            }
           }
       }
       future.recover {
