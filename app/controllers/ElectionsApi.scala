@@ -245,6 +245,21 @@ object ElectionsApi
       } (slickExecutionContext)
   }
 
+  /** sets election in stopped state, votes will not be accepted */
+  def allowTally(id: Long) =
+    HAction("", "AuthEvent", id, "edit|allow-tally")
+      .async 
+  {
+    request => 
+      Future {
+        Ok(
+          response(
+            DAL.elections.allowTally(id)
+          )
+        )
+      } (slickExecutionContext)
+  }
+
   /** sets a virtual election in TALLY_OK state */
   def virtualTally(id: Long) =
     HAction("", "AuthEvent", id, "edit|tally")
@@ -305,7 +320,17 @@ object ElectionsApi
         ) || 
         allowPartialTallies 
       ) {
-        BallotboxApi.dumpTheVotes(e.id).flatMap(_ => tallyElection(e))
+        if (e.tallyAllowed) 
+        {
+          BallotboxApi
+            .dumpTheVotes(e.id)
+            .flatMap(_ => tallyElection(e))
+        } else {
+          val msg = s"Cannot tally election $id because tallyAllowed = false"
+          Logger.warn(msg)
+          Future { BadRequest(error(msg)) }
+
+        }
       }
       else {
         Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
@@ -366,9 +391,16 @@ object ElectionsApi
             ) || 
             allowPartialTallies 
           ) {
-            BallotboxApi
-              .dumpTheVotes(e.id, validIds)
-              .flatMap(_ => tallyElection(e))
+            if (e.tallyAllowed)
+            {
+              BallotboxApi
+                .dumpTheVotes(e.id, validIds)
+                .flatMap(_ => tallyElection(e))
+            } else {
+              val msg = s"Cannot tally election $id because tallyAllowed = false"
+              Logger.warn(msg)
+              Future { BadRequest( error(msg)) }
+            }
           } else {
             Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
             Future { 
@@ -398,7 +430,14 @@ object ElectionsApi
             ) || 
             allowPartialTallies 
           ) {
-            tallyElection(e)
+            if (e.tallyAllowed)
+            {
+              tallyElection(e)
+            } else {
+              val msg = s"Cannot tally election $id because tallyAllowed = false"
+              Logger.warn(msg)
+              Future { BadRequest( error(msg)) }
+            }
           }
           else {
             Logger.warn(s"Cannot tally election $id in wrong state ${e.state}")
@@ -762,6 +801,10 @@ object ElectionsApi
         body = body.as[JsObject] + ("virtual" -> Json.toJson(false))
     }
 
+    if (!body.as[JsObject].keys.contains("tally_allowed")) {
+        body = body.as[JsObject] + ("tally_allowed" -> Json.toJson(false))
+    }
+
     if (!body.as[JsObject].keys.contains("virtualSubelections")) {
         body = body.as[JsObject] + ("virtualSubelections" -> JsArray())
     }
@@ -838,6 +881,7 @@ object ElectionsApi
                           None,
                           None,
                           validated.virtual,
+                          validated.tally_allowed,
                           validated.logo_url
                         )
                       )
