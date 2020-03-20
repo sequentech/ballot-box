@@ -118,10 +118,6 @@ case class Election(
         configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(virtual))
     }
 
-    if (!configJson.as[JsObject].keys.contains("tally_allowed")) {
-        tallyAllowed = configJson.as[JsObject] + ("tally_allowed" -> Json.toJson(tallyAllowed))
-    }
-
     if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
         configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
     }
