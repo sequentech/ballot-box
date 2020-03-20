@@ -103,6 +103,7 @@ case class Election(
   resultsUpdated: Option[Timestamp],
   publishedResults: Option[String],
   virtual: Boolean,
+  tallyAllowed: Boolean,
   logo_url: Option[String])
 {
 
@@ -115,6 +116,10 @@ case class Election(
 
     if (!configJson.as[JsObject].keys.contains("virtual")) {
         configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(virtual))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("tally_allowed")) {
+        tallyAllowed = configJson.as[JsObject] + ("tally_allowed" -> Json.toJson(tallyAllowed))
     }
 
     if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
@@ -143,6 +148,7 @@ case class Election(
       publishedResults,
       resUp,
       virtual,
+      tallyAllowed,
       logo_url)
   }
 }
