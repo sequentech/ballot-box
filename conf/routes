@@ -35,6 +35,7 @@ POST    /api/election/:id/tally-no-dump                       controllers.Electi
 POST    /api/election/:id/calculate-results                   controllers.ElectionsApi.calculateResults(id: Long)
 POST    /api/election/:id/update-ballot-boxes-config          controllers.ElectionsApi.updateBallotBoxesResultsConfig(id: Long)
 POST    /api/election/:id/publish-results                     controllers.ElectionsApi.publishResults(id: Long)
+POST    /api/election/:id/unpublish-results                   controllers.ElectionsApi.unpublishResults(id: Long)
 GET     /api/election/:id/results                             controllers.ElectionsApi.getResults(id: Long)
 GET     /api/election/:id/voters                              controllers.ElectionsApi.getElectionVoters(id: Long)
 GET     /api/election/:id/stats                               controllers.ElectionsApi.getElectionStats(id: Long)

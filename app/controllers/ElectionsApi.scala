@@ -606,6 +606,43 @@ object ElectionsApi
     publishResultsLogic(id)
   }
 
+  def unpublishResults(id: Long) =
+    HAction(
+      "", 
+      "AuthEvent", 
+      id, 
+      "edit|publish-results"
+    ).async {
+      Logger.info(s"unpublishing results for election $id")
+
+      val future = getElection(id).flatMap {
+        election =>
+          if(!election.publishedResults.isEmpty) 
+          {
+            DAL.elections.updatePublishedResults(id, null)
+            if (election.state == Elections.RESULTS_PUB)
+            {
+              DAL.elections.updateState(id, Elections.RESULTS_OK)
+            }
+            Ok(response("ok"))
+          } else
+          {
+            Logger.warn(
+              s"results not published for $id, election state is ${e.state}"
+            )
+            BadRequest(
+              error(
+                s"results not published for $id, election state is ${e.state}"
+              )
+            )
+          }
+      }
+      future.recover {
+        case e:NoSuchElementException => 
+          BadRequest(error(s"Election $id not found"))
+      }
+    }
+
   def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view-results").async { request =>
 
     val future = getElection(id).map { election =>
