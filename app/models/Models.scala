@@ -126,6 +126,10 @@ case class Election(
         configJson = configJson.as[JsObject] + ("logo_url" -> Json.toJson(logo_url))
     }
 
+    if (!configJson.as[JsObject].keys.contains("tally_allowed")) {
+        configJson = configJson.as[JsObject] + ("tally_allowed" -> Json.toJson(tallyAllowed))
+    }
+
     var config = configJson.validate[ElectionConfig].get
     var resUp = None: Option[Timestamp]
 
