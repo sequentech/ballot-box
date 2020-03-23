@@ -367,6 +367,18 @@ def stop(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def auth_stop(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
+    r = request_post(url, headers=headers)
+
+def auth_start(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/started/' % cfg['election_id']
+    r = request_post(url, headers=headers)
+
 def archive(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
