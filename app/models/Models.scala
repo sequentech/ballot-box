@@ -640,6 +640,7 @@ case class ElectionPresentation(
 /** defines election presentation extra options for an election */
 case class ElectionExtra(
   start_screen__skip: Option[Boolean],
+  disable_voting_booth_audit_ballot: Option[Boolean],
   success_screen__hide_ballot_tracker: Option[Boolean],
   success_screen__hide_qr_code: Option[Boolean],
   success_screen__hide_download_ballot_ticket: Option[Boolean],
