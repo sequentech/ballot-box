@@ -4,13 +4,13 @@ Agora Elections
 Installation
 =========
 
-Installing java 7 in debian
+Installing java 7
 
-    http://www.webupd8.org/2012/06/how-to-install-oracle-java-7-in-debian.html
+    apt-get install  openjdk-7-jdk
 
 Download the play activator from
 
-    https://www.playframework.com/download
+    wget https://downloads.typesafe.com/typesafe-activator/1.3.2/typesafe-activator-1.3.2.zip
 
 Once you have installed, clone the repository
 
