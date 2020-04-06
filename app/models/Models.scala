@@ -235,8 +235,8 @@ object Elections {
         .filter(_.id === id)
         .map(e => (e.state, e.results, e.resultsUpdated))
         .update(
-          Elections.RESULTS_OK, 
-          results, 
+          Elections.RESULTS_OK,
+          results,
           new Timestamp(new Date().getTime)
         )
     } else {
@@ -260,7 +260,7 @@ object Elections {
     } else {
       elections.filter(_.id === id).map(e => (e.configuration, e.startDate, e.endDate)).update(config, start.get, end.get)
     }
-    
+
   }
   def updateResultsConfig(id: Long, resultsConfig: String)
   (implicit s: Session) =
@@ -316,8 +316,20 @@ case class ElectionDTO(
 )
 
 /** an election configuration defines an election */
-case class ElectionConfig(id: Long, layout: String, director: String, authorities: Array[String], title: String, description: String,
-  questions: Array[Question], start_date: Option[Timestamp], end_date: Option[Timestamp], presentation: ElectionPresentation, extra_data: Option[String], resultsConfig: Option[String], virtual: Boolean, virtualSubelections: Option[Array[Long]], logo_url: Option[String])
+case class ElectionConfig(
+  id: Long,
+  layout: String, director: String,
+  authorities: Array[String],
+  title: String, description: String,
+  questions: Array[Question],
+  start_date: Option[Timestamp],
+  end_date: Option[Timestamp],
+  presentation: ElectionPresentation,
+  extra_data: Option[String],
+  resultsConfig: Option[String],
+  virtual: Boolean,
+  virtualSubelections: Option[Array[Long]],
+  logo_url: Option[String])
 {
 
   /**
@@ -443,7 +455,7 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
     // validate shuffle categories
-    if (extra_options.isDefined && 
+    if (extra_options.isDefined &&
         extra_options.get.shuffle_category_list.isDefined &&
         extra_options.get.shuffle_category_list.get.size > 0) {
       val categories = answers.map{ x => x.category } toSet

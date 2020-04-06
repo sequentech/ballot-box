@@ -64,12 +64,20 @@ class BallotboxSpec extends Specification with TestContexts with Response {
     "allow casting votes" in new AppWithDbData() {
 
       DB.withSession { implicit session =>
-        val cfg = TestData.config.validate[ElectionConfig].get
-        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None, None, None, true, None))
+        val cfg = TestData.config.validate[ElectionConfig]
 
-        // for validation to work we need to set the pk for the election manually (for election 1020)
-        Elections.setPublicKeys(1, pks1020)
-        Elections.updateState(1, Elections.STARTED)
+        cfg.fold(
+
+          errors => failure(s"Invalid election config json $errors"),
+
+          cfg => {
+            Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None, None, None, true, None))
+
+            // for validation to work we need to set the pk for the election manually (for election 1020)
+            Elections.setPublicKeys(1, pks1020)
+            Elections.updateState(1, Elections.STARTED)
+          }
+        )
       }
 
       val voteJson = getVote(1, "1")

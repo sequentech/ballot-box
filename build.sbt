@@ -27,7 +27,7 @@ trapExit in run := false
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
   jdbc,
@@ -39,7 +39,10 @@ libraryDependencies ++= Seq(
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
-  "com.chuusai" %% "shapeless" % "2.0.0"
+  "com.chuusai" %% "shapeless" % "2.0.0",
+  "org.cvogt" %% "play-json-extensions" % "0.2"
 )
 
+// add this if can't resolve akka-slf4j_2.11
+// resolvers += "mvn" at "https://repo1.maven.org/maven2/"
 resolvers += "Spy Repository" at "http://files.couchbase.com/maven2" // required to resolve `spymemcached`, the plugin's dependency.

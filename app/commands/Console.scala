@@ -124,7 +124,7 @@ class ConsoleImpl extends ConsoleInterface {
    * It generates --vote-count number of plaintexts, for the elections mentioned
    * on file --election-ids. The election-ids file should have an election id on
    * each line. Election ids should not be repeated. The generated plaintexts
-   * will be saved on the file set by option --plaintexts (or its default 
+   * will be saved on the file set by option --plaintexts (or its default
    * value). The output format of the plaintexts file is compatible with the
    * required input for command gen_votes. The number of votes should be at
    * least as big as the number of elections.
@@ -140,7 +140,7 @@ class ConsoleImpl extends ConsoleInterface {
         getElectionsSet()
         .flatMap
         {
-          electionsSet => get_election_info_all(electionsSet) 
+          electionsSet => get_election_info_all(electionsSet)
         }
         .flatMap
         {
@@ -321,7 +321,7 @@ class ConsoleImpl extends ConsoleInterface {
               val eid = array(0).toLong
               val voterId = array(1)
               val khmac = get_khmac(voterId, "AuthEvent", eid, "vote", now)
-              writer.write(file_line + "|" + khmac + "\n") 
+              writer.write(file_line + "|" + khmac + "\n")
           }
           .map
           {
@@ -366,7 +366,7 @@ class ConsoleImpl extends ConsoleInterface {
   |     gen_plaintexts
   |       Generates plaintext ballots covering every option for every question
   |       for each election id. Use --vote-count to set the number of plaintexts
-  |       to be generated, which should be at least the number of elections. 
+  |       to be generated, which should be at least the number of elections.
   |
   |     gen_votes
   |       Given a plaintext file where each string line contains a plaintext,
@@ -452,7 +452,7 @@ class ConsoleImpl extends ConsoleInterface {
   |       agora_elections service will use https.
   |       Usually, the agora_elections service will use a self-signed
   |       certificate. To make this program to accept the certificate, use
-  |       -Djavax.net.ssl.trustStore=/path/to/jks/truststore  and 
+  |       -Djavax.net.ssl.trustStore=/path/to/jks/truststore  and
   |       -Djavax.net.ssl.trustStorePassword=pass with a jks truststore that
   |       includes the agora_elections certificate.
   |       Possible values: true|false
@@ -838,7 +838,7 @@ class ConsoleImpl extends ConsoleInterface {
           // sum 1 as it would cause encoding problems, as zeros on the left are
           // removed in the end
           val optionStrBase = ( answer.options(j) + 1 ).toString
-          // Each chosen option needs to have the same length in number of 
+          // Each chosen option needs to have the same length in number of
           // characters/digits, so we fill in with zeros on the left
           strValue += "0" * (numChars - optionStrBase.length) + optionStrBase
         }
@@ -907,7 +907,7 @@ class ConsoleImpl extends ConsoleInterface {
   def get_pks_map(
     electionsInfoMap: scala.collection.mutable.HashMap[Long, ElectionDTO]
   )
-    : scala.collection.mutable.HashMap[Long, Array[PublicKey]] = 
+    : scala.collection.mutable.HashMap[Long, Array[PublicKey]] =
   {
     val pksMap = scala.collection.mutable.HashMap[Long, Array[PublicKey]]()
     // map election ids and public keys
@@ -1222,7 +1222,7 @@ object Console
     if(0 == args.length)
     {
       intf.showHelp()
-    } else 
+    } else
     {
       intf.parse_args(args)
       val command = args(0)

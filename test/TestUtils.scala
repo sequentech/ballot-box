@@ -56,8 +56,8 @@ trait TestContexts {
   "director": "test-auth1.agoravoting.com",
   "authorities": ["test-auth2.agoravoting.com"],
   "layout": "pcandidates-election",
+  "virtual": false,
   "presentation": {
-    "share_text": "lo que sea",
     "theme": "foo",
     "urls": [
       {
@@ -83,7 +83,7 @@ trait TestContexts {
               "shuffle_categories": true,
               "shuffle_all_options": true,
               "shuffle_category_list": []
-          }
+          },
           "answers": [
               {
                   "id": 0,
