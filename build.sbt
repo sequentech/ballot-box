@@ -39,7 +39,6 @@ libraryDependencies ++= Seq(
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
-  "com.chuusai" %% "shapeless" % "2.0.0",
   "org.cvogt" %% "play-json-extensions" % "0.2"
 )
 

@@ -224,29 +224,6 @@ class ConsoleSpec extends Specification with TestContexts
         }
     })
 
-    /* drb removed due to race condition
-
-    "work (get_election_info_all)" in new WithServer(app = appWithRoutes, port = 5433)
-    {
-      val console = new ConsoleImpl()
-      console.http_type = "http"
-      console.host = "localhost"
-      console.port = 5433
-      console.service_path = "honolulu/"
-      val electionsSetFails = scala.collection.immutable.Set[Long](24, 25)
-      val electionsSetSuceeds = scala.collection.immutable.Set[Long](24)
-
-      val dtoFutureFails = console.get_election_info_all(electionsSetFails)
-      val dtoFutureSuceeds = console.get_election_info_all(electionsSetSuceeds)
-
-      Await.ready(dtoFutureFails, timeoutDuration).value.get must beFailedTry
-      val result = Await.ready(dtoFutureSuceeds, timeoutDuration).value
-      println("result is " + result)
-      result.get must beSuccessfulTry
-
-    }
-    */
-
     "work (get_election_info)" in new WithServer(app = appWithRoutes, port = 5433)
     {
 
@@ -300,23 +277,6 @@ class ConsoleSpec extends Specification with TestContexts
       Await.ready(dtoFuture24, timeoutDuration).value.get must beSuccessfulTry
       Await.ready(dtoFuture25, timeoutDuration).value.get must beFailedTry
     }
-/*  drb removed causing errors
-    "work (dump_pks_elections)" in new WithServer(app = appWithRoutes, port = 5433)
-    {
-      val console = new ConsoleImpl()
-      console.http_type = "http"
-      console.host = "localhost"
-      console.port = 5433
-      console.service_path = "honolulu/"
-      val electionsSetFails = scala.collection.immutable.Set[Long](24, 25)
-      val electionsSetSuceeds = scala.collection.immutable.Set[Long](24)
-
-      val dtoFutureFails = console.dump_pks_elections(electionsSetFails)
-      val dtoFutureSuceeds = console.dump_pks_elections(electionsSetSuceeds)
-
-      Await.ready(dtoFutureFails, timeoutDuration).value.get must beFailedTry
-      Await.ready(dtoFutureSuceeds, timeoutDuration).value.get must beSuccessfulTry
-    }*/
   } // dump_pks_elections/dump_pks
 
   "encodePlaintext" should
