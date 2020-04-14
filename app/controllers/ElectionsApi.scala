@@ -1063,7 +1063,7 @@ object ElectionsApi
 
     Logger.info(s"tally for $id: calculating results with command: '$cmd'")
     val output = cmd.!!
-    Logger.info(s"tally for $id: calculating results with command: results length = '${output.length}")
+    Logger.info(s"tally for $id: calculating results with command: results length = '${output.length}'")
 
     // create the public symbolic link to the new results dir
     var newResultsDirRX = Paths.get(
