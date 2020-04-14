@@ -45,7 +45,7 @@ import os as _os
 
 from tempfile import mkdtemp
 
-from sqlalchemy import create_engine, select, func, text
+from sqlalchemy import create_engine, select, func, text, update as update_sql
 from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
 from sqlalchemy import distinct
 
@@ -180,7 +180,8 @@ def elections_table():
         Column('end_date', TIMESTAMP),
         Column('pks', String),
         Column('results', String),
-        Column('results_updated', String)
+        Column('results_updated', String),
+        Column('results_config', String)
     )
     return elections
 
@@ -882,6 +883,17 @@ def is_int(s):
     except ValueError:
         return False
 
+def update_results_config(cfg, args):
+    conn = get_db_connection()
+    elections = elections_table()
+    with open(cfg['payload'], 'r') as f:
+        results_configs = json.loads(f.read())
+        for results_config in results_configs:
+            statement = update_sql(elections)\
+                .where(elections.c.id == results_config['id'])\
+                .values(results_config=results_config['resultsConfig'])
+            result = conn.execute(statement)
+
 def main(argv):
     parser = argparse.ArgumentParser(description='agora-elections admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('command', nargs='+', help='''
@@ -915,6 +927,7 @@ tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
 update_ballot_boxes_config <election_id>: uses agora-results to calculate the election's results (stored in db)
+update_results_config --payload <config>: update results config from a file
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')

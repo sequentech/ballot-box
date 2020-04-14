@@ -454,7 +454,9 @@ object ElectionsApi
   private def ensureTally(id: Long, election: Election)
   {
     val tallyLink = Datastore.getTallyPath(id)
-    if (!Files.exists(tallyLink))
+    val tallyExists = Files.exists(tallyLink)
+    Logger.info(s"Ensuring tally for $id in $tallyLink exists (tallyExists=$tallyExists)")
+    if (!tallyExists)
     {
       val configfile = File.createTempFile("config", ".json")
       val tempPath = configfile.getAbsolutePath()
@@ -485,7 +487,7 @@ object ElectionsApi
     val future = getElection(id).flatMap
     {
       election =>
-        if (updateDatabase && !requestConfig.isEmpty) 
+        if (!requestConfig.isEmpty) 
         {
           Logger.info(
             "Updating resultsConfig for election " +
@@ -550,7 +552,7 @@ object ElectionsApi
                       val subelection = DAL.elections.findByIdWithSession(eid)
                       // ensure a tally can be executed
                       if (subelection.isDefined) {
-                        ensureTally(id, subelection.get)
+                        ensureTally(eid, subelection.get)
                       }
                       subelection.isDefined && subelection.get.results !=  null
                     }
@@ -1059,9 +1061,9 @@ object ElectionsApi
       else
         s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id"
 
-    Logger.info(s"executing '$cmd'")
+    Logger.info(s"tally for $id: calculating results with command: '$cmd'")
     val output = cmd.!!
-    Logger.info(s"command returns\n$output")
+    Logger.info(s"tally for $id: calculating results with command: results length = '${output.length}")
 
     // create the public symbolic link to the new results dir
     var newResultsDirRX = Paths.get(
