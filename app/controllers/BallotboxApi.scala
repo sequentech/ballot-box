@@ -154,8 +154,8 @@ object BallotboxApi extends Controller with Response {
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long, validVoterIds: Option[Set[String]] = None) = Future {
 
-    val length = validVoterIds.getOrElse(Set()).length()
-    Logger.info(s"dumping votes for election $electionId, validVoterids.length = ${length}")
+    val size = validVoterIds.getOrElse(Set()).size()
+    Logger.info(s"dumping votes for election $electionId, validVoterids.size = ${size}")
 
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
     DB.withSession { implicit session =>
