@@ -647,6 +647,7 @@ case class ElectionExtra(
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
   success_screen__redirect_to_login__auto_seconds: Option[Int],
+  public_results__rotate_questions: Option[Boolean],
   public_title: Option[String]
 )
 
