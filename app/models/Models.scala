@@ -350,6 +350,7 @@ case class ElectionDTO(
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
+  tally_allowed: Boolean,
   tallyAllowed: Boolean,
   logo_url: Option[String]
 )
