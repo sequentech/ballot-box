@@ -350,7 +350,6 @@ case class ElectionDTO(
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
-  tally_allowed: Boolean,
   tallyAllowed: Boolean,
   logo_url: Option[String]
 )
@@ -368,6 +367,7 @@ case class ElectionConfig(
   extra_data: Option[String],
   resultsConfig: Option[String],
   virtual: Boolean,
+  tally_allowed: Boolean,
   virtualSubelections: Option[Array[Long]],
   logo_url: Option[String])
 {
