@@ -154,7 +154,8 @@ object BallotboxApi extends Controller with Response {
   /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
   def dumpTheVotes(electionId: Long, validVoterIds: Option[Set[String]] = None) = Future {
 
-    Logger.info(s"dumping votes for election $electionId")
+    val size = validVoterIds.getOrElse(Set()).size
+    Logger.info(s"dumping votes for election $electionId, validVoterids.size = $size")
 
     val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
     DB.withSession { implicit session =>
@@ -172,7 +173,6 @@ object BallotboxApi extends Controller with Response {
         val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, batchSize)
         // filter duplicates
         val noDuplicates = next.filter { vote =>
-
           if(ids.contains(vote.voter_id)) {
             false
           } else {
@@ -182,11 +182,23 @@ object BallotboxApi extends Controller with Response {
         }
 
         // filter by voter id's, if present
-        val maybeValid = validVoterIds.map( ids => noDuplicates.filter( vote => ids.contains(vote.voter_id)) )
+        val maybeValid = validVoterIds
+          .map(
+            ids =>
+              noDuplicates.filter(
+                vote => ids.contains(vote.voter_id)
+              )
+          )
         val valid = maybeValid.getOrElse(noDuplicates)
 
-        val maybeInvalid = validVoterIds.map( ids => noDuplicates.filter( vote => !ids.contains(vote.voter_id)) )
-        val invalid = maybeInvalid.getOrElse(noDuplicates)
+        val maybeInvalid = validVoterIds
+          .map(
+            ids =>
+              noDuplicates.filter(
+                vote => !ids.contains(vote.voter_id)
+              )
+          )
+        val invalid = maybeInvalid.getOrElse(List())
 
         // eo format is new line separated list of votes
         // we add an extra \n as otherwise there will be no separation between batches

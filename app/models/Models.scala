@@ -101,7 +101,9 @@ case class Election(
   ballotBoxesResultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
+  publishedResults: Option[String],
   virtual: Boolean,
+  tallyAllowed: Boolean,
   logo_url: Option[String])
 {
 
@@ -124,12 +126,14 @@ case class Election(
         configJson = configJson.as[JsObject] + ("logo_url" -> Json.toJson(logo_url))
     }
 
+    if (!configJson.as[JsObject].keys.contains("tally_allowed")) {
+        configJson = configJson.as[JsObject] + ("tally_allowed" -> Json.toJson(tallyAllowed))
+    }
+
     var config = configJson.validate[ElectionConfig].get
-    var res = None: Option[String]
     var resUp = None: Option[Timestamp]
 
     if (state == Elections.RESULTS_PUB) {
-        res = results
         resUp = resultsUpdated
     }
 
@@ -141,9 +145,10 @@ case class Election(
       endDate,
       pks,
       resultsConfig,
-      res,
+      publishedResults,
       resUp,
       virtual,
+      tallyAllowed,
       logo_url)
   }
 }
@@ -162,7 +167,9 @@ class Elections(tag: Tag)
   def ballotBoxesResultsConfig = column[String]("ballot_boxes_results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
+  def publishedResults = column[String]("published_results", O.Nullable, O.DBType("text"))
   def virtual = column[Boolean]("virtual")
+  def tallyAllowed = column[Boolean]("tally_allowed")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
 
   def * = (
@@ -176,7 +183,9 @@ class Elections(tag: Tag)
     ballotBoxesResultsConfig.?,
     results.?,
     resultsUpdated.?,
+    publishedResults.?,
     virtual,
+    tallyAllowed,
     logo_url.?
   ) <> (Election.tupled, Election.unapply _)
 }
@@ -211,10 +220,32 @@ object Elections {
 
   def updateState(id: Long, state: String)(implicit s: Session) = {
     state match {
-      case STARTED => elections.filter(_.id === id).map(e => (e.state, e.startDate)).update(state, new Timestamp(new Date().getTime))
-      case STOPPED => elections.filter(_.id === id).map(e => (e.state, e.endDate)).update(state, new Timestamp(new Date().getTime))
-      case _ => elections.filter(_.id === id).map(e => e.state).update(state)
+      case STARTED => 
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.startDate))
+          .update(
+            state, 
+            new Timestamp(new Date().getTime)
+          )
+      case STOPPED => 
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.endDate))
+          .update(
+            state, 
+            new Timestamp(new Date().getTime)
+          )
+      case _ => 
+        elections
+          .filter(_.id === id)
+          .map(e => e.state)
+          .update(state)
     }
+  }
+
+  def allowTally(id: Long)(implicit s: Session) = {
+    elections.filter(_.id === id).map(e => e.tallyAllowed).update(true)
   }
 
   def setStartDate(id: Long, startDate: Timestamp)(implicit s: Session) = {
@@ -227,6 +258,13 @@ object Elections {
 
   def setTallyDate(id: Long, tallyDate: Timestamp)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => e.resultsUpdated).update(tallyDate)
+  }
+
+  def updatePublishedResults(id: Long, results: String)(implicit s: Session) = {
+    elections
+      .filter(_.id === id)
+      .map(e => e.publishedResults)
+      .update(results)
   }
 
   def updateResults(id: Long, results: String, updateStatus: Boolean)(implicit s: Session) = {
@@ -312,6 +350,7 @@ case class ElectionDTO(
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
+  tallyAllowed: Boolean,
   logo_url: Option[String]
 )
 
@@ -613,12 +652,14 @@ case class ElectionPresentation(
 /** defines election presentation extra options for an election */
 case class ElectionExtra(
   start_screen__skip: Option[Boolean],
+  disable_voting_booth_audit_ballot: Option[Boolean],
   success_screen__hide_ballot_tracker: Option[Boolean],
   success_screen__hide_qr_code: Option[Boolean],
   success_screen__hide_download_ballot_ticket: Option[Boolean],
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
-  success_screen__redirect_to_login__auto_seconds: Option[Int]
+  success_screen__redirect_to_login__auto_seconds: Option[Int],
+  public_title: Option[String]
 )
 
 /** an url to be shown when presenting election data */

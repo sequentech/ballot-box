@@ -17,6 +17,7 @@
 
 import argparse
 import json
+from uuid import uuid4
 import os
 import tarfile
 import tempfile
@@ -26,12 +27,24 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description='agora-elections create_empty_tally script'
     )
-    parser.add_argument('-c', '--config', help='file to the configuration of the election')
-    parser.add_argument('-o', '--output', help='output tally.tar.gz file path')
+    
+    parser.add_argument(
+        '-c', 
+        '--config', 
+        help='file to the configuration of the election'
+    )
+    
+    parser.add_argument(
+        '-o', 
+        '--output',
+        help='output tally.tar.gz file path'
+    )
+    
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
         questions = json.loads(f.read())['questions']
+
     questions_f = tempfile.NamedTemporaryFile(delete=False)
     questions_f.write(
         json.dumps(
@@ -48,8 +61,21 @@ def main(argv):
     tinfo = tar.gettarinfo(questions_f.name, "questions_json")
     with open(questions_f.name, 'rb') as questions_f2:
         tar.addfile(tinfo, questions_f2)
+
+    empty_file = tempfile.NamedTemporaryFile(delete=False)
+    empty_file.close()
+
+    with open(empty_file.name, 'rb') as empty_file_f:
+        for index, question in enumerate(questions):
+            empty_file_tinfo = tar.gettarinfo(
+                empty_file.name, 
+                "%d-%s/plaintexts_json" % (index, uuid4())
+            )
+            tar.addfile(empty_file_tinfo, empty_file_f)
+
     tar.close()
     os.unlink(questions_f.name)
+    os.unlink(empty_file.name)
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
