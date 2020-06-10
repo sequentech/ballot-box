@@ -99,7 +99,6 @@ class ElectionsSpec extends Specification with TestContexts with Response {
   }
 
   def responseCheck[T: Reads](result: Future[play.api.mvc.Result], f: T => Boolean, code:Int = OK) = {
-    println(s">>> received '${contentAsString(result)}'")
 
     status(result) must equalTo(code)
     contentType(result) must beSome.which(_ == "application/json")
