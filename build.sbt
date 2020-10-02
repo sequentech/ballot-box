@@ -45,3 +45,6 @@ libraryDependencies ++= Seq(
 // add this if can't resolve akka-slf4j_2.11
 // resolvers += "mvn" at "https://repo1.maven.org/maven2/"
 resolvers += "Spy Repository" at "https://files.couchbase.com/maven2" // required to resolve `spymemcached`, the plugin's dependency.
+
+resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
+
