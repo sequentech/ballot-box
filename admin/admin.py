@@ -392,6 +392,17 @@ def unarchive(cfg, args):
     url = base_url + 'auth-event/%d/unarchive/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
+def allow_tally(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'content-type': 'application/json', 'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/allow-tally' % (host, port, cfg['election_id'])
+    r = requests.post(
+        url,
+        headers=headers,
+        data=json.dumps(dict())
+    )
+
 def set_start_date(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
