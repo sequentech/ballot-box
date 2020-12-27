@@ -321,7 +321,7 @@ def delete_all_voters(cfg, args):
     for a specific election
     '''
     conn = get_authapi_db_connection()
-    election_id = cfg['electionConfig']['id']
+    election_id = cfg['election_id']
 
     delete_acls = '''
     DELETE FROM api_acl A
