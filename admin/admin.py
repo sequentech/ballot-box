@@ -314,6 +314,57 @@ def write_node_votes(votesData, filePath):
 
 ''' commands '''
 
+
+def delete_all_voters(cfg, args):
+    '''
+    Delete all the voters (and manually cascade on other tables) in authapi
+    for a specific election
+    '''
+    conn = get_authapi_db_connection()
+    election_id = cfg['electionConfig']['id']
+
+    delete_acls = '''
+    DELETE FROM api_acl A
+    WHERE EXISTS (
+    SELECT FROM api_userdata M
+    INNER JOIN auth_user U
+    ON U.id = M.user_id
+    WHERE M.event_id=%s AND M.status = 'act' AND A.user_id = U.id
+    )''' % election_id
+    print('deleting acls for election %s..' % election_id)
+    conn.execute(delete_acls)
+
+    delete_actions = '''
+    DELETE FROM api_action M
+    WHERE EXISTS (
+        SELECT FROM auth_user U
+        WHERE (U.id = M.executer_id OR U.id = M.receiver_id) AND M.event_id=%s
+    )''' % election_id
+    print('deleting actions for election %s..' % election_id)
+    conn.execute(delete_actions)
+
+    delete_userdata = '''
+    DELETE FROM api_userdata M
+    WHERE EXISTS (
+        SELECT FROM auth_user U
+        WHERE U.id = M.user_id AND M.event_id=%s
+    )''' % election_id
+    print('deleting userdatas for election %s..' % election_id)
+    conn.execute(delete_userdata)
+
+    # Every user needs to have an user data. As we deleted the user data at this
+    # stage, we lost the connection with the event_id (the election), so the way
+    # to remove the users related to the election is to remove all users with no
+    # corresponding userdata.
+    delete_user = '''
+    DELETE FROM auth_user U
+    WHERE not exists (
+        SELECT FROM api_userdata M
+        WHERE U.id = M.user_id
+    )'''
+    print('deleting users for election %s..' % election_id)
+    conn.execute(delete_user)
+
 def register(cfg, args):
 
     auth = get_hmac(cfg, "", "AuthEvent", cfg['electionConfig']['id'], "edit")
@@ -915,6 +966,7 @@ change_social <election_id>: changes the social netoworks share buttons configur
 count_votes [election_id, [election_id], ...]: count votes
 create <election_id>: creates an election
 deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
+delete_all_voters <election_id>: delete all voters for the election
 dump_pks <election_id>: dumps pks for an election (public datastore)
 dump_votes <election_id>: dumps votes for an election (private datastore)
 dump_votes [election_id, [election_id], ...]: dump voter ids
