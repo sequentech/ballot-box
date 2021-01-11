@@ -142,37 +142,69 @@ object BallotboxApi extends Controller with Response {
     }
   }
 
-  /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
-  def dumpVotesWithVoterIds(electionId: Long) = HAction("", "AuthEvent", electionId, "edit").async { request =>
-
-    dumpTheVotes(electionId, /** filterVoterIds= */ true).map { x =>
-      Ok(response(0))
-    }
+  /**
+   * Dumps votes to the private datastore. Only dumps votes matching in voterids
+   * file.
+   */
+  def dumpVotesWithVoterIdsFile(electionId: Long) = 
+    HAction("", "AuthEvent", electionId, "edit").async 
+  {
+    request =>
+      dumpTheVotes(
+        electionId, 
+        /** filterVoterIds= */ true, 
+        /** dumpValidVoterIds= */ false
+      )
+      .map { x => Ok(response(0)) }
   }
 
   /**
-   * Dumps votes in batches, goes to the private datastore of the election. 
-   * Also called by electionapi
+   * Dumps votes to the private datastore. Only dumps votes matching the enabled
+   * voters in AuthApi.
    */
-  def dumpTheVotes(electionId: Long, filterVoterIds: Boolean = false, voterIds) = Future {
+  def dumpVotesWithAuthapiVoterIds(electionId: Long)
+      HAction("", "AuthEvent", electionId, "edit").async 
+  {
+    request =>
+      dumpTheVotes(
+        electionId, 
+        /** filterVoterIds= */ true, 
+        /** dumpValidVoterIds= */ true
+      )
+      .map { x => Ok(response(0)) }
+  }
+
+  /**
+   * Dumps votes to the private datastore of the election. 
+   * Called by electionapi.
+   */
+  def dumpTheVotes(
+    electionId: Long,
+    filterVoterIds: Boolean = false,
+    dumpValidVoterIds: Boolean = true
+  ) = Future 
+  {
     if (filterVoterIds) 
     {
       // Filters active voters from authapi
 
-      // 1. dump voter ids
-      val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
-      val dumpIdsCommand = Seq(
-        "psql",
-        "service = authapi",
-        "-tAc",
-        s"SELECT U.username FROM auth_user U INNER JOIN api_userdata M ON U.id = M.user_id WHERE M.event_id=$electionId AND M.status = 'act' ORDER BY U.username ASC;",
-        "-o",
-        s"$voteIdsPath"
-      )
-
-      Logger.info(s"dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting voterIds:\n '$dumpIdsCommand'")
-      val dumpIdsCommandOutput = dumpIdsCommand.!!
-      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting voterIds: command returns\n$dumpIdsCommandOutput")
+      // 1. dump valid voter ids, if enabled
+      if (dumpValidVoterIds)
+      {
+        val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
+        val dumpIdsCommand = Seq(
+          "psql",
+          "service = authapi",
+          "-tAc",
+          s"SELECT U.username FROM auth_user U INNER JOIN api_userdata M ON U.id = M.user_id WHERE M.  event_id=$electionId AND M.status = 'act' ORDER BY U.username ASC;",
+          "-o",
+          s"$voteIdsPath"
+        )
+  
+        Logger.info(s"dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting   voterIds:\n '$dumpIdsCommand'")
+        val dumpIdsCommandOutput = dumpIdsCommand.!!
+        Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting   voterIds: command returns\n$dumpIdsCommandOutput")
+      }
 
       // 2. Dump all votes.
       // Each line contains first the voter_id, then the vote
