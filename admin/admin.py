@@ -545,7 +545,7 @@ def dump_votes_with_ids_file(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
-def dump_votes_with_ids_file(cfg, args):
+def dump_votes_with_authapi_ids(cfg, args):
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
@@ -966,8 +966,9 @@ create <election_id>: creates an election
 deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
 delete_all_voters <election_id>: delete all voters for the election
 dump_pks <election_id>: dumps pks for an election (public datastore)
-dump_votes <election_id>: dumps votes for an election (private datastore)
-dump_votes [election_id, [election_id], ...]: dump voter ids
+dump_votes <election_id>: dumps all votes for an election (private datastore)
+dump_votes_with_ids_file <election_id>: dumps votes for an election, filtering with voterids file (private datastore)
+dump_votes_with_authapi_ids <election_id>: dumps votes for an election, filtering with valid voters from authapi (private datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 list_votes <election_dir>: list votes
