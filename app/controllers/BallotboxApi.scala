@@ -162,7 +162,7 @@ object BallotboxApi extends Controller with Response {
    * Dumps votes to the private datastore. Only dumps votes matching the enabled
    * voters in AuthApi.
    */
-  def dumpVotesWithAuthapiVoterIds(electionId: Long)
+  def dumpVotesWithAuthapiVoterIds(electionId: Long) =
       HAction("", "AuthEvent", electionId, "edit").async 
   {
     request =>
@@ -187,11 +187,11 @@ object BallotboxApi extends Controller with Response {
     if (filterVoterIds) 
     {
       // Filters active voters from authapi
+      val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
 
       // 1. dump valid voter ids, if enabled
       if (dumpValidVoterIds)
       {
-        val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
         val dumpIdsCommand = Seq(
           "psql",
           "service = authapi",
