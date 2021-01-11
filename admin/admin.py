@@ -332,7 +332,7 @@ def delete_all_voters(cfg, args):
     WHERE M.event_id=%s AND M.status = 'act' AND A.user_id = U.id
     )''' % election_id
     print('deleting acls for election %s..' % election_id)
-    conn.execute(delete_acls)
+    print(conn.execute(delete_acls))
 
     delete_actions = '''
     DELETE FROM api_action M
@@ -537,23 +537,21 @@ def dump_votes(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
-def dump_votes_with_ids(cfg, args):
-    path = args.voter_ids
-    if path != None and os.path.isfile(path):
-        with open(path) as ids_file:
-            ids = json.load(ids_file)
+def dump_votes_with_ids_file(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/dump-votes-voter-ids-file' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
 
-        auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
-        host,port = get_local_hostport()
-        headers = {'Authorization': auth, 'content-type': 'application/json'}
-        url = 'http://%s:%d/api/election/%d/dump-votes-voter-ids' % (host, port, cfg['election_id'])
-        # print('json is %s' % json.dumps(ids))
-        r = requests.post(url, headers=headers, data=json.dumps(ids))
-        print(r.status_code, r.text)
-        return r.status_code
-    else:
-        print("no valid ids file %s" % path)
-        return 400
+def dump_votes_with_ids_file(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/dump-votes-authapi-voter-ids' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
 
 # remove
 def dump_ids(cfg, args):

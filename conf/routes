@@ -53,7 +53,8 @@ POST    /api/election/:id/tallydone                           controllers.Electi
 # admin
 POST    /api/election/:id/dump-pks                            controllers.ElectionsApi.dumpPks(id: Long)
 POST    /api/election/:id/dump-votes                          controllers.BallotboxApi.dumpVotes(id: Long)
-POST    /api/election/:id/dump-votes-voter-ids                controllers.BallotboxApi.dumpVotesWithVoterIds(id: Long)
+POST    /api/election/:id/dump-votes-voter-ids-file           controllers.BallotboxApi.dumpVotesWithVoterIdsFile(id: Long)
+POST    /api/election/:id/dump-votes-authapi-voter-ids        controllers.BallotboxApi.dumpVotesWithAuthapiVoterIds(id: Long)
 
 # file
 # GET /api/election/:id/private/:file                         controllers.Files.get(file: String)

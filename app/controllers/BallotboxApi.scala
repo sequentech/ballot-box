@@ -34,6 +34,7 @@ import play.api.libs.ws.ning.NingAsyncHttpClientConfigBuilder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent._
+import scala.sys.process._
 import java.sql.Timestamp
 
 /**
@@ -142,78 +143,78 @@ object BallotboxApi extends Controller with Response {
   }
 
   /** request a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
-  def dumpVotesWithVoterIds(electionId: Long) = HAction("", "AuthEvent", electionId, "edit").async(BodyParsers.parse.json) { request =>
+  def dumpVotesWithVoterIds(electionId: Long) = HAction("", "AuthEvent", electionId, "edit").async { request =>
 
-    val validIds = request.body.asOpt[List[String]].map(_.toSet)
-
-    dumpTheVotes(electionId, validIds).map { x =>
+    dumpTheVotes(electionId, /** filterVoterIds= */ true).map { x =>
       Ok(response(0))
     }
   }
 
-  /** dumps votes in batches, goes to the private datastore of the election. Also called by electionapi */
-  def dumpTheVotes(electionId: Long, validVoterIds: Option[Set[String]] = None) = Future {
+  /**
+   * Dumps votes in batches, goes to the private datastore of the election. 
+   * Also called by electionapi
+   */
+  def dumpTheVotes(electionId: Long, filterVoterIds: Boolean = false, voterIds) = Future {
+    if (filterVoterIds) 
+    {
+      // Filters active voters from authapi
 
-    val size = validVoterIds.getOrElse(Set()).size
-    Logger.info(s"dumping votes for election $electionId, validVoterids.size = $size")
+      // 1. dump voter ids
+      val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
+      val dumpIdsCommand = Seq(
+        "psql",
+        "service = authapi",
+        "-tAc",
+        s"SELECT U.username FROM auth_user U INNER JOIN api_userdata M ON U.id = M.user_id WHERE M.event_id=$electionId AND M.status = 'act' ORDER BY U.username ASC;",
+        "-o",
+        s"$voteIdsPath"
+      )
 
-    val batchSize: Int = Play.current.configuration.getInt("app.dump.batchsize").getOrElse(100)
-    DB.withSession { implicit session =>
+      Logger.info(s"dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting voterIds:\n '$dumpIdsCommand'")
+      val dumpIdsCommandOutput = dumpIdsCommand.!!
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting voterIds: command returns\n$dumpIdsCommandOutput")
 
-      val count = DAL.votes.countForElectionWithSession(electionId)
-      val batches = (count / batchSize) + 1
-      // in the current implementation we may hold a large number of ids
-      val ids = scala.collection.mutable.Set[String]()
+      // 2. Dump all votes.
+      // Each line contains first the voter_id, then the vote
+      val allCiphertextsPath = Datastore.getPath(electionId, Datastore.ALL_CIPHERTEXTS)
+      val dumpAllVotesCommand = Seq(
+        "psql",
+        "service = agora_elections",
+        "-tAc",
+        s"SELECT DISTINCT ON (voter_id) voter_id,vote FROM vote WHERE election_id=$electionId ORDER BY voter_id ASC, CREATED DESC;",
+        "-o",
+        s"$allCiphertextsPath"
+      )
 
-      val out = Datastore.getVotesStream(electionId)
-      val outInvalid = Datastore.getRemovedVoteHashesStream(electionId)
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting all cipherTexts:\n '$dumpAllVotesCommand'")
+      val dumpAllVotesCommandOutput = dumpAllVotesCommand.!!
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting all cipherTexts:command returns\n$dumpAllVotesCommandOutput")
 
-      for(i <- 1 to batches) {
-        val drop = (i - 1) * batchSize
-        val next = DAL.votes.findByElectionIdRangeWithSession(electionId, drop, batchSize)
-        // filter duplicates
-        val noDuplicates = next.filter { vote =>
-          if(ids.contains(vote.voter_id)) {
-            false
-          } else {
-            ids += vote.voter_id
-            true
-          }
-        }
+      // 3. Filter the votes by voter_id, using the join command
+      val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
+      val joinVotesCommand = Seq(
+        "bash",
+        "-lc",
+        s"join --nocheck-order $allCiphertextsPath $voteIdsPath -t '|' -o 1.2 > $votesPath"
+      )
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:\n '$joinVotesCommand'")
+      val joinVotesCommandOutput = joinVotesCommand.!!
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:command returns\n$joinVotesCommandOutput")
+    } else {
+      // Do not filter active voters
+      val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
+      val dumpCommand = Seq(
+        "psql",
+        "service = agora_elections",
+        "-tAc",
+        s"SELECT DISTINCT ON (voter_id) vote FROM vote WHERE election_id=$electionId ORDER BY voter_id ASC, CREATED DESC;",
+        "-o",
+        s"$votesPath"
+      )
 
-        // filter by voter id's, if present
-        val maybeValid = validVoterIds
-          .map(
-            ids =>
-              noDuplicates.filter(
-                vote => ids.contains(vote.voter_id)
-              )
-          )
-        val valid = maybeValid.getOrElse(noDuplicates)
-
-        val maybeInvalid = validVoterIds
-          .map(
-            ids =>
-              noDuplicates.filter(
-                vote => !ids.contains(vote.voter_id)
-              )
-          )
-        val invalid = maybeInvalid.getOrElse(List())
-
-        // eo format is new line separated list of votes
-        // we add an extra \n as otherwise there will be no separation between batches
-        if(valid.length > 0) {
-          val content = valid.map(_.vote).mkString("\n") + "\n"
-          out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-        }
-
-        if (invalid.length > 0) {
-          val content = invalid.map(_.hash).mkString("\n") + "\n"
-          outInvalid.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-        }
-      }
-      out.close()
-      outInvalid.close()
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting cipherTexts:\n '$dumpCommand'")
+      val dumpCommandOutput = dumpCommand.!!
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting cipherTexts:command returns\n$dumpCommandOutput")
     }
   }
 
