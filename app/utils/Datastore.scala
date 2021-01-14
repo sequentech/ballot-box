@@ -40,7 +40,9 @@ object Datastore {
   val publicDs = Play.current.configuration.getString("app.datastore.public").get
   val privateDs = Play.current.configuration.getString("app.datastore.private").get
 
+  val ALL_CIPHERTEXTS = "all_ciphertexts"
   val CIPHERTEXTS = "ciphertexts"
+  val VOTERIDS = "voterids"
   val REMOVED_VOTE_HASHES = "removed_vote_hashes"
   val PKS = "pks"
   val TALLY = "tally.tar.gz"

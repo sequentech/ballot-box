@@ -332,7 +332,7 @@ def delete_all_voters(cfg, args):
     WHERE M.event_id=%s AND M.status = 'act' AND A.user_id = U.id
     )''' % election_id
     print('deleting acls for election %s..' % election_id)
-    conn.execute(delete_acls)
+    print(conn.execute(delete_acls))
 
     delete_actions = '''
     DELETE FROM api_action M
@@ -537,23 +537,21 @@ def dump_votes(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
-def dump_votes_with_ids(cfg, args):
-    path = args.voter_ids
-    if path != None and os.path.isfile(path):
-        with open(path) as ids_file:
-            ids = json.load(ids_file)
+def dump_votes_with_ids_file(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/dump-votes-voter-ids-file' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
 
-        auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
-        host,port = get_local_hostport()
-        headers = {'Authorization': auth, 'content-type': 'application/json'}
-        url = 'http://%s:%d/api/election/%d/dump-votes-voter-ids' % (host, port, cfg['election_id'])
-        # print('json is %s' % json.dumps(ids))
-        r = requests.post(url, headers=headers, data=json.dumps(ids))
-        print(r.status_code, r.text)
-        return r.status_code
-    else:
-        print("no valid ids file %s" % path)
-        return 400
+def dump_votes_with_authapi_ids(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/dump-votes-authapi-voter-ids' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
 
 # remove
 def dump_ids(cfg, args):
@@ -968,8 +966,9 @@ create <election_id>: creates an election
 deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
 delete_all_voters <election_id>: delete all voters for the election
 dump_pks <election_id>: dumps pks for an election (public datastore)
-dump_votes <election_id>: dumps votes for an election (private datastore)
-dump_votes [election_id, [election_id], ...]: dump voter ids
+dump_votes <election_id>: dumps all votes for an election (private datastore)
+dump_votes_with_ids_file <election_id>: dumps votes for an election, filtering with voterids file (private datastore)
+dump_votes_with_authapi_ids <election_id>: dumps votes for an election, filtering with valid voters from authapi (private datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 list_votes <election_dir>: list votes

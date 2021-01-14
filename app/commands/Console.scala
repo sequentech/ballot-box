@@ -359,7 +359,7 @@ class ConsoleImpl extends ConsoleInterface {
   |
   |DESCRIPTION
   |     In order to run this program, use:
-  |         activator "runMain commands.Console [arguments]"
+  |         sbt "runMain commands.Console [arguments]"
   |
   |     Possible commands
   |
@@ -1206,7 +1206,7 @@ class ConsoleImpl extends ConsoleInterface {
   *
   * use runMain commands.Command <args> from console
   * or
-  * activator "run-main commands.Command <args>"
+  * sbt "run-main commands.Command <args>"
   * from CLI
   */
 object Console

@@ -377,8 +377,6 @@ object ElectionsApi
       .async(BodyParsers.parse.json) 
     {
       request =>
-        val validIds = request.body.asOpt[List[String]].map(_.toSet)
-
         val tally = getElection(id).flatMap { e =>
           if(
             e.state == Elections.STOPPED ||
@@ -394,7 +392,10 @@ object ElectionsApi
             if (e.tallyAllowed)
             {
               BallotboxApi
-                .dumpTheVotes(e.id, validIds)
+                .dumpTheVotes(
+                  e.id, 
+                  /** filterVoterIds= */ true
+                )
                 .flatMap(_ => tallyElection(e))
             } else {
               val msg = s"Cannot tally election $id because tallyAllowed = false"
