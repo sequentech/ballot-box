@@ -196,7 +196,7 @@ object BallotboxApi extends Controller with Response {
           "psql",
           "service = authapi",
           "-tAc",
-          s"SELECT U.username FROM auth_user U INNER JOIN api_userdata M ON U.id = M.user_id WHERE M.  event_id=$electionId AND M.status = 'act' ORDER BY U.username ASC;",
+          s"SELECT U.username FROM auth_user U INNER JOIN api_userdata M ON U.id = M.user_id WHERE M.  event_id=$electionId AND U.is_active = true ORDER BY U.username ASC;",
           "-o",
           s"$voteIdsPath"
         )
