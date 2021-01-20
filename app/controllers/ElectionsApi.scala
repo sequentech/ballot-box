@@ -901,7 +901,7 @@ object ElectionsApi
                     // in a custom deployment and this is safe).
                     case Some(existingElection) =>
                       if (
-                        existingElection.state !== Elections.REGISTERED 
+                        existingElection.state != Elections.REGISTERED
                         || !virtualElectionsAllowed
                       ) {
                         BadRequest(
