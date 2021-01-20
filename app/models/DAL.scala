@@ -124,6 +124,11 @@ object DAL {
       Elections.insert(election)
     }
 
+    def update(id: Long, election: Election) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.update(id, election)
+    }
+
     def setStartDate(id: Long, startDate: Timestamp) = DB.withSession { implicit session =>
       Cache.remove(key(id))
       Elections.setStartDate(id, startDate)
@@ -180,9 +185,16 @@ object DAL {
         Elections.updateResultsConfig(id, config)
     }
 
-    def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp]) = DB.withSession { implicit session =>
-      Cache.remove(key(id))
-      Elections.updateConfig(id, config, start, end)
+    def updateConfig(
+      id: Long, 
+      config: String, 
+      start: Option[Timestamp], 
+      end: Option[Timestamp]
+    ) = DB.withSession 
+    { 
+      implicit session =>
+        Cache.remove(key(id))
+        Elections.updateConfig(id, config, start, end)
     }
 
     def setPublicKeys(id: Long, pks: String) = DB.withSession { implicit session =>

@@ -107,6 +107,10 @@ object ElectionsApi
       }
     }
   val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
+  val virtualElectionsAllowed = Play.current.configuration
+    .getBoolean("election.virtualElectionsAllowed")
+    .getOrElse(false)
+
 
   /** inserts election into the db in the registered state */
   def register(id: Long) = HAction("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
@@ -819,11 +823,17 @@ object ElectionsApi
     if (!body.as[JsObject].keys.contains("logo_url")) {
         body = body.as[JsObject] + ("logo_url" -> Json.toJson(""))
     }
+
+    if (!body.as[JsObject].keys.contains("ballotBoxesResultsConfig")) {
+        body = body.as[JsObject] + ("ballotBoxesResultsConfig" -> Json.toJson(""))
+    }
+
     if (body.as[JsObject].keys.contains("start_date") && 
         (0 == (body.as[JsObject] \ "start_date").toString.length ||
          "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
         body = body.as[JsObject] - "start_date"
     }
+
     if (body.as[JsObject].keys.contains("end_date") && 
         (0 == (body.as[JsObject] \ "end_date").toString.length ||
         "\"\"" == (body.as[JsObject] \ "end_date").toString)) {
@@ -841,15 +851,21 @@ object ElectionsApi
       config =>
       {
         try {
-          val validated = config.validate(authorities, id).copy(start_date=None, end_date=None)
+          val validated = config
+            .validate(authorities, id)
+            .copy(start_date=None, end_date=None)
+
           DB.withSession
           {
             implicit session =>
               // check that related subelections exist
-              val notExistingSubelections = validated.virtualSubelections.get.filter(
-                (eid) =>
-                  !DAL.elections.findByIdWithSession(eid).isDefined
-              )
+              val notExistingSubelections = validated
+                .virtualSubelections
+                .get
+                .filter(
+                  (eid) =>
+                    !DAL.elections.findByIdWithSession(eid).isDefined
+                )
               notExistingSubelections match
               {
                 case l if l.length > 0 =>
@@ -862,32 +878,45 @@ object ElectionsApi
                   )
                 case _ =>
                   val existing = DAL.elections.findByIdWithSession(validated.id)
+                  val newElection = Election(
+                    id =                        validated.id,
+                    configuration =             validated.asString,
+                    state =                     Elections.REGISTERED,
+                    startDate =                 validated.start_date,
+                    endDate =                   validated.end_date,
+                    pks =                       None,
+                    resultsConfig =             validated.resultsConfig,
+                    ballotBoxesResultsConfig =  validated.ballotBoxesResultsConfig,
+                    results =                   None,
+                    resultsUpdated =            None,
+                    publishedResults =          None,
+                    virtual =                   validated.virtual,
+                    tallyAllowed =              validated.tally_allowed,
+                    logo_url =                  validated.logo_url
+                  )
                   existing match
                   {
-                    case Some(_) =>
-                      BadRequest(
-                        error(s"election with id ${config.id} already exists"))
-
+                    // We will update the election only if it's in registered
+                    // state and we allow virtual elections (which means we are
+                    // in a custom deployment and this is safe).
+                    case Some(existingElection) =>
+                      if (
+                        existingElection.state !== Elections.REGISTERED 
+                        || !virtualElectionsAllowed
+                      ) {
+                        BadRequest(
+                          error(s"election with id ${config.id} already exists")
+                        )
+                      } else {
+                        val result = DAL.elections.update(
+                          validated.id,
+                          newElection
+                        )
+                        Ok(response(result))
+                      }
                     case None =>
                     {
-                      val result = DAL.elections.insert(
-                        Election(
-                          validated.id,
-                          validated.asString,
-                          Elections.REGISTERED,
-                          validated.start_date,
-                          validated.end_date,
-                          None,
-                          validated.resultsConfig,
-                          None,
-                          None,
-                          None,
-                          None,
-                          validated.virtual,
-                          validated.tally_allowed,
-                          validated.logo_url
-                        )
-                      )
+                      val result = DAL.elections.insert(newElection)
                       Ok(response(result))
                     }
                   }
@@ -905,27 +934,53 @@ object ElectionsApi
   {
     val promise = Promise[Result]
     Future {
-      val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
-      if(allow_edit) {
+      val allow_edit: Boolean = Play
+        .current
+        .configuration
+        .getBoolean("share_social.allow_edit")
+        .getOrElse(false)
+
+      if(allow_edit) 
+      {
         var shareText = request.body.validate[Option[Array[ShareTextItem]]]
 
-        shareText match {
+        shareText match 
+        {
           case e: JsError =>
             promise.success(BadRequest(response(JsError.toFlatJson(e))))
+
           case jST: JsSuccess[Option[Array[ShareTextItem]]] =>
-            val future = getElection(id) map { election =>
-              val oldConfig = election.getDTO.configuration
-              val config = oldConfig.copy(presentation = oldConfig.presentation.copy(share_text = jST.get))
-              val validated = config.validate(authorities, id)
-              val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
-              Ok(response(result))
-            } recover { case err =>
-              BadRequest(response(getMessageFromThrowable(err)))
+            val future = getElection(id) map 
+            {
+              election =>
+                val oldConfig = election.getDTO.configuration
+                val config = oldConfig.copy(
+                  presentation = oldConfig.presentation.copy(share_text = jST.get)
+                )
+                val validated = config.validate(authorities, id)
+                val result = DAL
+                  .elections
+                  .updateConfig(
+                    id, 
+                    validated.asString,
+                    validated.start_date,
+                    validated.end_date
+                  )
+                Ok(response(result))
+            } recover {
+              case err =>
+                BadRequest(response(getMessageFromThrowable(err)))
             }
             promise.completeWith(future)
         }
       } else {
-        promise.success(BadRequest(response("Access Denied: Social share configuration modifications are not allowed")))
+        promise.success(
+          BadRequest(
+            response(
+              "Access Denied: Social share configuration modifications are not allowed"
+            )
+          )
+        )
       }
     } (slickExecutionContext) recover { case err =>
       promise.success(BadRequest(response(getMessageFromThrowable(err))))
@@ -951,10 +1006,14 @@ object ElectionsApi
       },
 
       config => {
-
         val validated = config.validate(authorities, id)
 
-        val result = DAL.elections.updateConfig(id, validated.asString, validated.start_date, validated.end_date)
+        val result = DAL.elections.updateConfig(
+          id, 
+          validated.asString, 
+          validated.start_date, 
+          validated.end_date
+        )
         Ok(response(result))
       }
     )

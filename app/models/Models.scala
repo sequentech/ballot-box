@@ -122,6 +122,10 @@ case class Election(
         configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
     }
 
+    if (!configJson.as[JsObject].keys.contains("ballotBoxesResultsConfig")) {
+        configJson = configJson.as[JsObject] + ("ballotBoxesResultsConfig" -> Json.toJson(ballotBoxesResultsConfig))
+    }
+
     if (!configJson.as[JsObject].keys.contains("logo_url")) {
         configJson = configJson.as[JsObject] + ("logo_url" -> Json.toJson(logo_url))
     }
@@ -145,6 +149,7 @@ case class Election(
       endDate,
       pks,
       resultsConfig,
+      ballotBoxesResultsConfig,
       publishedResults,
       resUp,
       virtual,
@@ -205,7 +210,8 @@ object Elections {
 
   val elections = TableQuery[Elections]
 
-  def findById(id: Long)(implicit s: Session): Option[Election] = elections.filter(_.id === id).firstOption
+  def findById(id: Long)(implicit s: Session): Option[Election] = 
+    elections.filter(_.id === id).firstOption
 
   def count(implicit s: Session): Int = elections.length.run
 
@@ -347,6 +353,7 @@ case class ElectionDTO(
   endDate: Option[Timestamp],
   pks: Option[String],
   resultsConfig: Option[String],
+  ballotBoxesResultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
@@ -366,6 +373,7 @@ case class ElectionConfig(
   presentation: ElectionPresentation,
   extra_data: Option[String],
   resultsConfig: Option[String],
+  ballotBoxesResultsConfig: Option[String],
   virtual: Boolean,
   tally_allowed: Boolean,
   virtualSubelections: Option[Array[Long]],
