@@ -375,7 +375,8 @@ object ElectionsApi
         calcResultsLogic(id, request.body, true)
     }
 
-  /** equest a tally, dumps votes to the private ds. Only tallies votes matching passed in voter ids */
+  /** Request a tally, dumps votes to the private ds. Only tallies votes 
+      matching authapi active voters */
   def tallyWithVoterIds(id: Long) = 
     HAction("", "AuthEvent", id, "edit|tally")
       .async(BodyParsers.parse.json) 
