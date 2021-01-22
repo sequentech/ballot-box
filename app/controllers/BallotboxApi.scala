@@ -196,7 +196,26 @@ object BallotboxApi extends Controller with Response {
           "psql",
           "service = authapi",
           "-tAc",
-          s"SELECT U.username FROM auth_user U INNER JOIN api_userdata M ON U.id = M.user_id WHERE M.  event_id=$electionId AND U.is_active = true ORDER BY U.username ASC;",
+          s"""
+SELECT auth_user.username
+FROM api_acl
+INNER JOIN api_userdata ON api_acl.user_id = api_userdata.id
+INNER JOIN auth_user ON auth_user.id = api_userdata.user_id
+INNER JOIN api_authevent ON api_authevent.id = '$electionId'
+WHERE 
+  api_acl.object_id IS NOT NULL 
+  AND api_acl.object_type = 'AuthEvent'
+  AND api_acl.perm = 'vote'
+  AND (
+    (
+      api_acl.object_id = '$electionId' AND api_authevent.parent_id IS NULL
+    ) OR (
+      api_acl.object_id = api_authevent.parent_id::text
+      AND api_authevent.parent_id IS NOT NULL
+      AND api_userdata.children_event_id_list::text LIKE '%$electionId%'
+    )
+  )
+ORDER BY auth_user.username ASC;""",
           "-o",
           s"$voteIdsPath"
         )

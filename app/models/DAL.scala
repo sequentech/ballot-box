@@ -24,6 +24,10 @@ import play.api._
 
 import java.sql.Timestamp
 
+import scala.sys.process._
+
+import utils._
+
 /**
   * DAL - data access layer
   *
@@ -64,6 +68,19 @@ object DAL {
 
     def count: Int = DB.withSession { implicit session =>
       Votes.count
+    }
+
+    def isVoteDumpEmpty(electionId: Long): Boolean = {
+      val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
+      val countVotesCommand = Seq(
+        "wc",
+        "-l",
+        s"$votesPath"
+      )
+      Logger.info(s"counting votes dumped:\n '$countVotesCommand'")
+      val countVotesCommandOutput = countVotesCommand.!!
+      Logger.info(s"counting votes dumped returns: $countVotesCommandOutput")
+      countVotesCommandOutput.startsWith("0 ")
     }
 
     def countForElection(electionId: Long): Int = DB.withSession { implicit session =>
@@ -124,6 +141,11 @@ object DAL {
       Elections.insert(election)
     }
 
+    def update(id: Long, election: Election) = DB.withSession { implicit session =>
+      Cache.remove(key(id))
+      Elections.update(id, election)
+    }
+
     def setStartDate(id: Long, startDate: Timestamp) = DB.withSession { implicit session =>
       Cache.remove(key(id))
       Elections.setStartDate(id, startDate)
@@ -180,9 +202,16 @@ object DAL {
         Elections.updateResultsConfig(id, config)
     }
 
-    def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp]) = DB.withSession { implicit session =>
-      Cache.remove(key(id))
-      Elections.updateConfig(id, config, start, end)
+    def updateConfig(
+      id: Long, 
+      config: String, 
+      start: Option[Timestamp], 
+      end: Option[Timestamp]
+    ) = DB.withSession 
+    { 
+      implicit session =>
+        Cache.remove(key(id))
+        Elections.updateConfig(id, config, start, end)
     }
 
     def setPublicKeys(id: Long, pks: String) = DB.withSession { implicit session =>
