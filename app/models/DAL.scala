@@ -24,6 +24,8 @@ import play.api._
 
 import java.sql.Timestamp
 
+import scala.sys.process._
+
 /**
   * DAL - data access layer
   *
@@ -64,6 +66,18 @@ object DAL {
 
     def count: Int = DB.withSession { implicit session =>
       Votes.count
+    }
+
+    def isVoteDumpEmpty(electionId: Long): Boolean = {
+      val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
+      val countVotesCommand = Seq(
+        "wc",
+        "-l",
+        s"$votesPath"
+      )
+      Logger.info(s"counting votes dumped:\n '$countVotesCommand'")
+      val countVotesCommandOutput = countVotesCommand.!!
+      countVotesCommandOutput.startsWith("0 ")
     }
 
     def countForElection(electionId: Long): Int = DB.withSession { implicit session =>
