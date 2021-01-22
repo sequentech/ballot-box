@@ -26,6 +26,8 @@ import java.sql.Timestamp
 
 import scala.sys.process._
 
+import utils._
+
 /**
   * DAL - data access layer
   *
