@@ -79,6 +79,7 @@ object DAL {
       )
       Logger.info(s"counting votes dumped:\n '$countVotesCommand'")
       val countVotesCommandOutput = countVotesCommand.!!
+      Logger.info(s"counting votes dumped returns: $countVotesCommandOutput")
       countVotesCommandOutput.startsWith("0 ")
     }
 
