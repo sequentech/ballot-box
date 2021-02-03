@@ -859,68 +859,51 @@ object ElectionsApi
           DB.withSession
           {
             implicit session =>
+              // we do not check the existence of virtual subelections because
+              // usually virtual election is created before the subelections
               // check that related subelections exist
-              val notExistingSubelections = validated
-                .virtualSubelections
-                .get
-                .filter(
-                  (eid) =>
-                    !DAL.elections.findByIdWithSession(eid).isDefined
-                )
-              notExistingSubelections match
+              val existing = DAL.elections.findByIdWithSession(validated.id)
+              val newElection = Election(
+                id =                        validated.id,
+                configuration =             validated.asString,
+                state =                     Elections.REGISTERED,
+                startDate =                 validated.start_date,
+                endDate =                   validated.end_date,
+                pks =                       None,
+                resultsConfig =             validated.resultsConfig,
+                ballotBoxesResultsConfig =  validated.ballotBoxesResultsConfig,
+                results =                   None,
+                resultsUpdated =            None,
+                publishedResults =          None,
+                virtual =                   validated.virtual,
+                tallyAllowed =              validated.tally_allowed,
+                logo_url =                  validated.logo_url
+              )
+              existing match
               {
-                case l if l.length > 0 =>
-                  BadRequest(
-                    error(
-                      s"election depends on some virtualSubelections that " +
-                      s"do not exist. The list of not existing elections " +
-                      s"is: ${notExistingSubelections}."
+                // We will update the election only if it's in registered
+                // state and we allow virtual elections (which means we are
+                // in a custom deployment and this is safe).
+                case Some(existingElection) =>
+                  if (
+                    existingElection.state != Elections.REGISTERED
+                    || !virtualElectionsAllowed
+                  ) {
+                    BadRequest(
+                      error(s"election with id ${config.id} already exists")
                     )
-                  )
-                case _ =>
-                  val existing = DAL.elections.findByIdWithSession(validated.id)
-                  val newElection = Election(
-                    id =                        validated.id,
-                    configuration =             validated.asString,
-                    state =                     Elections.REGISTERED,
-                    startDate =                 validated.start_date,
-                    endDate =                   validated.end_date,
-                    pks =                       None,
-                    resultsConfig =             validated.resultsConfig,
-                    ballotBoxesResultsConfig =  validated.ballotBoxesResultsConfig,
-                    results =                   None,
-                    resultsUpdated =            None,
-                    publishedResults =          None,
-                    virtual =                   validated.virtual,
-                    tallyAllowed =              validated.tally_allowed,
-                    logo_url =                  validated.logo_url
-                  )
-                  existing match
-                  {
-                    // We will update the election only if it's in registered
-                    // state and we allow virtual elections (which means we are
-                    // in a custom deployment and this is safe).
-                    case Some(existingElection) =>
-                      if (
-                        existingElection.state != Elections.REGISTERED
-                        || !virtualElectionsAllowed
-                      ) {
-                        BadRequest(
-                          error(s"election with id ${config.id} already exists")
-                        )
-                      } else {
-                        val result = DAL.elections.update(
-                          validated.id,
-                          newElection
-                        )
-                        Ok(response(result))
-                      }
-                    case None =>
-                    {
-                      val result = DAL.elections.insert(newElection)
-                      Ok(response(result))
-                    }
+                  } else {
+                    val result = DAL.elections.update(
+                      validated.id,
+                      newElection
+                    )
+                    Ok(response(result))
                   }
+                case None =>
+                {
+                  val result = DAL.elections.insert(newElection)
+                  Ok(response(result))
+                }
               }
           }
         } catch {
