@@ -890,7 +890,7 @@ object ElectionsApi
                     || !virtualElectionsAllowed
                   ) {
                     BadRequest(
-                      error(s"election with id ${config.id} already exists")
+                      error(s"election with id ${config.id} already exists and is not in registered state")
                     )
                   } else {
                     val result = DAL.elections.update(
