@@ -651,7 +651,7 @@ case class ElectionPresentation(
 
     validateIdentifier(theme, "invalid theme")
     val urlsOk = urls.map(_.validate())
-    validateIdentifier(theme_css, "invalid theme_css")
+    assert(theme_css.length <= LONG_STRING, "theme_css too long")
     val shareText = shareTextConfig()
 
     this.copy(urls = urlsOk, share_text = shareText)
