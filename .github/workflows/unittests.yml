@@ -1,0 +1,37 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  unittest:
+    runs-on: ubuntu-20.04
+    container: ubuntu:20.04
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: agora_elections
+          POSTGRES_PASSWORD: mypassword
+          POSTGRES_DB: agora_elections_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        apt update
+        apt install -y openjdk-8-jdk-headless wget
+        wget https://dl.bintray.com/sbt/debian/sbt-0.13.18.deb
+        dpkg -i sbt-0.13.18.deb
+
+    - name: tests
+      run: |
+        sbt test
