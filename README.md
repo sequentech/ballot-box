@@ -1,5 +1,8 @@
-Agora Elections
-===============
+Agora Elections [![tests_badge]][tests_link] 
+=============================================
+
+[tests_badge]: https://github.com/agoravoting/agora_elections/workflows/Tests/badge.svg
+[tests_link]: https://github.com/agoravoting/agora_elections/actions?query=workflow%3A%22Tests%22
 
 Installation
 =========
