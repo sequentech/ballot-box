@@ -1,0 +1,30 @@
+db.default.url="jdbc:postgresql://postgres:5432/agora_elections"
+db.default.driver="org.postgresql.Driver"
+db.default.user=agora_elections
+db.default.pass=mypassword
+
+app.datastore.public="/tmp/agora_elections/datastore/public"
+app.datastore.private="/tmp/agora_elections/datastore/private"
+
+app.api.root="http://prod-up:8000"
+app.datastore.root="http://localhost:8000"
+app.datastore.ssl_root="https://localhost:14453"
+
+app.eopeers.dir=/etc/eopeers/
+
+booth.auth.secret=<PASSWORD>
+booth.auth.expiry=60000
+
+ws.ssl {
+  loose.disableHostnameVerification=true
+  keyManager = {
+    stores = [
+      { type = "JKS", path = "/home/agoraelections/keystore.jks", password = "<PASSWORD>" }
+    ]
+  }
+  trustManager = {
+    stores = [
+      { type = "JKS", path = "/home/agoraelections/keystore.jks", password = "<PASSWORD>" }
+    ]
+  }
+}

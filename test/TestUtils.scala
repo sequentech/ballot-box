@@ -57,6 +57,7 @@ trait TestContexts {
   "authorities": ["test-auth2.agoravoting.com"],
   "layout": "pcandidates-election",
   "virtual": false,
+  "tally_allowed": true,
   "presentation": {
     "theme": "foo",
     "urls": [

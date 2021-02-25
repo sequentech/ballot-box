@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: agora_elections
           POSTGRES_PASSWORD: mypassword
-          POSTGRES_DB: agora_elections_test
+          POSTGRES_DB: agora_elections
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -31,6 +31,11 @@ jobs:
         apt install -y openjdk-8-jdk-headless wget
         wget https://dl.bintray.com/sbt/debian/sbt-0.13.18.deb
         dpkg -i sbt-0.13.18.deb
+        cp conf/test.local.conf.example conf/test.local.conf
+
+    - name: Build
+      run: |
+        sbt clean stage
 
     - name: tests
       run: |
