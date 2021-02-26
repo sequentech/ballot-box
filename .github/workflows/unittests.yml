@@ -49,8 +49,8 @@ jobs:
         mkdir -p /tmp/agora_elections/datastore/private
         cp -rf testdata/eopeers /etc
         cp -rf testdata/keystore.jks /tmp
-        cp -rf testdata/pg_service.conf ~/.pg_service.conf
 
     - name: tests
-      run: |
-        sbt test
+      run: sbt test
+      env:
+        PGSYSCONFDIR: testdata
