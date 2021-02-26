@@ -1,3 +1,5 @@
+memcached.host="memcached:11211"
+
 db.default.url="jdbc:postgresql://postgres:5432/agora_elections"
 db.default.driver="org.postgresql.Driver"
 db.default.user=agora_elections
@@ -19,12 +21,12 @@ ws.ssl {
   loose.disableHostnameVerification=true
   keyManager = {
     stores = [
-      { type = "JKS", path = "/home/agoraelections/keystore.jks", password = "<PASSWORD>" }
+      { type = "JKS", path = "/tmp/keystore.jks", password = "<PASSWORD>" }
     ]
   }
   trustManager = {
     stores = [
-      { type = "JKS", path = "/home/agoraelections/keystore.jks", password = "<PASSWORD>" }
+      { type = "JKS", path = "/tmp/keystore.jks", password = "<PASSWORD>" }
     ]
   }
 }
