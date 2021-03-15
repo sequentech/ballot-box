@@ -542,7 +542,12 @@ case class QuestionExtra(
   select_categories_1click: Option[Boolean],
   answer_columns_size: Option[Int],
   group_answer_pairs: Option[Boolean],
-  select_all_category_clicks: Option[Int])
+  select_all_category_clicks: Option[Int],
+  allow_casting_invalid_votes: Option[Boolean], // default = true
+  enable_panachage: Option[Boolean], // default = true
+  cumulative_number_of_checkboxes: Option[Int], // default = 1
+  enable_checkable_lists: Option[Boolean] // default = false
+)
 {
 
   def validate() = {
@@ -572,6 +577,8 @@ case class QuestionExtra(
            "shuffle_all_options is true but shuffle_category_list is not empty")
 
     assert(!select_all_category_clicks.isDefined || select_all_category_clicks.get >= 1, "select_all_category_clicks must be >= 1")
+
+    assert(!cumulative_number_of_checkboxes.isDefined || cumulative_number_of_checkboxes.get.toInt >= 1, "cumulative_number_of_checkboxes must be >= 1")
   }
 }
 
