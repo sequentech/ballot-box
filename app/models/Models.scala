@@ -530,23 +530,23 @@ case class Question(
     if (
       extra_options.isDefined &&
       extra_options.get.enable_checkable_lists.isDefined &&
-      extra_options.get.enable_checkable_lists == true
+      extra_options.get.enable_checkable_lists.get == true
     ) {
       // getting category names from answers
       val answerCategoryNames = answers
         .filter { answer => 
           answer.category.length > 0 &&
           answer.urls.map {
-            url.url != "true" || url.title != "isCategoryList"
+            url => url.url != "true" || url.title != "isCategoryList"
           }.length == 0
         }
         .map { answer => answer.category }
-        toSet
+        .toSet
       // getting category answers
       val categoryNames = answers
         .filter { answer => 
           answer.urls.map {
-            url.url == "true" && url.title == "isCategoryList"
+            url => url.url == "true" && url.title == "isCategoryList"
           }.length > 0
         }
         .map { answer => answer.text }
