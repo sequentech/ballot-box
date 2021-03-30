@@ -604,6 +604,7 @@ case class QuestionExtra(
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
   enable_checkable_lists: Option[Boolean] // default = false
+  invalid_vote_policy: Option[String] // allowed, warn, not-allowed
 )
 {
 
@@ -636,6 +637,14 @@ case class QuestionExtra(
     assert(!select_all_category_clicks.isDefined || select_all_category_clicks.get >= 1, "select_all_category_clicks must be >= 1")
 
     assert(!cumulative_number_of_checkboxes.isDefined || cumulative_number_of_checkboxes.get.toInt >= 1, "cumulative_number_of_checkboxes must be >= 1")
+
+    assert(
+      (
+        !invalid_vote_policy.isDefined || 
+        List("allowed", "warn", "not-allowed").contains(invalid_vote_policy.get)
+      ),
+      "invalid_vote_policy must be 'allowed', 'warn' or 'not-allowed'"
+    )
   }
 }
 
