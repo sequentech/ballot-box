@@ -603,7 +603,7 @@ case class QuestionExtra(
   allow_casting_invalid_votes: Option[Boolean], // default = true
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
-  enable_checkable_lists: Option[Boolean] // default = false
+  enable_checkable_lists: Option[Boolean], // default = false
   invalid_vote_policy: Option[String] // allowed, warn, not-allowed
 )
 {
