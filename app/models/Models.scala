@@ -467,8 +467,18 @@ case class ElectionConfig(
 }
 
 /** defines a question asked in an election */
-case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
-  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
+case class Question(
+  description: String,
+  layout: String,
+  max: Int, 
+  min: Int, 
+  num_winners: Int, 
+  title: String,
+  tally_type: String, 
+  answer_total_votes_percentage: String, 
+  answers: Array[Answer], 
+  extra_options: Option[QuestionExtra]
+) {
 
   def validate() = {
 
@@ -503,14 +513,48 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
     // validate shuffle categories
-    if (extra_options.isDefined &&
-        extra_options.get.shuffle_category_list.isDefined &&
-        extra_options.get.shuffle_category_list.get.size > 0) {
+    if (
+      extra_options.isDefined &&
+      extra_options.get.shuffle_category_list.isDefined &&
+      extra_options.get.shuffle_category_list.get.size > 0
+    ) {
       val categories = answers.map{ x => x.category } toSet
 
       extra_options.get.shuffle_category_list.get.map { x =>
         assert(categories.contains(x), s"category $x in shuffle_category_list not found is invalid")
       }
+    }
+
+    // if enable_checkable_lists is set, verify that for each category there
+    // is an list answer
+    if (
+      extra_options.isDefined &&
+      extra_options.get.enable_checkable_lists.isDefined &&
+      extra_options.get.enable_checkable_lists == true
+    ) {
+      // getting category names from answers
+      val answerCategoryNames = answers
+        .filter { answer => 
+          answer.category.length > 0 &&
+          answer.urls.map {
+            url.url != "true" || url.title != "isCategoryList"
+          }.length == 0
+        }
+        .map { answer => answer.category }
+        toSet
+      // getting category answers
+      val categoryNames = answers
+        .filter { answer => 
+          answer.urls.map {
+            url.url == "true" && url.title == "isCategoryList"
+          }.length > 0
+        }
+        .map { answer => answer.text }
+        .toSet
+      assert(
+        categoryNames == answerCategoryNames,
+        s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is enabled"
+      )
     }
 
     this.copy(description = descriptionOk, answers = answersOk)
