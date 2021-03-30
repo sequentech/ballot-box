@@ -391,7 +391,6 @@ case class ElectionConfig(
     *
     */
   def validate(peers: Map[String, JsObject], id2: Long) = {
-
     assert(id >= 0, s"Invalid id $id")
     validateIdentifier(layout, "invalid layout")
     assert(id == id2, s"Invalid id $id")
@@ -481,7 +480,6 @@ case class Question(
 ) {
 
   def validate() = {
-
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
@@ -524,6 +522,10 @@ case class Question(
       answerIds == shouldAnswerIds,
       "answer ids should start with 0 and have no missing number in between"
     )
+
+    if (extra_options.isDefined) {
+      extra_options.get.validate()
+    }
 
     // validate shuffle categories
     if (
