@@ -512,6 +512,19 @@ case class Question(
     val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
+    // validate answer ids
+    val answerIds = answers
+      .map { answer => answer.id }
+      .toSet
+    val shouldAnswerIds = answers
+      .zipWithIndex
+      .map { case (_answer, index) => index }
+      .toSet
+    assert(
+      answerIds == shouldAnswerIds,
+      "answer ids should start with 0 and have no missing number in between"
+    )
+
     // validate shuffle categories
     if (
       extra_options.isDefined &&
