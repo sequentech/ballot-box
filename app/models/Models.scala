@@ -391,7 +391,6 @@ case class ElectionConfig(
     *
     */
   def validate(peers: Map[String, JsObject], id2: Long) = {
-
     assert(id >= 0, s"Invalid id $id")
     validateIdentifier(layout, "invalid layout")
     assert(id == id2, s"Invalid id $id")
@@ -481,7 +480,6 @@ case class Question(
 ) {
 
   def validate() = {
-
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
@@ -525,6 +523,10 @@ case class Question(
       "answer ids should start with 0 and have no missing number in between"
     )
 
+    if (extra_options.isDefined) {
+      extra_options.get.validate()
+    }
+
     // validate shuffle categories
     if (
       extra_options.isDefined &&
@@ -549,8 +551,8 @@ case class Question(
       val answerCategoryNames = answers
         .filter { answer => 
           answer.category.length > 0 &&
-          answer.urls.map {
-            url => url.url != "true" || url.title != "isCategoryList"
+          answer.urls.filter {
+            url => (url.url != "true" || url.title != "isCategoryList")
           }.length == 0
         }
         .map { answer => answer.category }
@@ -558,8 +560,8 @@ case class Question(
       // getting category answers
       val categoryNames = answers
         .filter { answer => 
-          answer.urls.map {
-            url => url.url == "true" && url.title == "isCategoryList"
+          answer.urls.filter {
+            url => (url.url == "true" && url.title == "isCategoryList")
           }.length > 0
         }
         .map { answer => answer.text }
@@ -603,7 +605,8 @@ case class QuestionExtra(
   allow_casting_invalid_votes: Option[Boolean], // default = true
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
-  enable_checkable_lists: Option[Boolean] // default = false
+  enable_checkable_lists: Option[Boolean], // default = false
+  invalid_vote_policy: Option[String] // allowed, warn, not-allowed
 )
 {
 
@@ -636,6 +639,14 @@ case class QuestionExtra(
     assert(!select_all_category_clicks.isDefined || select_all_category_clicks.get >= 1, "select_all_category_clicks must be >= 1")
 
     assert(!cumulative_number_of_checkboxes.isDefined || cumulative_number_of_checkboxes.get.toInt >= 1, "cumulative_number_of_checkboxes must be >= 1")
+
+    assert(
+      (
+        !invalid_vote_policy.isDefined || 
+        List("allowed", "warn", "not-allowed").contains(invalid_vote_policy.get)
+      ),
+      "invalid_vote_policy must be 'allowed', 'warn' or 'not-allowed'"
+    )
   }
 }
 
