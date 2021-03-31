@@ -551,8 +551,8 @@ case class Question(
       val answerCategoryNames = answers
         .filter { answer => 
           answer.category.length > 0 &&
-          answer.urls.map {
-            url => url.url != "true" || url.title != "isCategoryList" && url.title != "isInvalidVote" && url.title != "isWriteIn"
+          answer.urls.filter {
+            url => (url.url != "true" || url.title != "isCategoryList")
           }.length == 0
         }
         .map { answer => answer.category }
@@ -560,8 +560,8 @@ case class Question(
       // getting category answers
       val categoryNames = answers
         .filter { answer => 
-          answer.urls.map {
-            url => url.url == "true" && url.title == "isCategoryList"
+          answer.urls.filter {
+            url => (url.url == "true" && url.title == "isCategoryList")
           }.length > 0
         }
         .map { answer => answer.text }
