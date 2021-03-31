@@ -552,7 +552,7 @@ case class Question(
         .filter { answer => 
           answer.category.length > 0 &&
           answer.urls.map {
-            url => url.url != "true" || url.title != "isCategoryList"
+            url => url.url != "true" || url.title != "isCategoryList" && url.title != "isInvalidVote" && url.title != "isWriteIn"
           }.length == 0
         }
         .map { answer => answer.category }
