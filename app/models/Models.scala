@@ -602,7 +602,6 @@ case class QuestionExtra(
   answer_columns_size: Option[Int],
   answer_group_columns_size: Option[Int],
   select_all_category_clicks: Option[Int],
-  allow_casting_invalid_votes: Option[Boolean], // default = true
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
   enable_checkable_lists: Option[Boolean], // default = false
