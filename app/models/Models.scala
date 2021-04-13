@@ -391,7 +391,6 @@ case class ElectionConfig(
     *
     */
   def validate(peers: Map[String, JsObject], id2: Long) = {
-
     assert(id >= 0, s"Invalid id $id")
     validateIdentifier(layout, "invalid layout")
     assert(id == id2, s"Invalid id $id")
@@ -467,11 +466,20 @@ case class ElectionConfig(
 }
 
 /** defines a question asked in an election */
-case class Question(description: String, layout: String, max: Int, min: Int, num_winners: Int, title: String,
-  tally_type: String, answer_total_votes_percentage: String, answers: Array[Answer], extra_options: Option[QuestionExtra]) {
+case class Question(
+  description: String,
+  layout: String,
+  max: Int, 
+  min: Int, 
+  num_winners: Int, 
+  title: String,
+  tally_type: String, 
+  answer_total_votes_percentage: String, 
+  answers: Array[Answer], 
+  extra_options: Option[QuestionExtra]
+) {
 
   def validate() = {
-
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
 
@@ -502,10 +510,29 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
     assert(repeatedAnswers.length == 0, s"answers texts repeated: $repeatedAnswersStr")
 
+    // validate answer ids
+    val answerIds = answers
+      .map { answer => answer.id }
+      .toSet
+    val shouldAnswerIds = answers
+      .zipWithIndex
+      .map { case (_answer, index) => index }
+      .toSet
+    assert(
+      answerIds == shouldAnswerIds,
+      "answer ids should start with 0 and have no missing number in between"
+    )
+
+    if (extra_options.isDefined) {
+      extra_options.get.validate()
+    }
+
     // validate shuffle categories
-    if (extra_options.isDefined &&
-        extra_options.get.shuffle_category_list.isDefined &&
-        extra_options.get.shuffle_category_list.get.size > 0) {
+    if (
+      extra_options.isDefined &&
+      extra_options.get.shuffle_category_list.isDefined &&
+      extra_options.get.shuffle_category_list.get.size > 0
+    ) {
       val categories = answers.map{ x => x.category } toSet
 
       extra_options.get.shuffle_category_list.get.map { x =>
@@ -526,6 +553,38 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
       assert(
         layout == "simultaneous-questions",
         "cumulative tally type is only supported in simultaneous-questions"
+      )
+    }
+    
+    // if enable_checkable_lists is set, verify that for each category there
+    // is an list answer
+    if (
+      extra_options.isDefined &&
+      extra_options.get.enable_checkable_lists.isDefined &&
+      extra_options.get.enable_checkable_lists.get == true
+    ) {
+      // getting category names from answers
+      val answerCategoryNames = answers
+        .filter { answer => 
+          answer.category.length > 0 &&
+          answer.urls.filter {
+            url => (url.url != "true" || url.title != "isCategoryList")
+          }.length == 0
+        }
+        .map { answer => answer.category }
+        .toSet
+      // getting category answers
+      val categoryNames = answers
+        .filter { answer => 
+          answer.urls.filter {
+            url => (url.url == "true" && url.title == "isCategoryList")
+          }.length > 0
+        }
+        .map { answer => answer.text }
+        .toSet
+      assert(
+        categoryNames == answerCategoryNames,
+        s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is enabled"
       )
     }
 
@@ -557,12 +616,12 @@ case class QuestionExtra(
   default_selected_option_ids: Option[Array[Int]],
   select_categories_1click: Option[Boolean],
   answer_columns_size: Option[Int],
-  group_answer_pairs: Option[Boolean],
+  answer_group_columns_size: Option[Int],
   select_all_category_clicks: Option[Int],
-  allow_casting_invalid_votes: Option[Boolean], // default = true
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
-  enable_checkable_lists: Option[Boolean] // default = false
+  enable_checkable_lists: Option[Boolean], // default = false
+  invalid_vote_policy: Option[String] // allowed, warn, not-allowed
 )
 {
 
@@ -588,6 +647,8 @@ case class QuestionExtra(
 
     assert(!answer_columns_size.isDefined || List(12,6,4,3).contains(answer_columns_size.get), "invalid answer_columns_size, can only be a string with 12,6,4,3")
 
+    assert(!answer_group_columns_size.isDefined || List(12,6,4,3).contains(answer_group_columns_size.get), "invalid answer_group_columns_size, can only be a string with 12,6,4,3")
+
     assert(!(shuffle_all_options.isDefined && shuffle_category_list.isDefined &&
            shuffle_all_options.get) || 0 == shuffle_category_list.get.size,
            "shuffle_all_options is true but shuffle_category_list is not empty")
@@ -595,6 +656,14 @@ case class QuestionExtra(
     assert(!select_all_category_clicks.isDefined || select_all_category_clicks.get >= 1, "select_all_category_clicks must be >= 1")
 
     assert(!cumulative_number_of_checkboxes.isDefined || cumulative_number_of_checkboxes.get.toInt >= 1, "cumulative_number_of_checkboxes must be >= 1")
+
+    assert(
+      (
+        !invalid_vote_policy.isDefined || 
+        List("allowed", "warn", "not-allowed").contains(invalid_vote_policy.get)
+      ),
+      "invalid_vote_policy must be 'allowed', 'warn' or 'not-allowed'"
+    )
   }
 }
 
