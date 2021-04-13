@@ -517,7 +517,9 @@ case class Question(description: String, layout: String, max: Int, min: Int, num
     if (tally_type == "cumulative") {
       // ensure extra option is defined
       assert(
-        extra_options.isDefined && extra_options.get.cumulative_number_of_checkboxes.isDefined,
+        extra_options.isDefined && 
+        extra_options.get.cumulative_number_of_checkboxes.isDefined && 
+        extra_options.get.cumulative_number_of_checkboxes.get >= 1,
         "cumulative_number_of_checkboxes must be >= 1"
       )
       // only supported in simultaneous-questions layout!
