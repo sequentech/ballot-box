@@ -540,6 +540,22 @@ case class Question(
       }
     }
 
+    // validate cumulative layout
+    if (tally_type == "cumulative") {
+      // ensure extra option is defined
+      assert(
+        extra_options.isDefined && 
+        extra_options.get.cumulative_number_of_checkboxes.isDefined && 
+        extra_options.get.cumulative_number_of_checkboxes.get >= 1,
+        "cumulative_number_of_checkboxes must be >= 1"
+      )
+      // only supported in simultaneous-questions layout!
+      assert(
+        layout == "simultaneous-questions",
+        "cumulative tally type is only supported in simultaneous-questions"
+      )
+    }
+    
     // if enable_checkable_lists is set, verify that for each category there
     // is an list answer
     if (
