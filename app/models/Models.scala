@@ -757,11 +757,26 @@ case class ElectionExtra(
   success_screen__hide_ballot_tracker: Option[Boolean],
   success_screen__hide_qr_code: Option[Boolean],
   success_screen__hide_download_ballot_ticket: Option[Boolean],
+  success_screen__redirect__url: Option[String],
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
   success_screen__redirect_to_login__auto_seconds: Option[Int],
   public_title: Option[String]
-)
+) {
+  def validate() = {
+    if (success_screen__redirect_to_login__text.isDefined) 
+    {
+      validateStringLength(success_screen__redirect_to_login__text.get, SHORT_STRING, s"too long success_screen__redirect_to_login__text ${success_screen__redirect_to_login__text.get}")
+    }
+    if (success_screen__redirect__url.isDefined)
+    {
+      validateStringLength(success_screen__redirect__url.get, SHORT_STRING, s"too long success_screen__redirect__url ${success_screen__redirect__url.get}")
+    }
+
+    this
+  }
+}
+
 
 /** an url to be shown when presenting election data */
 case class Url(title: String, url: String) {
