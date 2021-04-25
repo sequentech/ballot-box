@@ -761,6 +761,10 @@ case class ElectionExtra(
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
   success_screen__redirect_to_login__auto_seconds: Option[Int],
+  success_screen__ballot_ticket__logo_header: Option[String],
+  success_screen__ballot_ticket__logo_subheader: Option[String],
+  success_screen__ballot_ticket__h3: Option[String],
+  success_screen__ballot_ticket__h4: Option[String]
   public_title: Option[String]
 ) {
   def validate() = {
@@ -771,6 +775,22 @@ case class ElectionExtra(
     if (success_screen__redirect__url.isDefined)
     {
       validateStringLength(success_screen__redirect__url.get, SHORT_STRING, s"too long success_screen__redirect__url ${success_screen__redirect__url.get}")
+    }
+    if (success_screen__ballot_ticket__logo_header.isDefined) 
+    {
+      validateStringLength(success_screen__ballot_ticket__logo_header.get, SHORT_STRING, s"too long success_screen__ballot_ticket__logo_header ${success_screen__ballot_ticket__logo_header.get}")
+    }
+    if (success_screen__ballot_ticket__logo_subheader.isDefined) 
+    {
+      validateStringLength(success_screen__ballot_ticket__logo_subheader.get, SHORT_STRING, s"too long success_screen__ballot_ticket__logo_subheader ${success_screen__ballot_ticket__logo_subheader.get}")
+    }
+    if (success_screen__ballot_ticket__h3.isDefined) 
+    {
+      validateStringLength(success_screen__ballot_ticket__h3.get, SHORT_STRING, s"too long success_screen__ballot_ticket__h3 ${success_screen__ballot_ticket__h3.get}")
+    }
+    if (success_screen__ballot_ticket__h4.isDefined) 
+    {
+      validateStringLength(success_screen__ballot_ticket__h4.get, SHORT_STRING, s"too long success_screen__ballot_ticket__h4 ${success_screen__ballot_ticket__h4.get}")
     }
 
     this
