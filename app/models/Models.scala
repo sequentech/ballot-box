@@ -764,7 +764,7 @@ case class ElectionExtra(
   success_screen__ballot_ticket__logo_header: Option[String],
   success_screen__ballot_ticket__logo_subheader: Option[String],
   success_screen__ballot_ticket__h3: Option[String],
-  success_screen__ballot_ticket__h4: Option[String]
+  success_screen__ballot_ticket__h4: Option[String],
   public_title: Option[String]
 ) {
   def validate() = {
