@@ -761,6 +761,7 @@ case class ElectionExtra(
   success_screen__redirect_to_login: Option[Boolean],
   success_screen__redirect_to_login__text: Option[String],
   success_screen__redirect_to_login__auto_seconds: Option[Int],
+  success_screen__ballot_ticket__logo_url: Option[String],
   success_screen__ballot_ticket__logo_header: Option[String],
   success_screen__ballot_ticket__logo_subheader: Option[String],
   success_screen__ballot_ticket__h3: Option[String],
@@ -775,6 +776,10 @@ case class ElectionExtra(
     if (success_screen__redirect__url.isDefined)
     {
       validateStringLength(success_screen__redirect__url.get, SHORT_STRING, s"too long success_screen__redirect__url ${success_screen__redirect__url.get}")
+    }
+    if (success_screen__ballot_ticket__logo_url.isDefined) 
+    {
+      validateStringLength(success_screen__ballot_ticket__logo_url.get, SHORT_STRING, s"too long success_screen__ballot_ticket__logo_url ${success_screen__ballot_ticket__logo_url.get}")
     }
     if (success_screen__ballot_ticket__logo_header.isDefined) 
     {
