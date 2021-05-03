@@ -767,7 +767,8 @@ case class ElectionExtra(
   success_screen__ballot_ticket__h3: Option[String],
   success_screen__ballot_ticket__h4: Option[String],
   public_title: Option[String],
-  review_screen__split_cast_edit: Option[Boolean]
+  review_screen__split_cast_edit: Option[Boolean],
+  show_skip_question_button: Option[Boolean]
 ) {
   def validate() = {
     if (success_screen__redirect_to_login__text.isDefined) 
