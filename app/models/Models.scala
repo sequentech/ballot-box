@@ -621,7 +621,8 @@ case class QuestionExtra(
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
   enable_checkable_lists: Option[Boolean], // default = false
-  invalid_vote_policy: Option[String] // allowed, warn, not-allowed
+  invalid_vote_policy: Option[String], // allowed, warn, not-allowed
+  review_screen__show_question_description: Option[Boolean] // default = false
 )
 {
 
