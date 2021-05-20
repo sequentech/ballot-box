@@ -506,7 +506,7 @@ case class Question(
     val answersOk = answers.map(_.validate())
     val repeatedAnswers =  answers
       // do not include in the count write-ins, as the text there is empty
-      .filter { x => 
+      .filter { answer => 
         answer.urls.filter { 
           url => (url.url == "true" && url.title == "isWriteIn")
         }.length == 0
@@ -715,7 +715,7 @@ case class Answer(
     // TODO not looking inside the value
     assert(sort_order >= 0, "invalid sort_order")
     
-    val isWriteIn = answer.urls.filter {
+    val isWriteIn = urls.filter {
       url => (url.url == "true" && url.title == "isWriteIn")
     }.length != 0
     assert(isWriteIn || text.length > 0, "text too short")
