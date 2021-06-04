@@ -505,6 +505,12 @@ case class Question(
     validateIdentifier(answer_total_votes_percentage, "invalid answer_total_votes_percentage")
     val answersOk = answers.map(_.validate())
     val repeatedAnswers =  answers
+      // do not include in the count write-ins, as the text there is empty
+      .filter { answer => 
+        answer.urls.filter { 
+          url => (url.url == "true" && url.title == "isWriteIn")
+        }.length == 0
+      }
       .filter { x => answers.count(_.text == x.text) > 1 }
       .map { x => x.text }
     val repeatedAnswersStr = repeatedAnswers.toSet.mkString(", ")
@@ -621,6 +627,7 @@ case class QuestionExtra(
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
   enable_checkable_lists: Option[Boolean], // default = false
+  allow_writeins: Option[Boolean], // default = false
   invalid_vote_policy: Option[String], // allowed, warn, not-allowed
   review_screen__show_question_description: Option[Boolean] // default = false
 )
@@ -688,17 +695,32 @@ case class QuestionCondition(
 }
 
 /** defines a possible answer for a question asked in an election */
-case class Answer(id: Int, category: String, details: String, sort_order: Int, urls: Array[Url], text: String) {
-
+case class Answer(
+  id: Int,
+  category: String,
+  details: String,
+  sort_order: Int,
+  urls: Array[Url],
+  text: String
+) {
   def validate() = {
     assert(id >= 0, "invalid id")
-    validateStringLength(category, SHORT_STRING, s"category too large $category")
+    validateStringLength(
+      category, 
+      SHORT_STRING, 
+      s"category too large $category"
+    )
 
     assert(details.length <= LONG_STRING, "details too long")
     val detailsOk = sanitizeHtml(details)
     // TODO not looking inside the value
     assert(sort_order >= 0, "invalid sort_order")
-    assert(text.length <= LONG_STRING, "text too long")
+    
+    val isWriteIn = urls.filter {
+      url => (url.url == "true" && url.title == "isWriteIn")
+    }.length != 0
+    assert(isWriteIn || text.length > 0, "text too short")
+    assert(isWriteIn || text.length <= LONG_STRING, "text too long")
     val textOk = sanitizeHtml(text)
     val urlsOk = urls.map(_.validate())
 
