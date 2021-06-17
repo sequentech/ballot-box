@@ -68,14 +68,38 @@ object Votes {
     votes.filter(_.electionId === electionId).sortBy(_.created.desc).drop(drop).take(take).list
   }
 
-  def checkHash(electionId: Long, hash: String)(implicit s: Session): Option[Vote] = {
-    val vote = votes.filter(_.electionId === electionId).filter(_.hash === hash).firstOption
+  def checkHash(electionId: Long, hash: String)(implicit s: Session): Option[Vote] = 
+  {
+    getElection(electionId).fold(
+      errors => None,
+      election =>
+      {
+        val electionConfigStr = Json.parse(election.configuration).as[JsObject]
+        val electionConfig = electionConfigStr.validate[ElectionConfig]
+        electionConfig.fold(
+          errors => None,
+          configJson =>
+          {
+            val virtualSubElections = electionConfig.virtualSubelections.get
+            val electionIds = List.concat(virtualSubElections, List(electionId))
+            val vote = votes
+              .filter(_.electionId.inSet(electionIds))
+              .filter(_.hash === hash)
+              .firstOption
 
-    // we make sure the hash corresponds to the last vote, otherwise return None
-    vote.flatMap { v =>
-      val latest = votes.filter(_.electionId === electionId).filter(_.voterId === v.voter_id).sortBy(_.created.desc).firstOption
-      latest.filter(_.hash == hash)
-    }
+            // we make sure the hash corresponds to the last vote, otherwise return None
+            vote.flatMap { v =>
+              val latest = votes
+                .filter(_.electionId === vote.electionId)
+                .filter(_.voterId === v.voter_id)
+                .sortBy(_.created.desc)
+                .firstOption
+              latest.filter(_.hash == hash)
+            }
+          }
+        )
+      }
+    )
   }
 
   // def count(implicit s: Session): Int = Query(votes.length).first
