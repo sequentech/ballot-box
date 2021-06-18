@@ -87,7 +87,7 @@ object Votes {
         // we make sure the hash corresponds to the last vote, otherwise return None
         vote.flatMap { v =>
           val latest = votes
-            .filter(_.electionId === vote.get.electionId)
+            .filter(_.electionId === vote.get.election_id)
             .filter(_.voterId === v.voter_id)
             .sortBy(_.created.desc)
             .firstOption
