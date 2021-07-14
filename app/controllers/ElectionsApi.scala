@@ -106,24 +106,24 @@ object ElectionsApi
         None
       }
     }
-  val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
+  val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
   val virtualElectionsAllowed = Play.current.configuration
     .getBoolean("election.virtualElectionsAllowed")
     .getOrElse(false)
 
 
   /** inserts election into the db in the registered state */
-  def register(id: Long) = HAction("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
+  def register(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|register").async(BodyParsers.parse.json) { request =>
     registerElection(request, id)
   }
 
   /** updates an election's config */
-  def update(id: Long) = HAction("", "AuthEvent", id, "edit|update").async(BodyParsers.parse.json) { request =>
+  def update(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|update").async(BodyParsers.parse.json) { request =>
     updateElection(id, request)
   }  
 
   /** updates an election's social share buttons config */
-  def updateShare(id: Long) = HAction("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
+  def updateShare(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|update-share").async(BodyParsers.parse.json) { request =>
     updateShareElection(id, request)
   }
 
@@ -139,7 +139,7 @@ object ElectionsApi
   }
 
   /** Creates an election in eo */
-  def create(id: Long) = HAction("", "AuthEvent", id, "edit|create").async { request =>
+  def create(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|create").async { request =>
 
     getElection(id).flatMap(createElection).recover {
 
@@ -153,7 +153,7 @@ object ElectionsApi
   }
 
   /** Set start date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
-  def setStartDate(id: Long) = HAction("", "AuthEvent", id, "edit|start").async(BodyParsers.parse.json)
+  def setStartDate(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|start").async(BodyParsers.parse.json)
   {
     request => Future {
       val dateValueJs = request.body.as[JsObject]
@@ -176,7 +176,7 @@ object ElectionsApi
   }
 
   /** Set stop date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
-  def setStopDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
+  def setStopDate(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
   {
     request => Future {
       val dateValueJs = request.body.as[JsObject]
@@ -199,7 +199,7 @@ object ElectionsApi
   }
 
   /** Set results_updated date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
-  def setTallyDate(id: Long) = HAction("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
+  def setTallyDate(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
   {
     request => Future {
       val dateValueJs = request.body.as[JsObject]
@@ -222,7 +222,7 @@ object ElectionsApi
   }
 
   /** sets election in started state, votes will be accepted */
-  def start(id: Long) = HAction("", "AuthEvent", id, "edit|start").async { request => Future {
+  def start(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|start").async { request => Future {
 
     val ret = DAL.elections.updateState(id, Elections.STARTED)
     Future {
@@ -236,7 +236,7 @@ object ElectionsApi
 
   /** sets election in stopped state, votes will not be accepted */
   def stop(id: Long) =
-    HAction("", "AuthEvent", id, "edit|stop")
+    HActionAdmin("", "AuthEvent", id, "edit|stop")
       .async 
   {
     request => 
@@ -251,7 +251,7 @@ object ElectionsApi
 
   /** sets election in stopped state, votes will not be accepted */
   def allowTally(id: Long) =
-    HAction("", "AuthEvent", id, "edit|allow-tally")
+    HActionAdmin("", "AuthEvent", id, "edit|allow-tally")
       .async 
   {
     request => 
@@ -266,7 +266,7 @@ object ElectionsApi
 
   /** sets a virtual election in TALLY_OK state */
   def virtualTally(id: Long) =
-    HAction("", "AuthEvent", id, "edit|tally")
+    HActionAdmin("", "AuthEvent", id, "edit|tally")
       .async 
   {
     request => 
@@ -310,7 +310,7 @@ object ElectionsApi
   }
 
   /** request a tally, dumps votes to the private ds */
-  def tally(id: Long) = HAction("", "AuthEvent", id, "edit|tally").async { request =>
+  def tally(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|tally").async { request =>
 
     val tally = getElection(id).flatMap { e =>
       if(
@@ -346,7 +346,7 @@ object ElectionsApi
 
   /** update the ballot box results configuration and update the results */
   def updateBallotBoxesResultsConfig(id: Long) =
-    HAction("", "AuthEvent", id, "edit|update-ballot-boxes-results-config")
+    HActionAdmin("", "AuthEvent", id, "edit|update-ballot-boxes-results-config")
       .async(BodyParsers.parse.json)
   {
     request =>
@@ -368,7 +368,7 @@ object ElectionsApi
 
    /** calculate the results for a tally using agora-results */
   def calculateResults(id: Long) = 
-    HAction("", "AuthEvent", id, "edit|calculate-results")
+    HActionAdmin("", "AuthEvent", id, "edit|calculate-results")
       .async(BodyParsers.parse.tolerantText)
     {
       request =>
@@ -378,7 +378,7 @@ object ElectionsApi
   /** Request a tally, dumps votes to the private ds. Only tallies votes 
       matching authapi active voters */
   def tallyWithVoterIds(id: Long) = 
-    HAction("", "AuthEvent", id, "edit|tally")
+    HActionAdmin("", "AuthEvent", id, "edit|tally")
       .async(BodyParsers.parse.json) 
     {
       request =>
@@ -421,7 +421,7 @@ object ElectionsApi
 
   /** request a tally, but do not dump votes, use those in the private ds */
   def tallyNoDump(id: Long) = 
-    HAction("", "AuthEvent", id, "edit|tally").async 
+    HActionAdmin("", "AuthEvent", id, "edit|tally").async 
     {
       request =>
         val tally = getElection(id).flatMap { e =>
@@ -649,12 +649,12 @@ object ElectionsApi
     }
   }
 
-  def publishResults(id: Long) = HAction("", "AuthEvent", id, "edit|publish-results").async {
+  def publishResults(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|publish-results").async {
     publishResultsLogic(id)
   }
 
   def unpublishResults(id: Long) =
-    HAction(
+    HActionAdmin(
       "", 
       "AuthEvent", 
       id, 
@@ -692,7 +692,7 @@ object ElectionsApi
       }
     }
 
-  def getResults(id: Long) = HAction("", "AuthEvent", id, "edit|view-results").async { request =>
+  def getResults(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|view-results").async { request =>
 
     val future = getElection(id).map { election =>
       Ok(response(election.results))
@@ -702,20 +702,20 @@ object ElectionsApi
     }
   }
 
-  def getElectionVoters(id: Long) = HAction("", "AuthEvent", id, "edit|view-voters").async { request =>
+  def getElectionVoters(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|view-voters").async { request =>
     getVoters(id).map { voters =>
         Ok(response(Json.toJson( voters.map(v => v.voter_id) )))
     }
   }
 
-  def getElectionStats(id: Long) = HAction("", "AuthEvent", id, "edit|view-stats").async { request =>
+  def getElectionStats(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|view-stats").async { request =>
     getStats(id).map { s =>
         Ok(response(Json.toJson( s )))
     }
   }
 
   /** dump pks to the public datastore, this is an admin only command */
-  def dumpPks(id: Long) = HAction("", "AuthEvent", id, "edit").async { request =>
+  def dumpPks(id: Long) = HActionAdmin("", "AuthEvent", id, "edit").async { request =>
 
     val future = getElection(id).map { election =>
       val mapped = election.pks.map { pks =>

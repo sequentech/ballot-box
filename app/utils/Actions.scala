@@ -25,10 +25,14 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.{Crypto => PlayCrypto}
 
 /** Authorizes requests using hmac in Authorization header */
-case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: String) extends ActionFilter[Request] {
+case 
+class HMACAuthAction(
+  userId: 
+  String, 
+  objType/*  
+: */String, objId: Long, perm: String, expiry: Int) extends ActionFilter[Request] {
 
-  val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
-  val expiry = Play.current.configuration.getString("booth.auth.expiry").get.toInt
+  val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
 
   /** deny requests that dont pass hmac validations */
   def filter[A](input: Request[A]) = Future.successful {
@@ -105,7 +109,26 @@ case class HMACAuthAction(userId: String, objType: String, objId: Long, perm: St
 /** an action that passes through the hmac filter */
 case class HAction(userId: String, objType: String, objId: Long, perm: String) extends ActionBuilder[Request] {
   def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
-    HMACAuthAction(userId, objType, objId, perm).invokeBlock(request, block)
+    HMACAuthAction(
+      userId, 
+      objType, 
+      objId, 
+      perm,
+      /*expiry = */Play.current.configuration.getString("elections.auth.expiry").get.toInt
+    ).invokeBlock(request, block)
+  }
+}
+
+/** an action that passes through the hmac filter */
+case class HActionAdmin(userId: String, objType: String, objId: Long, perm: String) extends ActionBuilder[Request] {
+  def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
+    HMACAuthAction(
+      userId, 
+      objType, 
+      objId, 
+      perm,
+      /*expiry = */Play.current.configuration.getString("elections.auth.admin_expiry").get.toInt
+    ).invokeBlock(request, block)
   }
 }
 

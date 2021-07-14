@@ -56,7 +56,7 @@ object BallotboxApi extends Controller with Response {
         None
       }
     }
-  val boothSecret = Play.current.configuration.getString("booth.auth.secret").get
+  val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
 
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
@@ -135,7 +135,7 @@ object BallotboxApi extends Controller with Response {
   }(slickExecutionContext)}
 
   /** dump ciphertexts, goes to the private datastore of the election, this is an admin only command */
-  def dumpVotes(electionId: Long) = HAction("", "AuthEvent", electionId, "edit").async { request =>
+  def dumpVotes(electionId: Long) = HActionAdmin("", "AuthEvent", electionId, "edit").async { request =>
 
     dumpTheVotes(electionId).map { x =>
       Ok(response(0))
@@ -147,7 +147,7 @@ object BallotboxApi extends Controller with Response {
    * file.
    */
   def dumpVotesWithVoterIdsFile(electionId: Long) = 
-    HAction("", "AuthEvent", electionId, "edit").async 
+    HActionAdmin("", "AuthEvent", electionId, "edit").async 
   {
     request =>
       dumpTheVotes(
@@ -163,7 +163,7 @@ object BallotboxApi extends Controller with Response {
    * voters in AuthApi.
    */
   def dumpVotesWithAuthapiVoterIds(electionId: Long) =
-      HAction("", "AuthEvent", electionId, "edit").async 
+      HActionAdmin("", "AuthEvent", electionId, "edit").async 
   {
     request =>
       dumpTheVotes(
@@ -297,63 +297,3 @@ ORDER BY auth_user.username ASC;""",
       }
     }
   }
-
-  /* def vote(electionId: Long, voterId: String) =
-    HAction(voterId, "AuthEvent", electionId, "vote").async(BodyParsers.parse.json) { request =>
-
-    castVote(electionId, voterId, request).flatMap(postVoteCallback).recover {
-      case v:ValidationException => BadRequest(response(s"Failed validating vote, $v"))
-      case n:NoSuchElementException => BadRequest(response(s"No election found with id $electionId"))
-      case r:RuntimeException => BadRequest(response(r.getMessage()))
-      case i:IOException => InternalServerError(error(e.getMessage(), ErrorCodes.PK_ERROR))
-    }
-  }
-
-  private def castVote(electionId: Long, voterId: String, request: Request[JsValue]): Future[Result] = Future {
-
-    val voteValue = request.body.validate[VoteDTO]
-    voteValue.fold (
-
-      errors => BadRequest(response(s"Invalid vote json $errors")),
-
-      vote => {
-
-        DB.withSession { implicit session =>
-
-          val election = DAL.elections.findByIdWithSession(electionId).get
-          val votesCast = DAL.votes.countForElectionAndVoter(electionId, voterId)
-
-          if(votesCast >= maxRevotes) {
-            Logger.warn(s"Maximum number of revotes reached for voterId $voterId")
-            throw new RuntimeException("Maximum number of revotes reached")
-          }
-          else {
-
-            if(election.state == Elections.STARTED || election.state == Elections.CREATED) {
-
-              val pksJson = Json.parse(election.pks.get)
-              val pksValue = pksJson.validate[Array[PublicKey]]
-
-              pksValue.fold (
-
-                errors => throw new java.io.IOException("Failed reading pks for vote"),
-
-                pks => {
-
-                  val validated = vote.validate(pks, true, electionId, voterId)
-                  val result = DAL.votes.insertWithSession(validated)
-                  Ok(response(result))
-                }
-              )
-            }
-            else {
-              throw new RuntimeException("Election is not open")
-            }
-          }
-        }
-      }
-    )
-
-  }(slickExecutionContext)
-  */
-}
