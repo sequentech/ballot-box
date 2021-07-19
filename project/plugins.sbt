@@ -12,7 +12,9 @@
 
 // You should have received a copy of the GNU Affero General Public License
 // along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
-resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
+// resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
+resolvers += "Typesafe repository" at "https://scala.jfrog.io/artifactory/ivy-releases/"
 
 // The Play plugin
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.6")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.6")
+// addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.5.15")

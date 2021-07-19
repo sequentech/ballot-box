@@ -31,7 +31,7 @@ scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
   jdbc,
-  cache,
+  cacheApi,
   ws,
   "com.typesafe.play" %% "play-slick" % "0.8.0",
   "org.postgresql" % "postgresql" % "42.2.18",
