@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This file is part of agora_elections.
 # Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
