@@ -23,6 +23,7 @@ import java.sql.Timestamp
 import scala.math.BigInt
 
 import org.cvogt.play.json.Jsonx
+import org.cvogt.play.json.implicits.optionNoError
 
 import play.api.libs._
 import json._
@@ -103,4 +104,13 @@ object JsonFormatters {
   implicit val PlaintextBallotF = Json.format[PlaintextBallot]
 
   implicit val callbackF = Json.format[Callback]
+
+  // implicit val stringWrites = Json.writes[Option[String]]
+  implicit val writeOptionString = new Writes[Option[String]] {
+    def writes(ts: Option[String]): JsValue = {
+      JsString(ts.getOrElse(""))
+    }
+  }
+
+  implicit val readOptionShares: Reads[Option[Array[ShareTextItem]]] = optionNoError[Array[ShareTextItem]]
 }
