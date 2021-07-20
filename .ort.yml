@@ -1,0 +1,6 @@
+---
+resolutions:
+  rule_violations:
+  - message: "The package (PyPI|Maven):.*:.* has the declared ScanCode copyleft-limited categorized license (LGPL|EPL|CDDL|MPL|GPL-2.0-only WITH Classpath-exception-2.0)-.*"
+    reason: "DYNAMIC_LINKAGE_EXCEPTION"
+    comment: "This is not a problem because java imports modules dynamicly, see https://stackoverflow.com/questions/4805577/when-importing-a-java-library-class-from-jar-is-this-considered-static-linking."
