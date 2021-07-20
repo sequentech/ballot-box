@@ -39,7 +39,7 @@ libraryDependencies ++= Seq(
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
-  "org.cvogt" %% "play-json-extensions" % "0.2"
+  "org.cvogt" %% "play-json-extensions" % "0.3.0"
 )
 
 // add this if can't resolve akka-slf4j_2.11
