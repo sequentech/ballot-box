@@ -16,5 +16,4 @@
 resolvers += "Typesafe repository" at "https://scala.jfrog.io/artifactory/ivy-releases/"
 
 // The Play plugin
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.6")
-// addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.5.15")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.6")
