@@ -35,7 +35,7 @@ jobs:
       run: |
         apt update
         apt install -y openjdk-8-jdk-headless wget postgresql-client
-        wget https://dl.bintray.com/sbt/debian/sbt-0.13.18.deb
+        wget https://scala.jfrog.io/artifactory/debian/sbt-0.13.18.deb
         dpkg -i sbt-0.13.18.deb
 
     - name: Build
