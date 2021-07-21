@@ -15,7 +15,8 @@
     </licenses>
     <name>agora-elections</name>
     <organization>
-        <name>agora-elections</name>
+        <name>Agora Voting SL</name>
+        <url>https://nvotes.com</url>
     </organization>
     <dependencies>
         <dependency>
