@@ -42,6 +42,15 @@ jobs:
       run: |
         sbt clean stage
 
+    - name: Upload POM artifact
+      steps:
+      - run: |
+          sbt makePom && cp target/scala-.*/agora-verifier.*.pom ${{ github.workspace }}/artifact/pom.xml
+      - uses: actions/upload-artifact@v2
+        with:	
+          name: pom.xml
+          path: ${{ github.workspace }}/artifact/pom.xml
+
     - name: Set test data
       run: |
         cp conf/test.local.conf.example conf/test.local.conf
