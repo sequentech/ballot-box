@@ -45,7 +45,7 @@ jobs:
     - name: Create pom.xml
       run: |
         sbt makePom
-        cp target/scala-.*/agora-verifier.*.pom ${{ github.workspace }}/artifact/pom.xml
+        cp target/scala-.*/agora-elections.*.pom ${{ github.workspace }}/artifact/pom.xml
 
     - name: Upload pom.xml artifact
       uses: actions/upload-artifact@v2
