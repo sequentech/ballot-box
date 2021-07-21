@@ -1,0 +1,10 @@
+---
+resolutions:
+  rule_violations:
+  - message: "The package Maven:agora-elections:agora-elections.* has the declared ScanCode copyleft catalogized license AGPL-3.0-only."
+    reason: "LICENSE_ACQUIRED_EXCEPTION"
+    comment: "The project is open source so it's normal that it's set as such."
+
+  - message: "The package (PyPI|Maven):.*:.* has the declared ScanCode copyleft-limited categorized license (LGPL-|EPL-|CDDL-|MPL-|CPL-|GPL-2.0-only WITH Classpath-exception-2.0).*"
+    reason: "DYNAMIC_LINKAGE_EXCEPTION"
+    comment: "This is not a problem because java imports modules dynamicly, see https://stackoverflow.com/questions/4805577/when-importing-a-java-library-class-from-jar-is-this-considered-static-linking."

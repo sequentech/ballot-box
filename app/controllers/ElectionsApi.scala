@@ -731,7 +731,10 @@ object ElectionsApi
   }
 
   def getAuthorities = Action.async { request => Future {
-      Ok(response(authorities.mapValues(_ \ "public")))
+      Ok(response(authorities.mapValues( value => {
+          (value \ "public").get
+        }) 
+      ))
   }}
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
@@ -1355,7 +1358,7 @@ object ElectionsApi
       Json.obj(
         "name" -> a,
         "orchestra_url" -> eoUrl(a, "api/queues"),
-        "ssl_cert" -> authorities(a) \ "ssl_certificate"
+        "ssl_cert" -> (authorities(a) \ "ssl_certificate").get
       )
     }
     JsArray(data.toSeq)

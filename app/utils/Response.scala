@@ -24,7 +24,7 @@ import java.util.Date
   *
   */
 trait Response {
-  case class Response[T: Format](payload: T)
+  case class Response[T: Writes](payload: T)
   case class Error(error: String, code: Int)
 
   object ErrorCodes {
@@ -39,7 +39,7 @@ trait Response {
 
   implicit val errorFormatter = Json.format[Error]
 
-  /** need to manually write reads/writes for generic types */
+    /** need to manually write reads/writes for generic types */
   implicit def responseReads[T: Format]: Reads[Response[T]] = new Reads[Response[T]] {
     def reads(json: JsValue): JsResult[Response[T]] = JsSuccess(new Response[T] (
        (json \ "payload").as[T]
@@ -47,7 +47,7 @@ trait Response {
   }
 
   /** need to manually write reads/writes for generic types */
-  implicit def responseWrites[T: Format]: Writes[Response[T]] = new Writes[Response[T]] {
+  implicit def responseWrites[T: Writes]: Writes[Response[T]] = new Writes[Response[T]] {
     def writes(response: Response[T]) = JsObject(Seq(
         "date" -> JsString(new java.sql.Timestamp(new Date().getTime).toString),
         "payload" -> Json.toJson(response.payload)
@@ -58,7 +58,7 @@ trait Response {
     Json.toJson(Response(Error(error, code)))
   }
 
-  def response[T: Format](payload: T) = {
+  def response[T: Writes](payload: T) = {
     Json.toJson(Response(payload))
   }
 }

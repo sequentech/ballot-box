@@ -12,6 +12,7 @@
 
 // You should have received a copy of the GNU Affero General Public License
 // along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+
 resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
 
 // The Play plugin

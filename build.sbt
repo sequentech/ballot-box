@@ -27,6 +27,16 @@ trapExit in run := false
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
+licenses += ("AGPL-3.0", url("https://www.gnu.org/licenses/agpl-3.0.en.html"))
+
+startYear := Some(2014)
+
+homepage := Some(url("https://github.com/agoravoting/agora_elections"))
+
+organizationName := "Agora Voting SL"
+
+organizationHomepage := Some(url("https://nvotes.com"))
+
 scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
@@ -39,7 +49,8 @@ libraryDependencies ++= Seq(
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
-  "org.cvogt" %% "play-json-extensions" % "0.2"
+  "com.typesafe.play" %% "play-json" % "2.4.1" excludeAll( ExclusionRule(organization = "com.typesafe.play") ),
+  "org.cvogt" %% "play-json-extensions" % "0.3.0" excludeAll( ExclusionRule(organization = "com.typesafe.play") )
 )
 
 // add this if can't resolve akka-slf4j_2.11
@@ -47,4 +58,3 @@ libraryDependencies ++= Seq(
 resolvers += "Spy Repository" at "https://files.couchbase.com/maven2" // required to resolve `spymemcached`, the plugin's dependency.
 
 resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
-

@@ -35,12 +35,23 @@ jobs:
       run: |
         apt update
         apt install -y openjdk-8-jdk-headless wget postgresql-client
-        wget https://dl.bintray.com/sbt/debian/sbt-0.13.18.deb
+        wget https://scala.jfrog.io/artifactory/debian/sbt-0.13.18.deb
         dpkg -i sbt-0.13.18.deb
 
     - name: Build
       run: |
         sbt clean stage
+
+    - name: Create pom.xml
+      run: |
+        sbt makePom
+
+    - name: Upload pom.xml artifact
+      uses: actions/upload-artifact@v2
+      with:	
+        name: pom.xml
+        path: target/**/*.pom
+        if-no-files-found: error
 
     - name: Set test data
       run: |
