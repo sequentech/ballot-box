@@ -45,8 +45,7 @@ jobs:
     - name: Create pom.xml
       run: |
         sbt makePom
-        pwd
-        cp ./target/scala-.*/agora-elections.*.pom ${{ github.workspace }}/pom.xml
+        cp $(pwd)/target/scala.*/agora-elections.*.pom ${{ github.workspace }}/pom.xml
 
     - name: Upload pom.xml artifact
       uses: actions/upload-artifact@v2

@@ -29,6 +29,10 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 licenses += ("AGPL-3.0", url("https://www.gnu.org/licenses/agpl-3.0.en.html"))
 
+organizationName := "Agora Voting SL"
+
+organizationHomepage := Some(url("https://nvotes.com"))
+
 scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
