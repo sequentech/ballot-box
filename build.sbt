@@ -39,8 +39,7 @@ libraryDependencies ++= Seq(
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
-  "org.cvogt" %% "play-json-extensions" % "0.3.0",
-  "com.typesafe.play" %% "play-iteratees" % "2.3.10"
+  "org.cvogt" %% "play-json-extensions" % "0.3.0" exclude ("com.typesafe.play", "play-iteratees")
 )
 
 // add this if can't resolve akka-slf4j_2.11
@@ -48,4 +47,3 @@ libraryDependencies ++= Seq(
 resolvers += "Spy Repository" at "https://files.couchbase.com/maven2" // required to resolve `spymemcached`, the plugin's dependency.
 
 resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
-
