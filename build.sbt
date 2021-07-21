@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
   "org.cvogt" %% "play-json-extensions" % "0.3.0",
-  "com.typesafe.play" %% "play-iteratees" % "2.4.1"
+  "com.typesafe.play" %% "play-iteratees" % "2.3.10"
 )
 
 // add this if can't resolve akka-slf4j_2.11
