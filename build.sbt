@@ -39,6 +39,7 @@ libraryDependencies ++= Seq(
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
+  "com.typesafe.play" %% "play-json" % "2.4.1" excludeAll( ExclusionRule(organization = "com.typesafe.play") ),
   "org.cvogt" %% "play-json-extensions" % "0.3.0" excludeAll( ExclusionRule(organization = "com.typesafe.play") )
 )
 
