@@ -29,6 +29,10 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 licenses += ("AGPL-3.0", url("https://www.gnu.org/licenses/agpl-3.0.en.html"))
 
+startYear := Some(2014)
+
+homepage := Some(url("https://github.com/agoravoting/agora_elections"))
+
 organizationName := "Agora Voting SL"
 
 organizationHomepage := Some(url("https://nvotes.com"))
