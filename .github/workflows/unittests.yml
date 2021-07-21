@@ -46,13 +46,14 @@ jobs:
       run: |
         sbt makePom
         mkdir -p ${{ github.workspace }}/pom-artifact/
-        cp $(pwd)/target/scala*/agora-elections*.pom ${{ github.workspace }}/pom-artifact/pom.xml
+        cp $(pwd)/target/scala*/agora-elections*.pom ${{ github.workspace }}/pom-artifact/
+        ls -lah ${{ github.workspace }}/pom-artifact/
 
     - name: Upload pom.xml artifact
       uses: actions/upload-artifact@v2
       with:	
         name: pom.xml
-        path: ${{ github.workspace }}/pom-artifact/pom.xml
+        path: ${{ github.workspace }}/pom-artifact/**/*
 
     - name: Set test data
       run: |
