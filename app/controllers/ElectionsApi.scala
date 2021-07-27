@@ -1390,7 +1390,7 @@ object ElectionsApi
 
   /** gets the api url for eo authority */
   private def eoUrl(auth: String, path: String) = {
-    val port = authorities.get(auth).map(_ \ "port").getOrElse(5000)
+    val port = authorities.get(auth).map(_ \ "port").getOrElse(JsNumber(5000)).as[Int]
     s"https://$auth:$port/$path"
   }
 
