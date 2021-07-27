@@ -108,7 +108,11 @@ object JsonFormatters {
   // implicit val stringWrites = Json.writes[Option[String]]
   implicit val writeOptionString = new Writes[Option[String]] {
     def writes(ts: Option[String]): JsValue = {
-      JsString(ts.getOrElse(""))
+      ts match {
+        case Some(value) => JsString(value)
+        case None => JsNull
+      }
+
     }
   }
 
