@@ -108,27 +108,45 @@ case class HMACAuthAction(
 }
 
 /** an action that passes through the hmac filter */
-case class HAction(userId: String, objType: String, objId: Long, perm: String) extends ActionBuilder[Request] {
-  def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
+case class HAction(
+  userId: String,
+  objType: String, 
+  objId: Long,
+  perm: String
+) extends ActionBuilder[Request] 
+{
+  def invokeBlock[A](
+    request: Request[A],
+    block: (Request[A]) => Future[Result]
+  ) = {
     HMACAuthAction(
       userId, 
       objType, 
       objId, 
       perm,
-      /*expiry = */Play.current.configuration.getString("elections.auth.expiry").get.toInt
+      Play.current.configuration.getString("elections.auth.expiry").get.toInt
     ).invokeBlock(request, block)
   }
 }
 
 /** an action that passes through the hmac filter */
-case class HActionAdmin(userId: String, objType: String, objId: Long, perm: String) extends ActionBuilder[Request] {
-  def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
+case class HActionAdmin(
+  userId: String,
+  objType: String,
+  objId: Long,
+  perm: String
+) extends ActionBuilder[Request]
+{
+  def invokeBlock[A](
+    request: Request[A],
+    block: (Request[A]) => Future[Result]
+  ) = {
     HMACAuthAction(
       userId, 
       objType, 
       objId, 
       perm,
-      /*expiry = */Play.current.configuration.getString("elections.auth.admin_expiry").get.toInt
+      Play.current.configuration.getString("elections.auth.admin_expiry").get.toInt
     ).invokeBlock(request, block)
   }
 }
