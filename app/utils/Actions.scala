@@ -25,12 +25,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.{Crypto => PlayCrypto}
 
 /** Authorizes requests using hmac in Authorization header */
-case 
-class HMACAuthAction(
-  userId: 
-  String, 
-  objType/*  
-: */String, objId: Long, perm: String, expiry: Int) extends ActionFilter[Request] {
+case class HMACAuthAction(
+  userId: String, 
+  objType: String, 
+  objId: Long, 
+  perm: String, 
+  expiry: Int
+) extends ActionFilter[Request] {
 
   val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
 
