@@ -297,3 +297,4 @@ ORDER BY auth_user.username ASC;""",
       }
     }
   }
+}
