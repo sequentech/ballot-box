@@ -107,7 +107,7 @@ trait TestContexts {
   }
 
   def getAuth(userId: String, objType: String, objId: Long, perm: String) = {
-    val authSecret = Play.current.configuration.getString("booth.auth.secret").get
+    val authSecret = Play.current.configuration.getString("elections.auth.secret").get
     val time = (new java.util.Date().getTime / 1000)
     val head = s"$userId:$objType:$objId:$perm:$time"
 

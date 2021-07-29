@@ -14,8 +14,9 @@ app.datastore.ssl_root="https://localhost:14453"
 
 app.eopeers.dir=/etc/eopeers/
 
-booth.auth.secret=<PASSWORD>
-booth.auth.expiry=60000
+elections.auth.secret=<PASSWORD>
+elections.auth.expiry=60
+elections.auth.admin_expiry=3600
 
 ws.ssl {
   loose.disableHostnameVerification=true

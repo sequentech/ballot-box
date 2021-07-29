@@ -51,8 +51,9 @@ application.local.conf
 
     app.partial-tallies=false
 
-    booth.auth.secret=hohoho
-    booth.auth.expiry=600000
+    elections.auth.secret=hohoho
+    elections.auth.expiry=60
+    elections.auth.admin_expiry=3600
 
     ws.ssl {
       loose.disableHostnameVerification=true
@@ -108,8 +109,9 @@ test.local.conf
 
     app.partial-tallies=false
 
-    booth.auth.secret=hohoho
-    booth.auth.expiry=600000
+    elections.auth.secret=hohoho
+    elections.auth.expiry=60
+    elections.auth.admin_expiry=3600
 
     ws.ssl {
       loose.disableHostnameVerification=true
