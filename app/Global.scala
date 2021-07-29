@@ -38,7 +38,7 @@ object Global extends WithFilters(LoggingFilter) with Response {
     ensureCfgExists("app.api.root")
     ensureCfgExists("app.datastore.root")
     ensureCfgExists("app.datastore.ssl_root")
-    ensureCfgExists("booth.auth.secret")
+    ensureCfgExists("elections.auth.secret")
     ensureCfgExists("elections.auth.expiry")
     ensureCfgExists("elections.auth.admin_expiry")
     ensureCfgExists("app.datastore.public")
