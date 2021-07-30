@@ -545,16 +545,20 @@ object ElectionsApi
           },
           configJson =>
           {
+            Logger.info(s"ElectionConfig with no errors")
             try
             {
               val validated = configJson.validate(authorities, id)
+              Logger.info(s"Validated configJson")
               DB.withSession
               {
                 implicit session =>
                   // check that related subelections exist and have results
+                  Logger.info(s"Executing within a session")
                   val talliedSubelections = validated.virtualSubelections.get.filter(
                     (eid) =>
                     {
+                      Logger.info(s"ensuring tally of subellection $eid")
                       val subelection = DAL.elections.findByIdWithSession(eid)
                       // ensure a tally can be executed
                       if (subelection.isDefined) {
@@ -564,6 +568,7 @@ object ElectionsApi
                     }
                   )
 
+                  Logger.info(s"executing calcResults")
                   calcResults(
                     id, 
                     config, 
@@ -1063,6 +1068,7 @@ object ElectionsApi
     subelections: Array[Long]
   ) = Future
   {
+    Logger.info(s"Calling to update results for $id")
     // remove previous public results directory, before the execution
     val oldResultsDirsRX = Paths.get(
       Datastore.getDirPath(id, /*isPublic?*/true).toString,
