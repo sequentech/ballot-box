@@ -169,10 +169,12 @@ object ElectionsApi
             Ok(response(ret))
           } catch {
             case e: ParseException => {
+              e.printStackTrace()
               Logger.error(s"Exception ParseException ${e.getMessage}")
               BadRequest(error(e.getMessage))
             }
             case e: Throwable => {
+              e.printStackTrace()
               Logger.error(s"Exception Throwable ${e.getMessage}")
               BadRequest(error(e.getMessage))
             }
@@ -199,10 +201,12 @@ object ElectionsApi
             Ok(response(ret))
           } catch {
             case e: ParseException => {
+              e.printStackTrace()
               Logger.error(s"Exception ParseException ${e.getMessage}")
               BadRequest(error(e.getMessage))
             }
             case e: Throwable => {
+              e.printStackTrace()
               Logger.error(s"Exception Throwable ${e.getMessage}")
               BadRequest(error(e.getMessage))
             }
@@ -229,10 +233,12 @@ object ElectionsApi
             Ok(response(ret))
           } catch {
             case e: ParseException => {
+              e.printStackTrace()
               Logger.error(s"Exception ParseException ${e.getMessage}")
               BadRequest(error(e.getMessage))
             }
             case e: Throwable => {
+              e.printStackTrace()
               Logger.error(s"Exception Throwable ${e.getMessage}")
               BadRequest(error(e.getMessage))
             }
@@ -616,10 +622,12 @@ object ElectionsApi
             } catch 
             {
               case e: ValidationException => Future {
+                e.printStackTrace()
                 Logger.error(s"validation exception ValidationException ${e.getMessage}")
                 BadRequest(error(e.getMessage))
               }
               case e: Throwable => Future {
+                e.printStackTrace()
                 Logger.error(s"validation exception Throwable ${e.getMessage}")
                 BadRequest(error(e.getMessage))
               }
@@ -664,11 +672,13 @@ object ElectionsApi
               catch
               {
                 case e: ValidationException => Future {
-                  Logger.error(s"validation exception ValidationException ${e.getMessage}")
+                  e.printStackTrace()
+                  Logger.error(s"Exception ValidationException ${e.getMessage}")
                   BadRequest(error(e.getMessage))
                 }
                 case e: Throwable => Future {
-                  Logger.error(s"validation exception Throwable ${e.getMessage}")
+                  e.printStackTrace()
+                  Logger.error(s"Exception Throwable ${e.getMessage}")
                   BadRequest(error(e.getMessage))
                 }
               }
@@ -948,12 +958,14 @@ object ElectionsApi
               }
           }
         } catch {
-          case e: ValidationException => Future {
-            Logger.error(s"validation exception ValidationException ${e.getMessage}")
+          case e: ValidationException => {
+            e.printStackTrace()
+            Logger.error(s"Exception ValidationException ${e.getMessage}")
             BadRequest(error(e.getMessage))
           }
-          case e: Throwable => Future {
-            Logger.error(s"validation exception Throwable ${e.getMessage}")
+          case e: Throwable => {
+            e.printStackTrace()
+            Logger.error(s"Exception Throwable ${e.getMessage}")
             BadRequest(error(e.getMessage))
           }
         }
@@ -978,8 +990,10 @@ object ElectionsApi
 
         shareText match 
         {
-          case e: JsError =>
+          case e: JsError => {
+            e.printStackTrace()
             promise.success(BadRequest(response(JsError.toFlatJson(e))))
+          }
 
           case jST: JsSuccess[Option[Array[ShareTextItem]]] =>
             val future = getElection(id) map 
@@ -1000,8 +1014,10 @@ object ElectionsApi
                   )
                 Ok(response(result))
             } recover {
-              case err =>
+              case err => {
+                err.printStackTrace()
                 BadRequest(response(getMessageFromThrowable(err)))
+              }
             }
             promise.completeWith(future)
         }
@@ -1073,12 +1089,14 @@ object ElectionsApi
         }
       f.recover {
         case t: Throwable => {
+          t.printStackTrace()
           Logger.warn(s"Exception caught when posting to callback $t")
         }
       }
     }
     catch {
       case t:Throwable => {
+        t.printStackTrace()
         Logger.warn(s"Exception caught when posting to callback $t")
       }
     }
