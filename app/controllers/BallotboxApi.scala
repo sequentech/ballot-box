@@ -118,8 +118,21 @@ object BallotboxApi extends Controller with Response {
           }
         }
         catch {
-          case v:ValidationException => BadRequest(response(s"Failed validating vote, $v"))
-          case n:NoSuchElementException => BadRequest(response(s"No election found with id $electionId"))
+          case e: ValidationException => {
+            e.printStackTrace()
+            Logger.error(s"Failed validating vote, ParseException ${e.getMessage}")
+            BadRequest(response(s"Failed validating vote, ${e.getMessage}"))
+          }
+          case e: NoSuchElementException => {
+            e.printStackTrace()
+            Logger.error(s"No election found with id $electionId, exception ${e.getMessage}}")
+            BadRequest(response(s"No election found with id $electionId, exception ${e.getMessage}}"))
+          }
+          case e: Throwable => {
+            e.printStackTrace()
+            Logger.error(s"Exception Throwable ${e.getMessage}")
+            BadRequest(error(e.getMessage))
+          }
         }
       }
     )
@@ -287,12 +300,14 @@ ORDER BY auth_user.username ASC;""",
         }
       f.recover {
         case t: Throwable => {
+          t.printStackTrace()
           Logger.warn(s"Exception caught when posting to callback $t")
         }
       }
     }
     catch {
       case t:Throwable => {
+        t.printStackTrace()
         Logger.warn(s"Exception caught when posting to callback $t")
       }
     }

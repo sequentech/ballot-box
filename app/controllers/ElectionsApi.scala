@@ -168,7 +168,16 @@ object ElectionsApi
             val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
             Ok(response(ret))
           } catch {
-            case e: ParseException => BadRequest(error(e.getMessage))
+            case e: ParseException => {
+              e.printStackTrace()
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              e.printStackTrace()
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
           }
         }
       )
@@ -191,7 +200,16 @@ object ElectionsApi
             val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
             Ok(response(ret))
           } catch {
-            case e: ParseException => BadRequest(error(e.getMessage))
+            case e: ParseException => {
+              e.printStackTrace()
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              e.printStackTrace()
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
           }
         }
       )
@@ -214,7 +232,16 @@ object ElectionsApi
             val ret = DAL.elections.setTallyDate(id, new Timestamp(parsedDate.getTime))
             Ok(response(ret))
           } catch {
-            case e: ParseException => BadRequest(error(e.getMessage))
+            case e: ParseException => {
+              e.printStackTrace()
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              e.printStackTrace()
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
           }
         }
       )
@@ -545,16 +572,21 @@ object ElectionsApi
           },
           configJson =>
           {
+            Logger.info(s"ElectionConfig with no errors")
             try
             {
+            Logger.info(s"Validating configJson")
               val validated = configJson.validate(authorities, id)
+              Logger.info(s"Validated configJson")
               DB.withSession
               {
                 implicit session =>
                   // check that related subelections exist and have results
+                  Logger.info(s"Executing within a session")
                   val talliedSubelections = validated.virtualSubelections.get.filter(
                     (eid) =>
                     {
+                      Logger.info(s"ensuring tally of subellection $eid")
                       val subelection = DAL.elections.findByIdWithSession(eid)
                       // ensure a tally can be executed
                       if (subelection.isDefined) {
@@ -564,6 +596,7 @@ object ElectionsApi
                     }
                   )
 
+                  Logger.info(s"executing calcResults")
                   calcResults(
                     id, 
                     config, 
@@ -588,8 +621,16 @@ object ElectionsApi
               }
             } catch 
             {
-              case e: ValidationException =>
-                Future { BadRequest(error(e.getMessage)) }
+              case e: ValidationException => Future {
+                e.printStackTrace()
+                Logger.error(s"validation exception ValidationException ${e.getMessage}")
+                BadRequest(error(e.getMessage))
+              }
+              case e: Throwable => Future {
+                e.printStackTrace()
+                Logger.error(s"validation exception Throwable ${e.getMessage}")
+                BadRequest(error(e.getMessage))
+              }
             }
           }
         )
@@ -631,6 +672,13 @@ object ElectionsApi
               catch
               {
                 case e: ValidationException => Future {
+                  e.printStackTrace()
+                  Logger.error(s"Exception ValidationException ${e.getMessage}")
+                  BadRequest(error(e.getMessage))
+                }
+                case e: Throwable => Future {
+                  e.printStackTrace()
+                  Logger.error(s"Exception Throwable ${e.getMessage}")
                   BadRequest(error(e.getMessage))
                 }
               }
@@ -910,7 +958,16 @@ object ElectionsApi
               }
           }
         } catch {
-          case e: ValidationException => BadRequest(error(e.getMessage))
+          case e: ValidationException => {
+            e.printStackTrace()
+            Logger.error(s"Exception ValidationException ${e.getMessage}")
+            BadRequest(error(e.getMessage))
+          }
+          case e: Throwable => {
+            e.printStackTrace()
+            Logger.error(s"Exception Throwable ${e.getMessage}")
+            BadRequest(error(e.getMessage))
+          }
         }
       }
     )
@@ -933,8 +990,10 @@ object ElectionsApi
 
         shareText match 
         {
-          case e: JsError =>
+          case e: JsError => {
+            Logger.error(s"Validation error ${JsError.toFlatJson(e)}")
             promise.success(BadRequest(response(JsError.toFlatJson(e))))
+          }
 
           case jST: JsSuccess[Option[Array[ShareTextItem]]] =>
             val future = getElection(id) map 
@@ -955,8 +1014,10 @@ object ElectionsApi
                   )
                 Ok(response(result))
             } recover {
-              case err =>
+              case err => {
+                err.printStackTrace()
                 BadRequest(response(getMessageFromThrowable(err)))
+              }
             }
             promise.completeWith(future)
         }
@@ -1028,12 +1089,14 @@ object ElectionsApi
         }
       f.recover {
         case t: Throwable => {
+          t.printStackTrace()
           Logger.warn(s"Exception caught when posting to callback $t")
         }
       }
     }
     catch {
       case t:Throwable => {
+        t.printStackTrace()
         Logger.warn(s"Exception caught when posting to callback $t")
       }
     }
@@ -1063,6 +1126,7 @@ object ElectionsApi
     subelections: Array[Long]
   ) = Future
   {
+    Logger.info(s"Calling to update results for $id")
     // remove previous public results directory, before the execution
     val oldResultsDirsRX = Paths.get(
       Datastore.getDirPath(id, /*isPublic?*/true).toString,

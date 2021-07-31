@@ -105,7 +105,6 @@ object JsonFormatters {
 
   implicit val callbackF = Json.format[Callback]
 
-  // implicit val stringWrites = Json.writes[Option[String]]
   implicit val writeOptionString = new Writes[Option[String]] {
     def writes(ts: Option[String]): JsValue = {
       ts match {
@@ -116,5 +115,14 @@ object JsonFormatters {
     }
   }
 
+  implicit val writeOptionBool = new Writes[Option[Boolean]] {
+    def writes(ts: Option[Boolean]): JsValue = {
+      ts match {
+        case Some(value) => JsBoolean(value)
+        case None => JsNull
+      }
+
+    }
+  }
   implicit val readOptionShares: Reads[Option[Array[ShareTextItem]]] = optionNoError[Array[ShareTextItem]]
 }
