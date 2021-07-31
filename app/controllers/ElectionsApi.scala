@@ -991,7 +991,7 @@ object ElectionsApi
         shareText match 
         {
           case e: JsError => {
-            e.printStackTrace()
+            Logger.error(s"Validation error ${JsError.toFlatJson(e)}")
             promise.success(BadRequest(response(JsError.toFlatJson(e))))
           }
 
