@@ -168,7 +168,14 @@ object ElectionsApi
             val ret = DAL.elections.setStartDate(id, new Timestamp(parsedDate.getTime))
             Ok(response(ret))
           } catch {
-            case e: ParseException => BadRequest(error(e.getMessage))
+            case e: ParseException => {
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
           }
         }
       )
@@ -191,7 +198,14 @@ object ElectionsApi
             val ret = DAL.elections.setStopDate(id, new Timestamp(parsedDate.getTime))
             Ok(response(ret))
           } catch {
-            case e: ParseException => BadRequest(error(e.getMessage))
+            case e: ParseException => {
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
           }
         }
       )
@@ -214,7 +228,14 @@ object ElectionsApi
             val ret = DAL.elections.setTallyDate(id, new Timestamp(parsedDate.getTime))
             Ok(response(ret))
           } catch {
-            case e: ParseException => BadRequest(error(e.getMessage))
+            case e: ParseException => {
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
           }
         }
       )
@@ -548,6 +569,7 @@ object ElectionsApi
             Logger.info(s"ElectionConfig with no errors")
             try
             {
+            Logger.info(s"Validating configJson")
               val validated = configJson.validate(authorities, id)
               Logger.info(s"Validated configJson")
               DB.withSession
@@ -593,8 +615,14 @@ object ElectionsApi
               }
             } catch 
             {
-              case e: ValidationException =>
-                Future { BadRequest(error(e.getMessage)) }
+              case e: ValidationException => Future {
+                Logger.error(s"validation exception ValidationException ${e.getMessage}")
+                BadRequest(error(e.getMessage))
+              }
+              case e: Throwable => Future {
+                Logger.error(s"validation exception Throwable ${e.getMessage}")
+                BadRequest(error(e.getMessage))
+              }
             }
           }
         )
@@ -636,6 +664,11 @@ object ElectionsApi
               catch
               {
                 case e: ValidationException => Future {
+                  Logger.error(s"validation exception ValidationException ${e.getMessage}")
+                  BadRequest(error(e.getMessage))
+                }
+                case e: Throwable => Future {
+                  Logger.error(s"validation exception Throwable ${e.getMessage}")
                   BadRequest(error(e.getMessage))
                 }
               }
@@ -915,7 +948,14 @@ object ElectionsApi
               }
           }
         } catch {
-          case e: ValidationException => BadRequest(error(e.getMessage))
+          case e: ValidationException => Future {
+            Logger.error(s"validation exception ValidationException ${e.getMessage}")
+            BadRequest(error(e.getMessage))
+          }
+          case e: Throwable => Future {
+            Logger.error(s"validation exception Throwable ${e.getMessage}")
+            BadRequest(error(e.getMessage))
+          }
         }
       }
     )

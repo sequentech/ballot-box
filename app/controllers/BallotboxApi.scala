@@ -118,8 +118,18 @@ object BallotboxApi extends Controller with Response {
           }
         }
         catch {
-          case v:ValidationException => BadRequest(response(s"Failed validating vote, $v"))
-          case n:NoSuchElementException => BadRequest(response(s"No election found with id $electionId"))
+          case e: ValidationException => {
+            Logger.error(s"Failed validating vote, ParseException ${e.getMessage}")
+            BadRequest(response(s"Failed validating vote, ${e.getMessage}"))
+          }
+          case e: NoSuchElementException => {
+            Logger.error(s"No election found with id $electionId, exception ${e.getMessage}}")
+            BadRequest(response(s"No election found with id $electionId, exception ${e.getMessage}}"))
+          }
+          case e: Throwable => {
+            Logger.error(s"Exception Throwable ${e.getMessage}")
+            BadRequest(error(e.getMessage))
+          }
         }
       }
     )
