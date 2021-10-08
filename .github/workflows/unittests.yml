@@ -49,11 +49,6 @@ jobs:
       with:
         java-version: "adopt@1.8"
 
-    # This is for caching purposes, just following the steps in 
-    # https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
-    - name: Coursier cache
-      uses: coursier/cache-action@v5
-
     - name: Build
       run: |
         sbt clean stage
