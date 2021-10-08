@@ -37,12 +37,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Install dependencies
       run: |
         apt update
-        apt install -y openjdk-8-jdk-headless wget postgresql-client
-        wget https://scala.jfrog.io/artifactory/debian/sbt-0.13.18.deb
-        dpkg -i sbt-0.13.18.deb
+        apt install -y wget postgresql-client curl
+
+    # source: https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
+    - name: Setup Scala, Sbt and Java 8
+      uses: olafurpg/setup-scala@v10
+      with:
+        java-version: "adopt@1.8"
 
     - name: Build
       run: |
@@ -71,3 +76,5 @@ jobs:
       run: sbt test
       env:
         PGSYSCONFDIR: testdata
+
+
