@@ -44,6 +44,12 @@ jobs:
         wget https://scala.jfrog.io/artifactory/debian/sbt-0.13.18.deb
         dpkg -i sbt-0.13.18.deb
 
+
+    # This is for caching purposes, just following the steps in 
+    # https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
+    - name: Coursier cache
+      uses: coursier/cache-action@v5
+
     - name: Build
       run: |
         sbt clean stage
@@ -71,3 +77,14 @@ jobs:
       run: sbt test
       env:
         PGSYSCONFDIR: testdata
+
+    - name: Tear down caching
+      run: |
+        # This is for caching purposes, just following the steps in 
+        # https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
+        rm -rf "$HOME/.ivy2/local" || true
+        find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
+        find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+        find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
+        find $HOME/.sbt                              -name "*.lock"               -delete || true
+
