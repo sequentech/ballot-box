@@ -15,7 +15,7 @@
 
 name := """agora-elections"""
 
-version := "4.0.0"
+version := "4.0.1"
 
 fork in run := true
 
