@@ -46,7 +46,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "0.8.0",
   "org.postgresql" % "postgresql" % "42.2.18",
   "org.bouncycastle" % "bcprov-jdk15on" % "1.69",
-  "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "r239",
+  "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "20211018.2",
   "commons-validator" % "commons-validator" % "1.4.1",
   "com.github.mumoshu" %% "play2-memcached-play23" % "0.7.0",
   "com.typesafe.play" %% "play-json" % "2.4.1" excludeAll( ExclusionRule(organization = "com.typesafe.play") ),
