@@ -501,10 +501,11 @@ case class Question(
   def validate() = {
     assert(description.length <= LONG_STRING, "description too long")
     val descriptionOk = sanitizeHtml(description)
+    val cumulative = if (extra_options.isDefined && extra_options.get.cumulative_number_of_checkboxes.isDefined) && extra_options.get.cumulative_number_of_checkboxes.get else 1
 
     validateIdentifier(layout, "invalid layout")
     assert(max >= 1, "invalid max")
-    assert(max <= answers.size, "max greater than answers")
+    assert(max <= answers.size * cumulative, "max greater than checkable answers")
     assert(min >= 0, "invalid min")
     assert(min <= answers.size, "min greater than answers")
     assert(num_winners >= 1, "invalid num_winners")
