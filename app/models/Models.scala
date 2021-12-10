@@ -805,6 +805,7 @@ case class ElectionExtra(
   disable__demo_voting_booth: Option[Boolean],
   disable__public_home: Option[Boolean],
   disable_voting_booth_audit_ballot: Option[Boolean],
+  disable__election_chooser_screen: Option[Boolean],
   success_screen__hide_ballot_tracker: Option[Boolean],
   success_screen__hide_qr_code: Option[Boolean],
   success_screen__hide_download_ballot_ticket: Option[Boolean],
@@ -850,7 +851,6 @@ case class ElectionExtra(
     {
       validateStringLength(success_screen__ballot_ticket__h4.get, SHORT_STRING, s"too long success_screen__ballot_ticket__h4 ${success_screen__ballot_ticket__h4.get}")
     }
-
     this
   }
 }
