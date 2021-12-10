@@ -806,7 +806,6 @@ case class ElectionExtra(
   disable__public_home: Option[Boolean],
   disable_voting_booth_audit_ballot: Option[Boolean],
   disable__election_chooser_screen: Option[Boolean],
-  election_success_voted_text: Option[String],
   success_screen__hide_ballot_tracker: Option[Boolean],
   success_screen__hide_qr_code: Option[Boolean],
   success_screen__hide_download_ballot_ticket: Option[Boolean],
@@ -852,17 +851,7 @@ case class ElectionExtra(
     {
       validateStringLength(success_screen__ballot_ticket__h4.get, SHORT_STRING, s"too long success_screen__ballot_ticket__h4 ${success_screen__ballot_ticket__h4.get}")
     }
-    val election_success_voted_text_ok = if (election_success_voted_text.isDefined)
-    {
-      validateStringLength(
-        election_success_voted_text.get, 
-        LONG_STRING, 
-        s"election_success_voted_text too large: ${election_success_voted_text.get}"
-      )
-      Some(sanitizeHtml(election_success_voted_text.get))
-    } else None
-
-    this.copy(election_success_voted_text = election_success_voted_text_ok)
+    this
   }
 }
 
