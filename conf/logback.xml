@@ -8,7 +8,7 @@
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%d{yyyy-MM-dd HH:mm:ss} [%level] %coloredLevel %logger{15} - %message%n%xException{10}</pattern>
+      <pattern>%date{"yyyy-MM-dd'T'HH:mm:ss,SSSXXX' (UTC+0)'", UTC} [%level] %coloredLevel %logger{15} - %message%n%xException{10}</pattern>
     </encoder>
   </appender>
 
