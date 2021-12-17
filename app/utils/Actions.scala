@@ -65,16 +65,16 @@ case class HMACAuthAction(
       val message = value.substring(slashPos + 1)
 
       val split = message.split(':')
-      if(split.length != 5) {
+      if (split.length < 5) {
         Logger.warn(s"Malformed authorization header")
         return false
       }
 
-      val rcvUserId = split(0)
-      val rcvObjType = split(1)
-      val rcvObjId = split(2).toLong
-      val rcvPerm = split(3)
-      val rcvTime = split(4).toLong
+      val rcvUserId = split.slice(0, split.length - 4).mkString(":")
+      val rcvObjType = split(split.length - 4)
+      val rcvObjId = split(split.length - 3).toLong
+      val rcvPerm = split(split.length - 2)
+      val rcvTime = split(split.length - 1).toLong
       val now = new java.util.Date().getTime / 1000
       val diff = now - rcvTime
 
@@ -98,7 +98,7 @@ case class HMACAuthAction(
         return true
       }
 
-      Logger.warn(s"Failed to authorize hmac ($value) $compareOk $diff $expiry $userOk $rcvObjType $objType $rcvObjId $objId $rcvPerm $perm")
+      Logger.warn(s"Failed to authorize hmac:\n\tvalue=$value\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm")
       return false
     }
     catch {
