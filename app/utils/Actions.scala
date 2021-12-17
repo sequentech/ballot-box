@@ -70,7 +70,7 @@ case class HMACAuthAction(
         return false
       }
 
-      val rcvUserId = split.slice(0, split.length - 5).mkString(':')
+      val rcvUserId = split.slice(0, split.length - 5).mkString(":")
       val rcvObjType = split(split.length - 4)
       val rcvObjId = split(split.length - 3).toLong
       val rcvPerm = split(split.length - 2)
