@@ -81,8 +81,21 @@ object BallotboxApi extends Controller with Response {
               BadRequest(response(s"Maximum number of revotes reached"))
             }
             else {
-
-              if(election.state == Elections.STARTED || election.state == Elections.CREATED) {
+              val configJson = Json.parse(election.configuration)
+              val presentation = configJson.validate[ElectionConfig].get.presentation
+              val gracefulEnd = (
+                presentation.extra_options.isDefined &&
+                presentation.extra_options.get.allow_voting_end_graceful_period.isDefined &&
+                presentation.extra_options.get.allow_voting_end_graceful_period.get == true
+              )
+              if(
+                election.state == Elections.STARTED ||
+                election.state == Elections.CREATED ||
+                (
+                  election.state == Election.STOPPED &&
+                  gracefulEnd
+                )
+              ) {
 
                 val pksJson = Json.parse(election.pks.get)
                 val pksValue = pksJson.validate[Array[PublicKey]]
