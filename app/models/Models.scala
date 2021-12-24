@@ -802,6 +802,7 @@ case class ElectionPresentation(
 /** defines election presentation extra options for an election */
 case class ElectionExtra(
   start_screen__skip: Option[Boolean],
+  booth_log_out__disable: Option[Boolean],
   disable__demo_voting_booth: Option[Boolean],
   disable__public_home: Option[Boolean],
   disable_voting_booth_audit_ballot: Option[Boolean],
@@ -834,6 +835,10 @@ case class ElectionExtra(
     if (success_screen__ballot_ticket__logo_url.isDefined) 
     {
       validateStringLength(success_screen__ballot_ticket__logo_url.get, SHORT_STRING, s"too long success_screen__ballot_ticket__logo_url ${success_screen__ballot_ticket__logo_url.get}")
+    }
+    if (booth_log_out__url.isDefined) 
+    {
+      validateStringLength(booth_log_out__url.get, SHORT_STRING, s"too long booth_log_out__url ${booth_log_out__url.get}")
     }
     if (success_screen__ballot_ticket__logo_header.isDefined) 
     {
