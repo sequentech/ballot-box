@@ -836,10 +836,6 @@ case class ElectionExtra(
     {
       validateStringLength(success_screen__ballot_ticket__logo_url.get, SHORT_STRING, s"too long success_screen__ballot_ticket__logo_url ${success_screen__ballot_ticket__logo_url.get}")
     }
-    if (booth_log_out__url.isDefined) 
-    {
-      validateStringLength(booth_log_out__url.get, SHORT_STRING, s"too long booth_log_out__url ${booth_log_out__url.get}")
-    }
     if (success_screen__ballot_ticket__logo_header.isDefined) 
     {
       validateStringLength(success_screen__ballot_ticket__logo_header.get, SHORT_STRING, s"too long success_screen__ballot_ticket__logo_header ${success_screen__ballot_ticket__logo_header.get}")
