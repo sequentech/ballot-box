@@ -220,11 +220,13 @@ object Elections {
   val CREATED = "created"
   val CREATE_ERROR = "create_error"
   val STARTED = "started"
+  val SUSPENDED = "suspended"
+  val RESUMED = "resumed"
   val STOPPED = "stopped"
+  val DOING_TALLY = "doing_tally"
   val TALLY_OK = "tally_ok"
   val TALLY_ERROR = "tally_error"
   val RESULTS_OK = "results_ok"
-  val DOING_TALLY = "doing_tally"
   val RESULTS_PUB = "results_pub"
 
   val elections = TableQuery[Elections]
@@ -244,6 +246,55 @@ object Elections {
   }
 
   def updateState(id: Long, state: String)(implicit s: Session) = {
+    val enforceStateControls = Play
+      .current
+      .configuration
+      .getBoolean("elections.enforceStateControls")
+      .getOrElse(true)
+
+    val election = DAL
+      .elections
+      .findByIdWithSession(id)
+      .get
+
+    if (enforceStateControls) {
+      if (
+        (state == CREATED && election.state != REGISTERED) ||
+        (state == CREATED_ERROR && election.state != REGISTERED) ||
+        (state == STARTED && election.state != CREATED) ||
+        (state == SUSPENDED && election.state != STARTED) ||
+        (state == RESUMED && election.state != SUSPENDED) ||
+        (
+          state == STOPPED &&
+          election.state != STARTED &&
+          election.state != SUSPENDED &&
+          election.state != RESUMED &&
+          election.state != TALLY_ERROR
+        ) ||
+        (
+          state == DOING_TALLY &&
+          election.state != STOPPED &&
+          election.state != DOING_TALLY
+        ) ||
+        (state == TALLY_OK && election.state != DOING_TALLY) ||
+        (state == TALLY_ERROR && election.state != DOING_TALLY) ||
+        (
+          state == RESULTS_OK &&
+          election.state != TALLY_OK &&
+          election.state != RESULTS_OK &&
+          election.state != RESULTS_PUB
+        ) ||
+        (
+          state == RESULTS_PUB &&
+          election.state != RESULTS_PUB &&
+          election.state != RESULTS_OK
+        )
+      ) {
+        throw new Exception(
+          s"Invalid state=${election.state} to change to ${state}"
+        )
+      }
+    }
     state match {
       case STARTED => 
         elections

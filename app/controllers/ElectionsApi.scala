@@ -261,7 +261,10 @@ object ElectionsApi
 
   }(slickExecutionContext)}
 
-  /** sets election in stopped state, votes will not be accepted */
+  /**
+   * Sets election in stopped state, votes will not be accepted and election
+   * won't be able to be started again unless the hardStop setting is disabled.
+   */
   def stop(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit|stop")
       .async 
@@ -271,6 +274,42 @@ object ElectionsApi
         Ok(
           response(
             DAL.elections.updateState(id, Elections.STOPPED)
+          )
+        )
+      } (slickExecutionContext)
+  }
+
+  /**
+   * Sets election in suspended state, votes will not be accepted but election
+   * can be resumed afterwards. 
+   */
+  def suspend(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit|suspend")
+      .async 
+  {
+    request => 
+      Future {
+        Ok(
+          response(
+            DAL.elections.updateState(id, Elections.SUSPENDED)
+          )
+        )
+      } (slickExecutionContext)
+  }
+
+  /**
+   * Sets election in suspended state, votes will not be accepted but election
+   * can be resumed afterwards. 
+   */
+  def resume(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit|resume")
+      .async 
+  {
+    request => 
+      Future {
+        Ok(
+          response(
+            DAL.elections.updateState(id, Elections.RESUMED)
           )
         )
       } (slickExecutionContext)

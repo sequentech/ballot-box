@@ -402,7 +402,6 @@ def create(cfg, args):
     print(r.status_code, r.text)
 
 def start(cfg, args):
-
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
@@ -411,11 +410,26 @@ def start(cfg, args):
     print(r.status_code, r.text)
 
 def stop(cfg, args):
-
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
     url = 'http://%s:%d/api/election/%d/stop' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def suspend(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/suspend' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def resume(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/resume' % (host, port, cfg['election_id'])
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
