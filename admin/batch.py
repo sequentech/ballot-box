@@ -19,7 +19,6 @@ import admin
 import cycle
 
 import sys
-import StringIO
 from functools import partial
 import time
 import json
