@@ -18,7 +18,7 @@
 import admin
 
 import sys
-import StringIO
+from io import StringIO
 from functools import partial
 import time
 import json
@@ -52,7 +52,7 @@ def ids_path(id):
 def capture_stdout(function):
     def wrapper(*args):
         stdout = sys.stdout
-        output = StringIO.StringIO()
+        output = StringIO()
         sys.stdout = output
         function(args)
         sys.stdout = stdout
