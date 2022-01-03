@@ -287,14 +287,23 @@ object ElectionsApi
     HActionAdmin("", "AuthEvent", id, "edit|suspend")
       .async 
   {
-    request => 
-      Future {
-        Ok(
-          response(
-            DAL.elections.updateState(id, Elections.SUSPENDED)
+    request =>
+      try {
+        Future {
+          Ok(
+            response(
+              DAL.elections.updateState(id, Elections.SUSPENDED)
+            )
           )
-        )
-      } (slickExecutionContext)
+        } (slickExecutionContext)
+      } catch 
+      {
+        case e: Exception => Future {
+          e.printStackTrace()
+          Logger.error(e.getMessage)
+          BadRequest(error(e.getMessage))
+        }
+      }
   }
 
   /**
@@ -306,13 +315,22 @@ object ElectionsApi
       .async 
   {
     request => 
-      Future {
-        Ok(
-          response(
-            DAL.elections.updateState(id, Elections.RESUMED)
+      try {
+        Future {
+          Ok(
+            response(
+              DAL.elections.updateState(id, Elections.RESUMED)
+            )
           )
-        )
-      } (slickExecutionContext)
+        } (slickExecutionContext)
+      } catch 
+      {
+        case e: Exception => Future {
+          e.printStackTrace()
+          Logger.error(e.getMessage)
+          BadRequest(error(e.getMessage))
+        }
+      }
   }
 
   /** sets election in stopped state, votes will not be accepted */
