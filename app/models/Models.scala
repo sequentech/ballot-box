@@ -257,10 +257,11 @@ object Elections {
       .findByIdWithSession(id)
       .get
 
+    // enforce only allowed state transitions happen
     if (enforceStateControls) {
       if (
         (state == CREATED && election.state != REGISTERED) ||
-        (state == CREATED_ERROR && election.state != REGISTERED) ||
+        (state == CREATE_ERROR && election.state != REGISTERED) ||
         (state == STARTED && election.state != CREATED) ||
         (state == SUSPENDED && election.state != STARTED) ||
         (state == RESUMED && election.state != SUSPENDED) ||
