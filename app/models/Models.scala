@@ -264,7 +264,11 @@ object Elections {
         (state == CREATED && current_state != REGISTERED) ||
         (state == CREATE_ERROR && current_state != REGISTERED) ||
         (state == STARTED && current_state != CREATED) ||
-        (state == SUSPENDED && current_state != STARTED) ||
+        (
+          state == SUSPENDED &&
+          current_state != STARTED &&
+          current_state != RESUMED
+        ) ||
         (state == RESUMED && current_state != SUSPENDED) ||
         (
           state == STOPPED &&
