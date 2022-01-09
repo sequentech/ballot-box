@@ -167,8 +167,13 @@ object DAL {
     }
 
     def updateState(id: Long, state: String) = DB.withSession { implicit session =>
+      val current_state = DAL
+        .elections
+        .findByIdWithSession(id)
+        .get
+        .state
       Cache.remove(key(id))
-      Elections.updateState(id, state)
+      Elections.updateState(id, current_state, state)
     }
 
     def allowTally(id: Long) = DB.withSession { implicit session =>
