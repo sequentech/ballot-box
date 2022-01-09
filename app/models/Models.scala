@@ -23,6 +23,7 @@ import utils.Validator
 import utils.ValidationException
 
 import play.api.Play
+import play.api.cache.Cache
 import play.api.db.slick.Config.driver.simple._
 import scala.slick.lifted.Tag
 import play.api.libs.json._
@@ -220,11 +221,13 @@ object Elections {
   val CREATED = "created"
   val CREATE_ERROR = "create_error"
   val STARTED = "started"
+  val SUSPENDED = "suspended"
+  val RESUMED = "resumed"
   val STOPPED = "stopped"
+  val DOING_TALLY = "doing_tally"
   val TALLY_OK = "tally_ok"
   val TALLY_ERROR = "tally_error"
   val RESULTS_OK = "results_ok"
-  val DOING_TALLY = "doing_tally"
   val RESULTS_PUB = "results_pub"
 
   val elections = TableQuery[Elections]
@@ -243,7 +246,61 @@ object Elections {
     elections.filter(_.id === theId).update(electionToWrite)
   }
 
-  def updateState(id: Long, state: String)(implicit s: Session) = {
+  def updateState(id: Long, current_state: String, state: String)
+  (implicit s: Session): Int = 
+  {
+    if (state == current_state) {
+      return 0
+    }
+    val enforceStateControls = Play
+      .current
+      .configuration
+      .getBoolean("elections.enforceStateControls")
+      .getOrElse(true)
+    
+    // enforce only allowed state transitions happen
+    if (enforceStateControls) {
+      if (
+        (state == CREATED && current_state != REGISTERED) ||
+        (state == CREATE_ERROR && current_state != REGISTERED) ||
+        (state == STARTED && current_state != CREATED) ||
+        (
+          state == SUSPENDED &&
+          current_state != STARTED &&
+          current_state != RESUMED
+        ) ||
+        (state == RESUMED && current_state != SUSPENDED) ||
+        (
+          state == STOPPED &&
+          current_state != STARTED &&
+          current_state != SUSPENDED &&
+          current_state != RESUMED &&
+          current_state != TALLY_ERROR
+        ) ||
+        (
+          state == DOING_TALLY &&
+          current_state != STOPPED &&
+          current_state != DOING_TALLY
+        ) ||
+        (state == TALLY_OK && current_state != DOING_TALLY) ||
+        (state == TALLY_ERROR && current_state != DOING_TALLY) ||
+        (
+          state == RESULTS_OK &&
+          current_state != TALLY_OK &&
+          current_state != RESULTS_OK &&
+          current_state != RESULTS_PUB
+        ) ||
+        (
+          state == RESULTS_PUB &&
+          current_state != RESULTS_PUB &&
+          current_state != RESULTS_OK
+        )
+      ) {
+        throw new Exception(
+          s"Invalid state=${current_state} to change to ${state}"
+        )
+      }
+    }
     state match {
       case STARTED => 
         elections

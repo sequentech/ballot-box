@@ -75,7 +75,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
             // for validation to work we need to set the pk for the election manually (for election 1020)
             Elections.setPublicKeys(1, pks1020)
-            Elections.updateState(1, Elections.STARTED)
+            Elections.updateState(1, Elections.REGISTERED, Elections.STARTED)
           }
         )
       }
@@ -99,7 +99,7 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
         // for validation to work we need to set the pk for the election manually (for election 1020)
         Elections.setPublicKeys(1, pks1020)
-        Elections.updateState(1, Elections.STARTED)
+        Elections.updateState(1, Elections.REGISTERED, Elections.STARTED)
       }
 
       val voteJson = getVote(1, "1")

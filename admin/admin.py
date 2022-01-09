@@ -402,7 +402,6 @@ def create(cfg, args):
     print(r.status_code, r.text)
 
 def start(cfg, args):
-
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
@@ -411,7 +410,6 @@ def start(cfg, args):
     print(r.status_code, r.text)
 
 def stop(cfg, args):
-
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
@@ -419,29 +417,63 @@ def stop(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def suspend(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/suspend' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def resume(cfg, args):
+    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
+    host,port = get_local_hostport()
+    headers = {'Authorization': auth}
+    url = 'http://%s:%d/api/election/%d/resume' % (host, port, cfg['election_id'])
+    r = requests.post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def auth_suspend(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/suspended/' % cfg['election_id']
+    r = request_post(url, headers=headers)
+    print(r.status_code, r.text)
+
+def auth_resume(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = base_url + 'auth-event/%d/resumed/' % cfg['election_id']
+    r = request_post(url, headers=headers)
+    print(r.status_code, r.text)
+
 def auth_stop(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
     url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
     r = request_post(url, headers=headers)
+    print(r.status_code, r.text)
 
 def auth_start(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
     url = base_url + 'auth-event/%d/started/' % cfg['election_id']
     r = request_post(url, headers=headers)
+    print(r.status_code, r.text)
 
 def archive(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
     url = base_url + 'auth-event/%d/archive/' % cfg['election_id']
     r = request_post(url, headers=headers)
+    print(r.status_code, r.text)
 
 def unarchive(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
     headers = get_authapi_auth_headers()
     url = base_url + 'auth-event/%d/unarchive/' % cfg['election_id']
     r = request_post(url, headers=headers)
+    print(r.status_code, r.text)
 
 def allow_tally(cfg, args):
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")

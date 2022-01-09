@@ -25,6 +25,8 @@ POST    /api/election/:id/update-share                        controllers.Electi
 POST    /api/election/:id/create                              controllers.ElectionsApi.create(id: Long)
 POST    /api/election/:id/start                               controllers.ElectionsApi.start(id: Long)
 POST    /api/election/:id/stop                                controllers.ElectionsApi.stop(id: Long)
+POST    /api/election/:id/suspend                             controllers.ElectionsApi.suspend(id: Long)
+POST    /api/election/:id/resume                              controllers.ElectionsApi.resume(id: Long)
 POST    /api/election/:id/allow-tally                         controllers.ElectionsApi.allowTally(id: Long)
 POST    /api/election/:id/virtual-tally                       controllers.ElectionsApi.virtualTally(id: Long)
 POST    /api/election/:id/set-start-date                      controllers.ElectionsApi.setStartDate(id: Long)
