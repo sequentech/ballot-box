@@ -90,7 +90,7 @@ object BallotboxApi extends Controller with Response {
               )
               if(
                 election.state == Elections.STARTED ||
-                election.state == Elections.CREATED ||
+                election.state == Elections.RESUMED ||
                 (
                   election.state == Elections.STOPPED &&
                   gracefulEnd
