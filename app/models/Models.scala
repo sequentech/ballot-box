@@ -247,8 +247,11 @@ object Elections {
   }
 
   def updateState(id: Long, current_state: String, state: String)
-  (implicit s: Session) = 
+  (implicit s: Session): Int = 
   {
+    if (state == current_state) {
+      return 0
+    }
     val enforceStateControls = Play
       .current
       .configuration
