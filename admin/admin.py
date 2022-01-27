@@ -743,6 +743,13 @@ def request_post(url, *args, **kwargs):
     print(req.status_code, req.text)
     return req
 
+def request_get(url, *args, **kwargs):
+    print("GET %s" % url)
+    kwargs['verify'] = False
+    req = requests.get(url, *args, **kwargs)
+    print(req.status_code, req.text)
+    return req
+
 def get_authapi_auth_headers():
     '''
     Returns logged in headers
@@ -764,6 +771,34 @@ def send_auth(cfg, args):
     headers = get_authapi_auth_headers()
     url = base_url + 'auth-event/%d/census/send_auth/' % cfg['election_id']
     r = request_post(url, headers=headers, data=cfg['payload'])
+
+def launch_self_test(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = f'{base_url}tasks/launch-self-test/'
+    request_post(url, headers=headers)
+
+def list_tasks(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    url = f"{base_url}tasks/"
+    r = request_get(url, headers=headers)
+    print(r.json())
+
+def list_task(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    task_id = cfg['election_id']
+    url = f"{base_url}tasks/{task_id}/"
+    r = request_get(url, headers=headers)
+    print(r.json())
+
+def cancel_task(cfg, args):
+    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+    headers = get_authapi_auth_headers()
+    task_id = cfg['election_id']
+    url = f"{base_url}tasks/{task_id}/cancel/"
+    request_post(url, headers=headers)
 
 def auth_start(cfg, args):
     base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
@@ -1022,6 +1057,10 @@ tally_voter_ids <election_id>: launches tally, only with votes matching passed v
 tally_no_dump <election_id>: launches tally (does not dump votes)
 update_ballot_boxes_config <election_id>: uses agora-results to calculate the election's results (stored in db)
 update_results_config --payload <config>: update results config from a file
+launch_self_test - Launches an E2E self-test
+cancel_task <task_id> - Cancel a task
+list_tasks - List tasks
+list_task <task_id> - List task
 ''')
     parser.add_argument('--ciphertexts', help='file to write ciphertetxs (used in dump, load and encrypt)')
     parser.add_argument('--acls-path', help='''the file has one line per acl with format: '(email:email@example.com|tlf:+34666777888),permission_name,object_type,object_id,user_election_id' ''')
