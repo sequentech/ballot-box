@@ -595,15 +595,17 @@ object ElectionsApi
 
         val config =
           if (election.ballotBoxesResultsConfig.isDefined)
-            configBase.replaceAll(
-              "__ballotBoxesResultsConfig__",
-              election.ballotBoxesResultsConfig.get
-            )
+            configBase
+              .replaceAll(
+                "\"__ballotBoxesResultsConfig__\"",
+                election.ballotBoxesResultsConfig.get
+              )
           else
-            configBase.replaceAll(
-              "__ballotBoxesResultsConfig__",
-              "[]"
-            )
+            configBase
+              .replaceAll(
+                "\"__ballotBoxesResultsConfig__\"",
+                "[]"
+              )
 
         // ensure a tally can be executed
         ensureTally(id, election)
