@@ -537,7 +537,10 @@ object ElectionsApi
             requestConfig
 
         val config =
-          if (election.ballotBoxesResultsConfig.isDefined)
+          if (
+            election.ballotBoxesResultsConfig.isDefined &&
+            !election.ballotBoxesResultsConfig.get.isEmpty
+          )
             configBase
               .replaceAll(
                 "\"__ballotBoxesResultsConfig__\"",
