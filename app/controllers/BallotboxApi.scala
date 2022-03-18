@@ -216,7 +216,8 @@ INNER JOIN api_userdata ON api_acl.user_id = api_userdata.id
 INNER JOIN auth_user ON auth_user.id = api_userdata.user_id
 INNER JOIN api_authevent ON api_authevent.id = '$electionId'
 WHERE 
-  api_acl.object_id IS NOT NULL 
+  auth_user.is_active = true
+  AND api_acl.object_id IS NOT NULL
   AND api_acl.object_type = 'AuthEvent'
   AND api_acl.perm = 'vote'
   AND (
