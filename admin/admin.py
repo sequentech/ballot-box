@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
-# This file is part of agora_elections.
+# This file is part of ballot_box.
 # Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
 
-# agora_elections is free software: you can redistribute it and/or modify
+# ballot_box is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License.
 
-# agora_elections  is distributed in the hope that it will be useful,
+# ballot_box  is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 
 # You should have received a copy of the GNU Affero General Public License
-# along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+# along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import requests
@@ -54,9 +54,9 @@ from utils.votesfilter import VotesFilter
 # set configuration parameters
 datastore = '/home/agoraelections/datastore'
 shared_secret = '<password>'
-db_user = 'agora_elections'
-db_password = 'agora_elections'
-db_name = 'agora_elections'
+db_user = 'ballot_box'
+db_password = 'ballot_box'
+db_name = 'ballot_box'
 db_port = 5432
 app_host = 'localhost'
 app_port = 9000
@@ -1022,7 +1022,7 @@ def update_results_config(cfg, args):
             result = conn.execute(statement)
 
 def main(argv):
-    parser = argparse.ArgumentParser(description='agora-elections admin script', formatter_class=RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description='ballot-box admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('command', nargs='+', help='''
 authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
 calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)

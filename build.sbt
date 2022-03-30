@@ -1,17 +1,17 @@
-// This file is part of agora_elections.
+// This file is part of ballot_box.
 // Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
 
-// agora_elections is free software: you can redistribute it and/or modify
+// ballot_box is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License.
 
-// agora_elections  is distributed in the hope that it will be useful,
+// ballot_box  is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 
 // You should have received a copy of the GNU Affero General Public License
-// along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+// along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
 name := """agora-elections"""
 
@@ -31,7 +31,7 @@ licenses += ("AGPL-3.0", url("https://www.gnu.org/licenses/agpl-3.0.en.html"))
 
 startYear := Some(2014)
 
-homepage := Some(url("https://github.com/agoravoting/agora_elections"))
+homepage := Some(url("https://github.com/sequentech/ballot-box"))
 
 organizationName := "Agora Voting SL"
 
