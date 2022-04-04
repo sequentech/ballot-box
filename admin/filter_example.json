@@ -1,8 +1,8 @@
 [
   {
     "type": "ip",
-    "geoip_cache": "/home/agoraelections/geocache.pickle",
-    "ips_log": "/home/agoraelections/nginx_log",
+    "geoip_cache": "/home/ballotbox/geocache.pickle",
+    "ips_log": "/home/ballotbox/nginx_log",
     "ips_regex": "^(?P<ip>\\S+).*POST /elections/api/election/(?P<election_id>\\d+)/voter/(?P<voter_id>\\w+)\\s",
     "log_level": "debug",
     "geolocation_services": [
@@ -11,7 +11,7 @@
           "cache_key": "maxmind_lite_db",
           "not-located-policy": "accept",
           "filtered-policy": "relocate",
-          "geoip_db_path": "/home/agoraelections/GeoLite2-City.mmdb"
+          "geoip_db_path": "/home/ballotbox/GeoLite2-City.mmdb"
         },
         {
           "type": "maxmind",

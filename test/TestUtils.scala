@@ -1,6 +1,6 @@
 /**
  * This file is part of ballot_box.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
  * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -53,8 +53,8 @@ trait TestContexts {
   "id": 1,
   "title": "Votación de candidatos",
   "description": "Selecciona los documentos politico, etico y organizativo con los que Podemos",
-  "director": "test-auth1.agoravoting.com",
-  "authorities": ["test-auth2.agoravoting.com"],
+  "director": "test-auth1.sequentech.io",
+  "authorities": ["test-auth2.sequentech.io"],
   "layout": "pcandidates-election",
   "virtual": false,
   "tally_allowed": true,

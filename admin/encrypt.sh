@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # This file is part of ballot_box.
-# Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+# Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
 # ballot_box is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -16,5 +16,5 @@
 # along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
 IVY=/root/.ivy2/cache
-AGORA_HOME=..
-java -classpath  $AGORA_HOME/target/scala-2.11/ballot-box_2.11-1.0-SNAPSHOT.jar:$IVY/com.typesafe.play/play-json_2.11/jars/play-json_2.11-2.3.6.jar:$IVY/org.scala-lang/scala-library/jars/scala-library-2.11.1.jar:$IVY/com.fasterxml.jackson.core/jackson-core/bundles/jackson-core-2.3.3.jar:$IVY/com.fasterxml.jackson.core/jackson-databind/bundles/jackson-databind-2.3.3.jar:$IVY/com.fasterxml.jackson.core/jackson-annotations/bundles/jackson-annotations-2.3.2.jar:$IVY/com.typesafe.play/play-functional_2.11/jars/play-functional_2.11-2.3.6.jar:$IVY/org.joda/joda-convert/jars/joda-convert-1.6.jar:$IVY/joda-time/joda-time/jars/joda-time-2.3.jar commands.DemoVotes $*
+SEQUENT_HOME=..
+java -classpath  $SEQUENT_HOME/target/scala-2.11/ballot-box_2.11-1.0-SNAPSHOT.jar:$IVY/com.typesafe.play/play-json_2.11/jars/play-json_2.11-2.3.6.jar:$IVY/org.scala-lang/scala-library/jars/scala-library-2.11.1.jar:$IVY/com.fasterxml.jackson.core/jackson-core/bundles/jackson-core-2.3.3.jar:$IVY/com.fasterxml.jackson.core/jackson-databind/bundles/jackson-databind-2.3.3.jar:$IVY/com.fasterxml.jackson.core/jackson-annotations/bundles/jackson-annotations-2.3.2.jar:$IVY/com.typesafe.play/play-functional_2.11/jars/play-functional_2.11-2.3.6.jar:$IVY/org.joda/joda-convert/jars/joda-convert-1.6.jar:$IVY/joda-time/joda-time/jars/joda-time-2.3.jar commands.DemoVotes $*

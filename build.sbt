@@ -1,5 +1,5 @@
 // This file is part of ballot_box.
-// Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+// Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
 // ballot_box is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
-name := """agora-elections"""
+name := """ballot-box"""
 
 version := "master"
 
@@ -33,9 +33,9 @@ startYear := Some(2014)
 
 homepage := Some(url("https://github.com/sequentech/ballot-box"))
 
-organizationName := "Agora Voting SL"
+organizationName := "Sequent Tech Inc"
 
-organizationHomepage := Some(url("https://nvotes.com"))
+organizationHomepage := Some(url("https://sequentech.io"))
 
 scalaVersion := "2.11.6"
 

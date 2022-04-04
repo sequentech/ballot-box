@@ -1,7 +1,7 @@
 Datastore
 =========
 
-This directory holds the public and private datastore for agora elections.
+This directory holds the public and private datastore for sequent elections.
 
 * datastore/public
 

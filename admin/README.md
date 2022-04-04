@@ -4,11 +4,11 @@ Example of voter ids filtering:
 
     wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz
     gunzip GeoLite2-City.mmdb.gz
-    python admin.py dump_ids 101000 --filter-config /home/agoraelections/ballot-box/admin/filter_example.json
+    python admin.py dump_ids 101000 --filter-config /home/ballotbox/ballot-box/admin/filter_example.json
 
 log generation:
 
-    python admin.py dump_ids ~/agora-tools/config/proceso-primarias-4-ids.txt --filter-config filter_example.json  > ~/filtered.log
+    python admin.py dump_ids ~/misc-tools/config/proceso-primarias-4-ids.txt --filter-config filter_example.json  > ~/filtered.log
 
 list elections:
 

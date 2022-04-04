@@ -1,6 +1,6 @@
 /**
  * This file is part of ballot_box.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
  * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -212,7 +212,7 @@ object BallotboxApi extends Controller with Response {
   {
     if (filterVoterIds) 
     {
-      // Filters active voters from authapi
+      // Filters active voters from iam
       val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
 
       // 1. dump valid voter ids, if enabled
@@ -220,7 +220,7 @@ object BallotboxApi extends Controller with Response {
       {
         val dumpIdsCommand = Seq(
           "psql",
-          "service = authapi",
+          "service = iam",
           "-tAc",
           s"""
 SELECT auth_user.username
@@ -270,14 +270,14 @@ ORDER BY auth_user.username ASC;""",
 
       // 3. Filter the votes by voter_id, using the join command
       val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
-      val joinVotesCommand = Seq(
+      val joiSequentCommand = Seq(
         "bash",
         "-lc",
         s"join --nocheck-order $allCiphertextsPath $voteIdsPath -t '|' -o 1.2 > $votesPath"
       )
-      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:\n '$joinVotesCommand'")
-      val joinVotesCommandOutput = joinVotesCommand.!!
-      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:command returns\n$joinVotesCommandOutput")
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:\n '$joiSequentCommand'")
+      val joiSequentCommandOutput = joiSequentCommand.!!
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:command returns\n$joiSequentCommandOutput")
     } else {
       // Do not filter active voters
       val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)

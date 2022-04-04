@@ -1,6 +1,6 @@
 /**
  * This file is part of ballot_box.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
  * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -56,7 +56,7 @@ eval(filedata);*/
 var sjcl = require('./sjcl.js');
 var moment = require('./moment.js');
 
-// FIXME copied from voting_booth.js as it is a hassle to import the whole agora view structure
+// FIXME copied from voting_booth.js as it is a hassle to import the whole sequent view structure
 var encryptAnswer = function(pk_json, plain_answer) {
 
     var pk = ElGamal.PublicKey.fromJSONObject(pk_json[0]);

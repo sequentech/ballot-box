@@ -1,6 +1,6 @@
 /**
  * This file is part of ballot_box.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
  * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -42,8 +42,8 @@ object DemoVotes {
     val jsonPks = Json.parse(scala.io.Source.fromFile(args(0)).mkString)
     val pks = jsonPks.validate[Array[PublicKey]].get
 
-    val jsonVotes = Json.parse(scala.io.Source.fromFile(args(1)).mkString)
-    val votes = jsonVotes.validate[Array[Array[Long]]].get
+    val jsoSequent = Json.parse(scala.io.Source.fromFile(args(1)).mkString)
+    val votes = jsoSequent.validate[Array[Array[Long]]].get
 
     val toEncrypt = if(args.length == 3) {
       val extraSize = (args(2).toInt - votes.length).max(0)

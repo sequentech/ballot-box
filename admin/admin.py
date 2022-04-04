@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # This file is part of ballot_box.
-# Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+# Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
 # ballot_box is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -52,7 +52,7 @@ from sqlalchemy import distinct
 from utils.votesfilter import VotesFilter
 
 # set configuration parameters
-datastore = '/home/agoraelections/datastore'
+datastore = '/home/ballotbox/datastore'
 shared_secret = '<password>'
 db_user = 'ballot_box'
 db_password = 'ballot_box'
@@ -60,13 +60,13 @@ db_name = 'ballot_box'
 db_port = 5432
 app_host = 'localhost'
 app_port = 9000
-authapi_port = 10081
-authapi_credentials = dict()
-authapi_admin_eid = 1
-authapi_db_user = 'authapi'
-authapi_db_password = 'authapi'
-authapi_db_name = 'authapi'
-authapi_db_port = 5432
+iam_port = 10081
+iam_credentials = dict()
+iam_admin_eid = 1
+iam_db_user = 'iam'
+iam_db_password = 'iam'
+iam_db_name = 'iam'
+iam_db_port = 5432
 node = '/usr/local/bin/node'
 
 class TemporaryDirectory(object):
@@ -245,21 +245,21 @@ def get_db_connection():
 
     return conn
 
-def get_authapi_db_connection():
+def get_iam_db_connection():
     engine = create_engine(
         'postgresql+psycopg2://%s:%s@localhost:%d/%s' % (
-            authapi_db_user,
-            authapi_db_password,
-            authapi_db_port,
-            authapi_db_name
+            iam_db_user,
+            iam_db_password,
+            iam_db_port,
+            iam_db_name
         )
     )
     conn = engine.connect()
 
     return conn
 
-def authapi_ensure_acls(cfg, args):
-    conn = get_authapi_db_connection()
+def iam_ensure_acls(cfg, args):
+    conn = get_iam_db_connection()
     acls = []
     with codecs.open(args.acls_path, encoding='utf-8', mode='w+') as f:
         acls = [line.split(',') for line in f.read().splitlines()]
@@ -317,10 +317,10 @@ def write_node_votes(votesData, filePath):
 
 def delete_all_voters(cfg, args):
     '''
-    Delete all the voters (and manually cascade on other tables) in authapi
+    Delete all the voters (and manually cascade on other tables) in iam
     for a specific election
     '''
-    conn = get_authapi_db_connection()
+    conn = get_iam_db_connection()
     election_id = cfg['election_id']
 
     delete_acls = '''
@@ -434,43 +434,43 @@ def resume(cfg, args):
     print(r.status_code, r.text)
 
 def auth_suspend(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/suspended/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def auth_resume(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/resumed/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def auth_stop(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def auth_start(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/started/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def archive(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/archive/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def unarchive(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/unarchive/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
@@ -577,11 +577,11 @@ def dump_votes_with_ids_file(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
-def dump_votes_with_authapi_ids(cfg, args):
+def dump_votes_with_iam_ids(cfg, args):
     auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
     host,port = get_local_hostport()
     headers = {'Authorization': auth}
-    url = 'http://%s:%d/api/election/%d/dump-votes-authapi-voter-ids' % (host, port, cfg['election_id'])
+    url = 'http://%s:%d/api/election/%d/dump-votes-iam-voter-ids' % (host, port, cfg['election_id'])
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
@@ -750,65 +750,65 @@ def request_get(url, *args, **kwargs):
     print(req.status_code, req.text)
     return req
 
-def get_authapi_auth_headers():
+def get_iam_auth_headers():
     '''
     Returns logged in headers
     '''
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    event_id = authapi_admin_eid
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    event_id = iam_admin_eid
     req = request_post(
         base_url + 'auth-event/%d/authenticate/' % event_id,
-        data=json.dumps(authapi_credentials)
+        data=json.dumps(iam_credentials)
     )
     if req.status_code != 200:
-        raise Exception("authapi login failed")
+        raise Exception("iam login failed")
 
     auth_token = req.json()['auth-token']
     return {'AUTH': auth_token}
 
 def send_auth(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/census/send_auth/' % cfg['election_id']
     r = request_post(url, headers=headers, data=cfg['payload'])
 
 def launch_self_test(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = f'{base_url}tasks/launch-self-test/'
     request_post(url, headers=headers)
 
 def list_tasks(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = f"{base_url}tasks/"
     r = request_get(url, headers=headers)
     print(r.json())
 
 def list_task(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     task_id = cfg['election_id']
     url = f"{base_url}tasks/{task_id}/"
     r = request_get(url, headers=headers)
     print(r.json())
 
 def cancel_task(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     task_id = cfg['election_id']
     url = f"{base_url}tasks/{task_id}/cancel/"
     request_post(url, headers=headers)
 
 def auth_start(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/started/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
 def auth_stop(cfg, args):
-    base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
-    headers = get_authapi_auth_headers()
+    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
@@ -958,7 +958,7 @@ class JClient:
         self.auth_token = token
 
     def post(self, url, data):
-        base_url = 'http://%s:%d/authapi/api/' % (app_host, authapi_port)
+        base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
         jdata = json.dumps(data)
         headers = {'content-type': 'application/json', 'Authorization': self.auth_token}
         r = requests.post(base_url + url, data=jdata, headers=headers)
@@ -988,18 +988,18 @@ def deregister(cfg, args):
     else:
         credentials['email'] = args.email
 
-    event_id = authapi_admin_eid
+    event_id = iam_admin_eid
     
     c = JClient()
     req = c.authenticate(event_id, credentials)
 
     if req.status_code != 200:
-        raise Exception("authapi login failed")
+        raise Exception("iam login failed")
 
     req = c.post("user/deregister/",{})
 
     if req.status_code != 200:
-        raise Exception("authapi deregister failed")
+        raise Exception("iam deregister failed")
 
     print("user deregistration successful")
 
@@ -1018,24 +1018,24 @@ def update_results_config(cfg, args):
         for results_config in results_configs:
             statement = update_sql(elections)\
                 .where(elections.c.id == results_config['id'])\
-                .values(results_config=results_config['resultsConfig'])
+                .values(results_config=results_config['tallyPipesConfig'])
             result = conn.execute(statement)
 
 def main(argv):
     parser = argparse.ArgumentParser(description='ballot-box admin script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('command', nargs='+', help='''
-authapi_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
-calculate_results <election_id>: uses agora-results to calculate the election's results (stored in db)
+iam_ensure_acls --acls-path <acl_path>: ensure that the acls inside acl_path exist
+calculate_results <election_id>: uses tally-pipes to calculate the election's results (stored in db)
 cast_votes <election_dir>: cast votes from ciphertetxs
 change_social <election_id>: changes the social netoworks share buttons configuration
 count_votes [election_id, [election_id], ...]: count votes
 create <election_id>: creates an election
-deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in authapi
+deregister [--email <email>] [--tel <telephone number>] --code <code>: deregister user in iam
 delete_all_voters <election_id>: delete all voters for the election
 dump_pks <election_id>: dumps pks for an election (public datastore)
 dump_votes <election_id>: dumps all votes for an election (private datastore)
 dump_votes_with_ids_file <election_id>: dumps votes for an election, filtering with voterids file (private datastore)
-dump_votes_with_authapi_ids <election_id>: dumps votes for an election, filtering with valid voters from authapi (private datastore)
+dump_votes_with_iam_ids <election_id>: dumps votes for an election, filtering with valid voters from iam (private datastore)
 encrypt <election_id>: encrypts votes using scala (public key must be in datastore)
 encryptNode <election_id>: encrypts votes using node (public key must be in datastore)
 list_votes <election_dir>: list votes
@@ -1055,7 +1055,7 @@ show_column <election_id>: shows a column for an election
 tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
-update_ballot_boxes_config <election_id>: uses agora-results to calculate the election's results (stored in db)
+update_ballot_boxes_config <election_id>: uses tally-pipes to calculate the election's results (stored in db)
 update_results_config --payload <config>: update results config from a file
 launch_self_test - Launches an E2E self-test
 cancel_task <task_id> - Cancel a task
@@ -1068,7 +1068,7 @@ list_task <task_id> - List task
     parser.add_argument('--filter-config', help='file with filter configuration', default = None)
     parser.add_argument('--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('--vote-count', help='number of votes to generate', type=int, default = 0)
-    parser.add_argument('--results-config', help='config file for agora-results')
+    parser.add_argument('--results-config', help='config file for tally-pipes')
     parser.add_argument('--voter-ids', help='json file with list of valid voter ids to tally (used with tally_voter_ids)')
     parser.add_argument('--email', help='User email')
     parser.add_argument('--payload', help='Payload')

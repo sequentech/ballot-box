@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # This file is part of ballot_box.
-# Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+# Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
 # ballot_box is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -346,10 +346,10 @@ def main(argv):
     parser = argparse.ArgumentParser(description='cycle testing script', formatter_class=RawTextHelpFormatter)
     parser.add_argument('-e', '--encrypt-count', help='number of votes to encrypt (generates duplicates if more than in json file)', type=int, default = 0)
     parser.add_argument('-c', '--election-config', help='config file for election', default='election.json')
-    parser.add_argument('-r', '--results-config', help='config file for agora-results', default='config.json')
-    parser.add_argument('-i', '--init-id', help='config file for agora-results', type=int)
-    parser.add_argument('-t', '--total-cycles', help='config file for agora-results', type=int, default='1')
-    parser.add_argument('-p', '--parallel', help='config file for agora-results', action='store_true')
+    parser.add_argument('-r', '--results-config', help='config file for tally-pipes', default='config.json')
+    parser.add_argument('-i', '--init-id', help='config file for tally-pipes', type=int)
+    parser.add_argument('-t', '--total-cycles', help='config file for tally-pipes', type=int, default='1')
+    parser.add_argument('-p', '--parallel', help='config file for tally-pipes', action='store_true')
     args = parser.parse_args()
 
     print('************************ cfg ************************')
