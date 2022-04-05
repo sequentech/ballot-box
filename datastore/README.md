@@ -1,7 +1,7 @@
 Datastore
 =========
 
-This directory holds the public and private datastore for agora elections.
+This directory holds the public and private datastore for sequent elections.
 
 * datastore/public
 
@@ -22,8 +22,8 @@ tallies (not yet published)
 Example nginx configuration blocks
 
     location /public {
-        root /tmp/agora_elections/datastore;
+        root /tmp/ballot_box/datastore;
     }
     location /private {
-        root /tmp/agora_elections/datastore;
+        root /tmp/ballot_box/datastore;
     }

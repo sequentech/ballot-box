@@ -1,18 +1,18 @@
 /**
- * This file is part of agora_elections.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * This file is part of ballot_box.
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
- * agora_elections is free software: you can redistribute it and/or modify
+ * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License.
 
- * agora_elections  is distributed in the hope that it will be useful,
+ * ballot_box  is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
 
  * You should have received a copy of the GNU Affero General Public License
- * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+ * along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 **/
 package controllers
 
@@ -212,7 +212,7 @@ object BallotboxApi extends Controller with Response {
   {
     if (filterVoterIds) 
     {
-      // Filters active voters from authapi
+      // Filters active voters from iam
       val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
 
       // 1. dump valid voter ids, if enabled
@@ -220,7 +220,7 @@ object BallotboxApi extends Controller with Response {
       {
         val dumpIdsCommand = Seq(
           "psql",
-          "service = authapi",
+          "service = iam",
           "-tAc",
           s"""
 SELECT auth_user.username
@@ -257,7 +257,7 @@ ORDER BY auth_user.username ASC;""",
       val allCiphertextsPath = Datastore.getPath(electionId, Datastore.ALL_CIPHERTEXTS)
       val dumpAllVotesCommand = Seq(
         "psql",
-        "service = agora_elections",
+        "service = ballot_box",
         "-tAc",
         s"SELECT DISTINCT ON (voter_id) voter_id,vote FROM vote WHERE election_id=$electionId ORDER BY voter_id ASC, CREATED DESC;",
         "-o",
@@ -270,20 +270,20 @@ ORDER BY auth_user.username ASC;""",
 
       // 3. Filter the votes by voter_id, using the join command
       val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
-      val joinVotesCommand = Seq(
+      val joiSequentCommand = Seq(
         "bash",
         "-lc",
         s"join --nocheck-order $allCiphertextsPath $voteIdsPath -t '|' -o 1.2 > $votesPath"
       )
-      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:\n '$joinVotesCommand'")
-      val joinVotesCommandOutput = joinVotesCommand.!!
-      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:command returns\n$joinVotesCommandOutput")
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:\n '$joiSequentCommand'")
+      val joiSequentCommandOutput = joiSequentCommand.!!
+      Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:command returns\n$joiSequentCommandOutput")
     } else {
       // Do not filter active voters
       val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
       val dumpCommand = Seq(
         "psql",
-        "service = agora_elections",
+        "service = ballot_box",
         "-tAc",
         s"SELECT DISTINCT ON (voter_id) vote FROM vote WHERE election_id=$electionId ORDER BY voter_id ASC, CREATED DESC;",
         "-o",

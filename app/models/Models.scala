@@ -1,18 +1,18 @@
 /**
- * This file is part of agora_elections.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * This file is part of ballot_box.
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
- * agora_elections is free software: you can redistribute it and/or modify
+ * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License.
 
- * agora_elections  is distributed in the hope that it will be useful,
+ * ballot_box  is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
 
  * You should have received a copy of the GNU Affero General Public License
- * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+ * along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 **/
 package models
 
@@ -117,7 +117,7 @@ case class Election(
   startDate: Option[Timestamp],
   endDate: Option[Timestamp],
   pks: Option[String],
-  resultsConfig: Option[String],
+  tallyPipesConfig: Option[String],
   ballotBoxesResultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
@@ -138,8 +138,8 @@ case class Election(
         configJson = configJson.as[JsObject] + ("virtual" -> Json.toJson(virtual))
     }
 
-    if (!configJson.as[JsObject].keys.contains("resultsConfig")) {
-        configJson = configJson.as[JsObject] + ("resultsConfig" -> Json.toJson(resultsConfig))
+    if (!configJson.as[JsObject].keys.contains("tallyPipesConfig")) {
+        configJson = configJson.as[JsObject] + ("tallyPipesConfig" -> Json.toJson(tallyPipesConfig))
     }
 
     if (!configJson.as[JsObject].keys.contains("ballotBoxesResultsConfig")) {
@@ -168,7 +168,7 @@ case class Election(
       startDate,
       endDate,
       pks,
-      resultsConfig,
+      tallyPipesConfig,
       ballotBoxesResultsConfig,
       publishedResults,
       resUp,
@@ -188,7 +188,7 @@ class Elections(tag: Tag)
   def startDate = column[Timestamp]("start_date", O.Nullable)
   def endDate = column[Timestamp]("end_date", O.Nullable)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
-  def resultsConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
+  def tallyPipesConfig = column[String]("results_config", O.Nullable, O.DBType("text"))
   def ballotBoxesResultsConfig = column[String]("ballot_boxes_results_config", O.Nullable, O.DBType("text"))
   def results = column[String]("results", O.Nullable, O.DBType("text"))
   def resultsUpdated = column[Timestamp]("results_updated", O.Nullable)
@@ -204,7 +204,7 @@ class Elections(tag: Tag)
     startDate.?,
     endDate.?,
     pks.?,
-    resultsConfig.?,
+    tallyPipesConfig.?,
     ballotBoxesResultsConfig.?,
     results.?,
     resultsUpdated.?,
@@ -382,13 +382,13 @@ object Elections {
     }
 
   }
-  def updateResultsConfig(id: Long, resultsConfig: String)
+  def updateResultsConfig(id: Long, tallyPipesConfig: String)
   (implicit s: Session) =
   {
     elections
       .filter(_.id === id)
-      .map(e => (e.resultsConfig))
-      .update(resultsConfig)
+      .map(e => (e.tallyPipesConfig))
+      .update(tallyPipesConfig)
   }
 
   def updateBallotBoxesResultsConfig(id: Long, ballotBoxesResultsConfig: String)
@@ -428,7 +428,7 @@ case class ElectionDTO(
   startDate: Option[Timestamp],
   endDate: Option[Timestamp],
   pks: Option[String],
-  resultsConfig: Option[String],
+  tallyPipesConfig: Option[String],
   ballotBoxesResultsConfig: Option[String],
   results: Option[String],
   resultsUpdated: Option[Timestamp],
@@ -448,7 +448,7 @@ case class ElectionConfig(
   end_date: Option[Timestamp],
   presentation: ElectionPresentation,
   extra_data: Option[String],
-  resultsConfig: Option[String],
+  tallyPipesConfig: Option[String],
   ballotBoxesResultsConfig: Option[String],
   virtual: Boolean,
   tally_allowed: Boolean,

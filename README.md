@@ -1,8 +1,8 @@
 Agora Elections [![tests_badge]][tests_link] 
 =============================================
 
-[tests_badge]: https://github.com/agoravoting/agora_elections/workflows/Tests/badge.svg
-[tests_link]: https://github.com/agoravoting/agora_elections/actions?query=workflow%3A%22Tests%22
+[tests_badge]: https://github.com/sequentech/ballot-box/workflows/Tests/badge.svg
+[tests_link]: https://github.com/sequentech/ballot-box/actions?query=workflow%3A%22Tests%22
 
 Installation
 =========
@@ -17,29 +17,29 @@ Download the play activator from
 
 Once you have installed, clone the repository
 
-    git clone https://github.com/agoravoting/agora_elections.git
+    git clone https://github.com/sequentech/ballot-box.git
 
 Database setup
 
-    postgres=# create user agora_elections;
+    postgres=# create user ballot_box;
 
-    postgres=# create database agora_elections owner agora_elections;
+    postgres=# create database ballot_box owner ballot_box;
 
-    postgres=# create database agora_elections_test owner agora_elections;
+    postgres=# create database ballot_box_test owner ballot_box;
 
-    postgres=# ALTER ROLE agora_elections WITH PASSWORD 'mypassword';
+    postgres=# ALTER ROLE ballot_box WITH PASSWORD 'mypassword';
 
 Example configuration files
 
 application.local.conf
 
-    db.default.url="jdbc:postgresql://localhost:5432/agora_elections"
+    db.default.url="jdbc:postgresql://localhost:5432/ballot_box"
     db.default.driver="org.postgresql.Driver"
-    db.default.user=agora_elections
-    db.default.pass=agora_elections
+    db.default.user=ballot_box
+    db.default.pass=ballot_box
 
-    app.datastore.public="/tmp/agora_elections/datastore/public"
-    app.datastore.private="/tmp/agora_elections/datastore/private"
+    app.datastore.public="/tmp/ballot_box/datastore/public"
+    app.datastore.private="/tmp/ballot_box/datastore/private"
 
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
@@ -59,32 +59,32 @@ application.local.conf
       loose.disableHostnameVerification=true
       keyManager = {
         stores = [
-          { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
+          { type = "JKS", path = "/tmp/ballot_box/keystore.jks", password = "password" }
         ]
       }
       trustManager = {
         stores = [
-          { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
+          { type = "JKS", path = "/tmp/ballot_box/keystore.jks", password = "password" }
         ]
       }
     }
 
     app.authorities {
-      test-auth1.agoravoting.com = {
-        name = "Agora Voting auth 1"
+      test-auth1.sequentech.io = {
+        name = "Sequent Tech auth 1"
         description = "My authority 1"
         url = "http://foo.bar.1"
         image = "http://foo.bar.1/img.img"
       }
-      "test-auth2.agoravoting.com" = {
-        name = "Agora Voting auth 2"
+      "test-auth2.sequentech.io" = {
+        name = "Sequent Tech auth 2"
         description = "My authority 2"
         url = "http://foo.bar.2"
         image = "http://foo.bar.2/img"
       }
     }
 
-    # app.vote_callback_url="podemos.agoravoting.com"
+    # app.vote_callback_url="podemos.sequentech.io"
 
     # memcached
     # ehcacheplugin=disabled
@@ -93,13 +93,13 @@ application.local.conf
 
 test.local.conf
 
-    db.default.url="jdbc:postgresql://localhost:5432/agora_elections_test"
+    db.default.url="jdbc:postgresql://localhost:5432/ballot_box_test"
     db.default.driver="org.postgresql.Driver"
-    db.default.user=agora_elections
-    db.default.pass=agora_elections
+    db.default.user=ballot_box
+    db.default.pass=ballot_box
 
-    app.datastore.public="/tmp/agora_elections/datastore/public"
-    app.datastore.private="/tmp/agora_elections/datastore/private"
+    app.datastore.public="/tmp/ballot_box/datastore/public"
+    app.datastore.private="/tmp/ballot_box/datastore/private"
 
     app.api.root="http://vota.podemos.info:8000"
     app.datastore.root="http://94.23.34.20:8000"
@@ -117,25 +117,25 @@ test.local.conf
       loose.disableHostnameVerification=true
       keyManager = {
         stores = [
-          { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
+          { type = "JKS", path = "/tmp/ballot_box/keystore.jks", password = "password" }
         ]
       }
       trustManager = {
         stores = [
-          { type = "JKS", path = "/tmp/agora_elections/keystore.jks", password = "password" }
+          { type = "JKS", path = "/tmp/ballot_box/keystore.jks", password = "password" }
         ]
       }
     }
 
     app.authorities {
-      test-auth1.agoravoting.com = {
-        name = "Agora Voting auth 1"
+      test-auth1.sequentech.io = {
+        name = "Sequent Tech auth 1"
         description = "My authority 1"
         url = "http://foo.bar.1"
         image = "http://foo.bar.1/img.img"
       }
-      "test-auth2.agoravoting.com" = {
-        name = "Agora Voting auth 2"
+      "test-auth2.sequentech.io" = {
+        name = "Sequent Tech auth 2"
         description = "My authority 2"
         url = "http://foo.bar.2"
         image = "http://foo.bar.2/img"
@@ -162,11 +162,11 @@ Admin tool set up
 specify the follwing configuration parameters in the admin tool, at <app_root>/admin/admin.py
 
     # set configuration parameters
-    datastore = '/tmp/agora_elections/datastore'
+    datastore = '/tmp/ballot_box/datastore'
     shared_secret = 'hohoho'
-    db_user = 'agora_elections'
-    db_password = 'agora_elections'
-    db_name = 'agora_elections'
+    db_user = 'ballot_box'
+    db_password = 'ballot_box'
+    db_name = 'ballot_box'
     app_host = 'localhost'
     app_port = 9000
     node = '/usr/local/bin/node'
@@ -181,24 +181,24 @@ set the executable permissions if not already set for several admin scripts
 
 Create a virtualenv for the admin script and install admin script requirements:
 
-    mkvirtualenv agora_elections -p $(which python2)
-    workon agora_elections
-    cd agora_elections/admin
+    mkvirtualenv ballot_box -p $(which python2)
+    workon ballot_box
+    cd ballot_box/admin
     pip install -r requirements.txt
 
 Agora-Results set up
 
-Clone and install agora-results
+Clone and install tally-pipes
 
-    git clone https://github.com/agoravoting/agora-results.git
-    mkvirtualenv agora-results -p $(which python3)
-    workon agora-results
-    cd agora-results
+    git clone https://github.com/sequentech/tally-pipes.git
+    mkvirtualenv tally-pipes -p $(which python3)
+    workon tally-pipes
+    cd tally-pipes
     pip install -r requirements.txt
 
-you must also configure these two settings in results.sh, found in agora-elections/admin
+you must also configure these two settings in results.sh, found in ballot-box/admin
 
-    AGORA_RESULTS=/tmp/agora-results
+    SEQUENT_RESULTS=/tmp/tally-pipes
     VENV=/root/.virtualenvs
 
 Local vote encryption set up
@@ -210,7 +210,7 @@ settings in admin/encrypt.sh
 
 you must also make sure that the software is packaged from the activator console, with
 
-    [agora-elections] $ package
+    [ballot-box] $ package
 
 which will generate the required jar in the target directory (note that encrypt.sh assumes scala v2.11)
 
@@ -354,7 +354,7 @@ publish results
     ./admin.py publish_results 50
 
 You can also carry out administration commands in batch mode, with batch.py. batch.py expects a directory
-with configuration files for both election definition and agora-results set up. The files must be in this
+with configuration files for both election definition and tally-pipes set up. The files must be in this
 format
 
     <id>.results.json
@@ -363,7 +363,7 @@ for election configuration files, and
 
     <id>.config.results.json
 
-for agora-results configuration files. batch.py will run the command for all the configuration files
+for tally-pipes configuration files. batch.py will run the command for all the configuration files
 found in the given directory, in increasing order of id. For example
 
     ./batch.py -c create -d json_files
@@ -381,16 +381,16 @@ Automated testing of an election cycle
 You can do automated tests with the cycle.py tool in the admin directory. This requires
 correctly setting up admin.py first, as described earlier. You need an election configuration as base,
 you can use one like the one above. cycle.py looks for such a file with default name 'election.json'.
-You also need an agora-results configuration file to calculate results. cycle.py looks for such a file
-at 'config.json'. Here's an example agora-results configuration file
+You also need an tally-pipes configuration file to calculate results. cycle.py looks for such a file
+at 'config.json'. Here's an example tally-pipes configuration file
 
     [
       [
-        "agora_results.pipes.results.do_tallies",
+        "tally_pipes.pipes.results.do_tallies",
         {"ignore_invalid_votes": true}
       ],
       [
-        "agora_results.pipes.results.to_files",
+        "tally_pipes.pipes.results.to_files",
         {"paths": ["results.json"]}
       ]
     ]
@@ -403,7 +403,7 @@ to run 5 cycles serially, casting 100 votes in each (votes duplicated)
 
     ./cycle.py -t 5 -i 50 -e 100
 
-to run 10 cycles in parallel, using election.json as election config, config.json as agora-results config,
+to run 10 cycles in parallel, using election.json as election config, config.json as tally-pipes config,
 casting 100 votes and starting at id 50:
 
     ./cycle.py -t 10 -i 50 -e 100 -c election.json -r config.json -p
@@ -415,7 +415,7 @@ You can cast test votes into the ballotbox with the following steps. First, edit
 and specify the correct value for variables
 
     IVY=/root/.ivy2/cache
-    AGORA_HOME=..
+    SEQUENT_HOME=..
 
 In order to cast votes for an election, that election must be in the correct state, which is 'started'. This
 state implies the existence of public keys with which to encrypt votes, and also that the ballotbox will accept
@@ -457,11 +457,11 @@ Running (production mode)
     clean
     stage
     exit
-    target/universal/stage/bin/agora-elections -v
+    target/universal/stage/bin/ballot-box -v
 
 you probably want to pass in a configuration file
 
-    target/universal/stage/bin/agora-elections -Dconfig.file=/full/path/to/conf/application-prod.conf
+    target/universal/stage/bin/ballot-box -Dconfig.file=/full/path/to/conf/application-prod.conf
 
 the log will be found in
 
@@ -469,21 +469,21 @@ the log will be found in
 
 # License
 
-Copyright (C) 2015 Agora Voting SL and/or its subsidiary(-ies).
-Contact: legal@agoravoting.com
+Copyright (C) 2015 Sequent Tech Inc and/or its subsidiary(-ies).
+Contact: legal@sequentech.io
 
-This file is part of the agora-core-view module of the Agora Voting project.
+This file is part of the sequent-core-view module of the Sequent Tech project.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 Commercial License Usage
-Licensees holding valid commercial Agora Voting project licenses may use this
+Licensees holding valid commercial Sequent Tech project licenses may use this
 file in accordance with the commercial license agreement provided with the
 Software or, alternatively, in accordance with the terms contained in
-a written agreement between you and Agora Voting SL. For licensing terms and
-conditions and further information contact us at legal@agoravoting.com .
+a written agreement between you and Sequent Tech Inc. For licensing terms and
+conditions and further information contact us at legal@sequentech.io .
 
 GNU Affero General Public License Usage
 Alternatively, this file may be used under the terms of the GNU Affero General

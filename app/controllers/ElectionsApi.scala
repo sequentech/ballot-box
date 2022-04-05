@@ -1,18 +1,18 @@
 /**
- * This file is part of agora_elections.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * This file is part of ballot_box.
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
- * agora_elections is free software: you can redistribute it and/or modify
+ * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License.
 
- * agora_elections  is distributed in the hope that it will be useful,
+ * ballot_box  is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
 
  * You should have received a copy of the GNU Affero General Public License
- * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+ * along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 **/
 package controllers
 
@@ -81,9 +81,9 @@ object ElectionsApi
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
-  val agoraResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
+  val sequentResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
   val createEmptyTally = Play.current.configuration.getString("app.results.script").getOrElse("./admin/create_empty_tally.py")
-  val pipesWhitelist = Play.current.configuration.getString("app.agoraResults.pipesWhitelist").getOrElse("")
+  val pipesWhitelist = Play.current.configuration.getString("app.sequentResults.pipesWhitelist").getOrElse("")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
   val authorities = getAuthorityData
@@ -450,7 +450,7 @@ object ElectionsApi
       }
   }
 
-   /** calculate the results for a tally using agora-results */
+   /** calculate the results for a tally using tally-pipes */
   def calculateResults(id: Long) = 
     HActionAdmin("", "AuthEvent", id, "edit|calculate-results")
       .async(BodyParsers.parse.tolerantText)
@@ -460,7 +460,7 @@ object ElectionsApi
     }
 
   /** Request a tally, dumps votes to the private ds. Only tallies votes 
-      matching authapi active voters */
+      matching iam active voters */
   def tallyWithVoterIds(id: Long) = 
     HActionAdmin("", "AuthEvent", id, "edit|tally")
       .async(BodyParsers.parse.json) 
@@ -580,7 +580,7 @@ object ElectionsApi
         if (!requestConfig.isEmpty) 
         {
           Logger.info(
-            "Updating resultsConfig for election " +
+            "Updating tallyPipesConfig for election " +
             s"$id with = $requestConfig"
           )
           val ret = DAL.elections.updateResultsConfig(id, requestConfig)
@@ -589,7 +589,7 @@ object ElectionsApi
         // if no config use the one stored in the election
         val configBase =
           if (requestConfig.isEmpty)
-            election.resultsConfig.get
+            election.tallyPipesConfig.get
           else
             requestConfig
 
@@ -983,7 +983,7 @@ object ElectionsApi
                 startDate =                 validated.start_date,
                 endDate =                   validated.end_date,
                 pks =                       None,
-                resultsConfig =             validated.resultsConfig,
+                tallyPipesConfig =             validated.tallyPipesConfig,
                 ballotBoxesResultsConfig =  validated.ballotBoxesResultsConfig,
                 results =                   None,
                 resultsUpdated =            None,
@@ -1181,7 +1181,7 @@ object ElectionsApi
 
   }(slickExecutionContext)
 
-  /** Future: calculates an election's results using agora-results */
+  /** Future: calculates an election's results using tally-pipes */
   private def calcResults(
     id: Long,
     config: String,
@@ -1230,9 +1230,9 @@ object ElectionsApi
     }
     val dirPath = Datastore.getDirPath(id)
     val cmd = if (pipesWhitelist.length > 0)
-        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id -p $pipesWhitelist"
+        s"$sequentResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id -p $pipesWhitelist"
       else
-        s"$agoraResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id"
+        s"$sequentResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id"
 
     Logger.info(s"tally for $id: calculating results with command: '$cmd'")
     val output = cmd.!!

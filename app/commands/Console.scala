@@ -1,18 +1,18 @@
 /**
- * This file is part of agora_elections.
- * Copyright (C) 2017  Agora Voting SL <nvotes@nvotes.com>
+ * This file is part of ballot_box.
+ * Copyright (C) 2017  Sequent Tech Inc <legal@sequentech.io>
 
- * agora_elections is free software: you can redistribute it and/or modify
+ * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License.
 
- * agora_elections  is distributed in the hope that it will be useful,
+ * ballot_box  is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
 
  * You should have received a copy of the GNU Affero General Public License
- * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+ * along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 **/
 package commands
 
@@ -90,11 +90,11 @@ class ConsoleImpl extends ConsoleInterface {
   var vote_count : Long = 0
   // http or https
   var http_type = "https"
-  // hostname of the agora-elections server
+  // hostname of the ballot-box server
   var host = "localhost"
   // path to the service inside the host
   var service_path = "elections/"
-  // agora-elections port
+  // ballot-box port
   var port : Long = 9000
   // default plaintext path
   var plaintexts_path = "plaintexts.txt"
@@ -429,32 +429,32 @@ class ConsoleImpl extends ConsoleInterface {
   |     --shared-secret
   |       The shared secret required for authentication and creating khmacs.
   |       This value can be found on the config.yml
-  |       agora.agora_elections.shared_secret variable.
+  |       sequent.ballot_box.shared_secret variable.
   |       Default value: <PASSWORD>
   |
   |     --service-path
-  |       The location of service agora_elections in the host server. For
+  |       The location of service ballot_box in the host server. For
   |       example if a call to the server is:
-  |           https://agora:443/elections/api/election/39
+  |           https://sequent:443/elections/api/election/39
   |       Then the service path is "elections/".
   |       Default value: elections/
   |
   |     --port
-  |       Port number of the agora_elections service.
+  |       Port number of the ballot_box service.
   |       Default value: 443
   |
   |     --host
-  |       Hostname of the agora_elections service.
+  |       Hostname of the ballot_box service.
   |       Default value: localhost
   |
   |     --ssl
   |       Enables or disables https. If true, http requests to the
-  |       agora_elections service will use https.
-  |       Usually, the agora_elections service will use a self-signed
+  |       ballot_box service will use https.
+  |       Usually, the ballot_box service will use a self-signed
   |       certificate. To make this program to accept the certificate, use
   |       -Djavax.net.ssl.trustStore=/path/to/jks/truststore  and
   |       -Djavax.net.ssl.trustStorePassword=pass with a jks truststore that
-  |       includes the agora_elections certificate.
+  |       includes the ballot_box certificate.
   |       Possible values: true|false
   |       Default value: true
   |
@@ -665,7 +665,7 @@ class ConsoleImpl extends ConsoleInterface {
   }
 
   /**
-   * Makes an http request to agora-elections to get the election info.
+   * Makes an http request to ballot-box to get the election info.
    * Returns the parsed election info
    */
   def get_election_info(electionId: Long) : Future[ElectionDTO] =
@@ -742,7 +742,7 @@ class ConsoleImpl extends ConsoleInterface {
   }
 
   /**
-   * Makes an HTTP request to agora-elections to dump the public keys for a
+   * Makes an HTTP request to ballot-box to dump the public keys for a
    * given election id.
    */
   def dump_pks(electionId: Long): Future[Unit] =

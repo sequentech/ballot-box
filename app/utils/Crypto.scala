@@ -1,18 +1,18 @@
 /**
- * This file is part of agora_elections.
- * Copyright (C) 2014-2016  Agora Voting SL <agora@agoravoting.com>
+ * This file is part of ballot_box.
+ * Copyright (C) 2014-2016  Sequent Tech Inc <legal@sequentech.io>
 
- * agora_elections is free software: you can redistribute it and/or modify
+ * ballot_box is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License.
 
- * agora_elections  is distributed in the hope that it will be useful,
+ * ballot_box  is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
 
  * You should have received a copy of the GNU Affero General Public License
- * along with agora_elections.  If not, see <http://www.gnu.org/licenses/>.
+ * along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 **/
 package utils
 
@@ -62,7 +62,7 @@ import java.math.BigInteger
 
   /** calculate the jacobi symbol (and hence legendre, since modulus is odd prime)
     *
-    * algorithm taken from verificatum https://github.com/agoravoting/verificatum/blob/master/verificatum%2Fverificatum%2Farithm%2FLargeInteger.magic#L1621
+    * algorithm taken from verificatum https://github.com/sequentech/verificatum/blob/master/verificatum%2Fverificatum%2Farithm%2FLargeInteger.magic#L1621
     *
     * and http://programmingpraxis.com/2012/05/01/legendres-symbol/
     *

@@ -20,9 +20,9 @@ jobs:
       postgres:
         image: postgres:12
         env:
-          POSTGRES_USER: agora_elections
+          POSTGRES_USER: ballot_box
           POSTGRES_PASSWORD: mypassword
-          POSTGRES_DB: agora_elections
+          POSTGRES_DB: ballot_box
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -67,8 +67,8 @@ jobs:
     - name: Set test data
       run: |
         cp conf/test.local.conf.example conf/test.local.conf
-        mkdir -p /tmp/agora_elections/datastore/public
-        mkdir -p /tmp/agora_elections/datastore/private
+        mkdir -p /tmp/ballot_box/datastore/public
+        mkdir -p /tmp/ballot_box/datastore/private
         cp -rf testdata/eopeers /etc
         cp -rf testdata/keystore.jks /tmp
 

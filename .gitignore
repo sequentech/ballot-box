@@ -1,3 +1,4 @@
 logs/
 project/
 target/
+*.pyc

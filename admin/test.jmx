@@ -153,7 +153,7 @@
             </elementProp>
             <elementProp name="csv_file_path" elementType="Argument">
               <stringProp name="Argument.name">csv_file_path</stringProp>
-              <stringProp name="Argument.value">${__P(csv_file_path,/home/agoraelections/jmeter/ciphertexts-khmac.csv)}</stringProp>
+              <stringProp name="Argument.value">${__P(csv_file_path,/home/ballotbox/jmeter/ciphertexts-khmac.csv)}</stringProp>
               <stringProp name="Argument.metadata">=</stringProp>
             </elementProp>
             <elementProp name="server_host" elementType="Argument">
