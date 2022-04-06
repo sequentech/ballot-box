@@ -477,7 +477,10 @@ case class ElectionConfig(
 
     // make sure that all requested authorities are available as peers
     auths.foreach { auth =>
-      assert(peers.contains(auth), "One or more authorities were not found")
+      assert(
+        peers.contains(auth), 
+        s"Authority '${auth}' not found in peers: ${peers.keys}"
+      )
     }
 
     validateStringLength(title, LONG_STRING, s"title too large: $title")
