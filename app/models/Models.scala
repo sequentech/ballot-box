@@ -479,7 +479,7 @@ case class ElectionConfig(
     auths.foreach { auth =>
       assert(
         peers.contains(auth), 
-        s"Authority '${auth}' not found in peers: ${peers}"
+        s"Authority '${auth}' not found in peers: ${peers.keys}"
       )
     }
 
