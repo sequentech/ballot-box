@@ -282,7 +282,11 @@ object Elections {
           current_state != STOPPED &&
           current_state != DOING_TALLY
         ) ||
-        (state == TALLY_OK && current_state != DOING_TALLY) ||
+        (
+          state == TALLY_OK &&
+          current_state != DOING_TALLY &&
+          current_state != STOPPED // This is allowed for virtual elections
+        ) ||
         (state == TALLY_ERROR && current_state != DOING_TALLY) ||
         (
           state == RESULTS_OK &&
