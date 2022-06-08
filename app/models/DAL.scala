@@ -137,33 +137,39 @@ object DAL {
     }
 
     def insert(election: Election) = DB.withSession { implicit session =>
+      val ret = Elections.insert(election)
       Cache.remove(key(election.id))
-      Elections.insert(election)
+      ret
     }
 
     def update(id: Long, election: Election) = DB.withSession { implicit session =>
+      val ret = Elections.update(id, election)
       Cache.remove(key(id))
-      Elections.update(id, election)
+      ret
     }
 
     def setStartDate(id: Long, startDate: Timestamp) = DB.withSession { implicit session =>
+      val ret = Elections.setStartDate(id, startDate)
       Cache.remove(key(id))
-      Elections.setStartDate(id, startDate)
+      ret
     }
 
     def setStopDate(id: Long, endDate: Timestamp) = DB.withSession { implicit session =>
+      val ret = Elections.setStopDate(id, endDate)
       Cache.remove(key(id))
-      Elections.setStopDate(id, endDate)
+      ret
     }
 
     def setTallyDate(id: Long, tallyDate: Timestamp) = DB.withSession { implicit session =>
+      val ret = Elections.setTallyDate(id, tallyDate)
       Cache.remove(key(id))
-      Elections.setTallyDate(id, tallyDate)
+      ret
     }
 
     def insertWithSession(election: Election)(implicit s:Session) = DB.withSession { implicit session =>
+      val ret = Elections.insert(election)
       Cache.remove(key(election.id))
-      Elections.insert(election)
+      ret
     }
 
     def updateState(id: Long, state: String) = DB.withSession { implicit session =>
@@ -172,39 +178,45 @@ object DAL {
         .findByIdWithSession(id)
         .get
         .state
+      val ret = Elections.updateState(id, current_state, state)
       Cache.remove(key(id))
-      Elections.updateState(id, current_state, state)
+      ret
     }
 
     def allowTally(id: Long) = DB.withSession { implicit session =>
+      val ret = Elections.allowTally(id)
       Cache.remove(key(id))
-      Elections.allowTally(id)
+      ret
     }
 
     def updatePublishedResults(id: Long, results: String) = DB.withSession { implicit session =>
-      Cache.remove(key(id))
+      val ret = Cache.remove(key(id))
       Elections.updatePublishedResults(id, results)
+      ret
     }
 
     def updateResults(id: Long, results: String, updateStatus: Boolean) = DB.withSession { implicit session =>
+      val ret = Elections.updateResults(id, results, updateStatus)
       Cache.remove(key(id))
-      Elections.updateResults(id, results, updateStatus)
+      ret
     }
 
     def updateBallotBoxesResultsConfig(id: Long, config: String)
     = DB.withSession
     {
       implicit session =>
+        val ret = Elections.updateBallotBoxesResultsConfig(id, config)
         Cache.remove(key(id))
-        Elections.updateBallotBoxesResultsConfig(id, config)
+        ret
     }
 
     def updateResultsConfig(id: Long, config: String)
     = DB.withSession
     {
       implicit session =>
+        val ret = Elections.updateResultsConfig(id, config)
         Cache.remove(key(id))
-        Elections.updateResultsConfig(id, config)
+        ret
     }
 
     def updateConfig(
@@ -215,18 +227,21 @@ object DAL {
     ) = DB.withSession 
     { 
       implicit session =>
+        val ret = Elections.updateConfig(id, config, start, end)
         Cache.remove(key(id))
-        Elections.updateConfig(id, config, start, end)
+        ret
     }
 
     def setPublicKeys(id: Long, pks: String) = DB.withSession { implicit session =>
+      val ret = Elections.setPublicKeys(id, pks)
       Cache.remove(key(id))
-      Elections.setPublicKeys(id, pks)
+      ret
     }
 
     def delete(id: Long) = DB.withSession { implicit session =>
+      val ret = Elections.delete(id)
       Cache.remove(key(id))
-      Elections.delete(id)
+      ret
     }
 
     private def key(id: Long) = s"election.$id"
