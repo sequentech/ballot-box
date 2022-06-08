@@ -126,8 +126,11 @@ object DAL {
       }
       case None => {
         val election = Elections.findById(id)
-        // set in cache if found
-        election.map(Cache.set(key(id), _))
+        // set in cache if found, with some expiration
+        val expirationSeconds = Play.current.configuration
+          .getInt("app.cache.expiration_seconds")
+          .getOrElse(60)
+        election.map(Cache.set(key(id), _, expirationSeconds))
         election
       }
     }
