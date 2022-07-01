@@ -128,13 +128,51 @@ object ElectionsApi
   }
 
   /** gets an election */
-  def get(id: Long) = Action.async { request =>
-
-    val future = getElection(id).map { election =>
-      Ok(response(election.getDTO))
-    }
-    future.recover {
-      case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+  def get(id: Long) = Action.async {
+    request => {
+      val authorizationHeader = request.headers.get("Authorization")
+      val boothSecret = Play
+        .current
+        .configuration
+        .getString("elections.auth.secret")
+        .get
+      val expiry = Play
+        .current
+        .configuration
+        .getString("elections.auth.expiry")
+        .get
+        .toInt
+      val isAuthenticated = authorizationHeader match {
+        case Some(someAuthorizationHeader) => HMACActionHelper(
+          /* userId = */ "",
+          /* objType = */ "AuthEvent",
+          /* objId = */ id,
+          /* perm = */ "edit|view",
+          /* expiry = */ expiry,
+          /* boothSecret = */ boothSecret,
+          /* authorizationHeader = */ someAuthorizationHeader
+        ).check()
+        case _ => false
+      }
+      val future = getElection(id)
+        .map {
+          election => {
+            // show candidates only if isAuthenticated or
+            // election.publicCandidates
+            val showCandidates = isAuthenticated || election.publicCandidates
+            Ok(
+              response(
+                election.getDTO(showCandidates)
+              )
+            )
+          }
+        }
+      future.recover {
+        case e: NoSuchElementException =>
+          BadRequest(
+            error(s"Election $id not found", ErrorCodes.EO_ERROR)
+          )
+      }
     }
   }
 
@@ -988,6 +1026,7 @@ object ElectionsApi
                 results =                   None,
                 resultsUpdated =            None,
                 publishedResults =          None,
+                publicCandidates =          validated.publicCandidates,
                 virtual =                   validated.virtual,
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url
@@ -1061,7 +1100,9 @@ object ElectionsApi
             val future = getElection(id) map 
             {
               election =>
-                val oldConfig = election.getDTO.configuration
+                val oldConfig = election
+                  .getDTO(/* showCandidates = */ true)
+                  .configuration
                 val config = oldConfig.copy(
                   presentation = oldConfig.presentation.copy(share_text = jST.get)
                 )
