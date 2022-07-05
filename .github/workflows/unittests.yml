@@ -14,7 +14,8 @@ on:
 
 jobs:
   unittest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
+    container: ubuntu:20.04
     env:
       # define Java options for both official sbt and sbt-extras
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
@@ -43,16 +44,14 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt update
-        sudo apt install -y wget postgresql-client curl
+        apt update
+        apt install -y wget postgresql-client curl
 
     # source: https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
-    - name: Setup JDK
-      uses: actions/setup-java@v3
+    - name: Setup Scala, Sbt and Java 8
+      uses: olafurpg/setup-scala@v10
       with:
-        distribution: temurin
-        java-version: 8
-        cache: sbt
+        java-version: "adopt@1.8"
 
     - name: Build
       run: sbt -v clean stage
@@ -73,10 +72,10 @@ jobs:
         cp conf/test.local.conf.example conf/test.local.conf
         mkdir -p /tmp/ballot_box/datastore/public
         mkdir -p /tmp/ballot_box/datastore/private
-        sudo cp -rf testdata/eopeers /etc
-        sudo cp -rf testdata/keystore.jks /tmp
+        cp -rf testdata/eopeers /etc
+        cp -rf testdata/keystore.jks /tmp
 
-    - name: tests
+    - name: Run sbt test
       run: sbt test
       env:
         PGSYSCONFDIR: testdata

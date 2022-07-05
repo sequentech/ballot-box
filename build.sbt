@@ -43,7 +43,6 @@ libraryDependencies ++= Seq(
   jdbc,
   cache,
   ws,
-  "org.specs2" %% "specs2" % "2.3.13" % Test,
   "com.typesafe.play" %% "play-slick" % "0.8.0",
   "org.postgresql" % "postgresql" % "42.3.3",
   "org.bouncycastle" % "bcprov-jdk15on" % "1.69",
