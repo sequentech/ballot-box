@@ -73,7 +73,7 @@ jobs:
         cp -rf testdata/keystore.jks /tmp
 
     - name: tests
-      run: sbt test
+      run: sbt "test -- fullstacktrace"
       env:
         PGSYSCONFDIR: testdata
 
