@@ -127,6 +127,40 @@ object ElectionsApi
     updateShareElection(id, request)
   }
 
+  /** set if an election's candidates are public or not (i.e. private only to authenticated users) */
+  def setPublicCandidates(id: Long) =
+    HActionAdmin(
+      /* userId = */  "",
+      /* objType = */ "AuthEvent",
+      /* objId = */   id,
+      /* perm = */    "edit|set-public-candidates"
+    )
+    .async(BodyParsers.parse.json)
+    {
+      request => Future {
+        val inputData = request.body.as[JsObject].validate[PublicCandidatesDTO]
+        inputData.fold (
+          errors => BadRequest(response(s"Invalid date json $errors")),
+          data =>
+          {
+            try {
+              val ret = DAL.elections.setPublicCandidates(
+                id,
+                data.publicCandidates
+              )
+              Ok(response(ret))
+            } catch {
+              case e: Throwable => {
+                e.printStackTrace()
+                Logger.error(s"Exception Throwable ${e.getMessage}")
+                BadRequest(error(e.getMessage))
+              }
+            }
+          }
+        )
+      }
+    }
+
   /** gets an election */
   def get(id: Long) = Action.async {
     request => {

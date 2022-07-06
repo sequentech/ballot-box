@@ -81,6 +81,7 @@ object JsonFormatters {
   implicit val statDayF = Json.format[StatDay]
   implicit val statsF = Json.format[Stats]
   implicit val electionDtoF = Json.format[ElectionDTO]
+  implicit val publicCandidatesF = Json.format[PublicCandidatesDTO]
 
   implicit val publicKeyF = Json.format[PublicKey]
   implicit val publicKeySessionF = Json.format[PublicKeySession]

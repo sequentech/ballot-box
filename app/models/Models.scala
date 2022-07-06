@@ -354,6 +354,18 @@ object Elections {
     elections.filter(_.id === id).map(e => e.tallyAllowed).update(true)
   }
 
+  def setPublicCandidates(
+    id: Long,
+    publicCandidates: Boolean
+  ) (
+    implicit s: Session
+  ) = {
+    elections
+      .filter(_.id === id)
+      .map(e => e.publicCandidates)
+      .update(publicCandidates)
+  }
+
   def setStartDate(id: Long, startDate: Timestamp)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => e.startDate).update(startDate)
   }
@@ -443,6 +455,11 @@ case class DateDTO(date: String)
     validateStringLength(date, SHORT_STRING, s"date string too large: $date")
   }
 }
+
+/** used to return an election with config in structured form */
+case class PublicCandidatesDTO(
+  publicCandidates: Boolean
+)
 
 /** used to return an election with config in structured form */
 case class ElectionDTO(
