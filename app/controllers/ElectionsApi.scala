@@ -181,7 +181,7 @@ object ElectionsApi
           /* userId = */ "",
           /* objType = */ "AuthEvent",
           /* objId = */ id,
-          /* perm = */ "edit|view",
+          /* perm = */ "edit|view|vote",
           /* expiry = */ expiry,
           /* boothSecret = */ boothSecret,
           /* authorizationHeader = */ someAuthorizationHeader
