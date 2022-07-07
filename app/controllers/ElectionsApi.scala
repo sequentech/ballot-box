@@ -1014,6 +1014,10 @@ object ElectionsApi
         body = body.as[JsObject] + ("ballotBoxesResultsConfig" -> Json.toJson(""))
     }
 
+    if (!body.as[JsObject].keys.contains("publicCandidates")) {
+        body = body.as[JsObject] + ("publicCandidates" -> Json.toJson(true))
+    }
+
     if (body.as[JsObject].keys.contains("start_date") && 
         (0 == (body.as[JsObject] \ "start_date").toString.length ||
          "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
