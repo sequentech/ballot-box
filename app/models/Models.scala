@@ -124,10 +124,12 @@ case class Election(
   publishedResults: Option[String],
   virtual: Boolean,
   tallyAllowed: Boolean,
-  logo_url: Option[String])
+  publicCandidates: Boolean,
+  logo_url: Option[String]
+)
 {
 
-  def getDTO =
+  def getDTO(showCandidates: Boolean = true) =
   {
     var configJson = Json.parse(configuration)
     if (!configJson.as[JsObject].keys.contains("layout")) {
@@ -154,7 +156,21 @@ case class Election(
         configJson = configJson.as[JsObject] + ("tally_allowed" -> Json.toJson(tallyAllowed))
     }
 
+    if (!configJson.as[JsObject].keys.contains("publicCandidates")) {
+        configJson = configJson.as[JsObject] + ("publicCandidates" -> Json.toJson(publicCandidates))
+    }
+
     var config = configJson.validate[ElectionConfig].get
+    var privacyConfig = (showCandidates) match {
+      case true => config
+      case false => config.copy(
+          questions=config.questions.map(
+            (question) => {
+              question.copy(answers=Array())
+            }
+          )
+        )
+    }
     var resUp = None: Option[Timestamp]
 
     if (state == Elections.RESULTS_PUB) {
@@ -163,7 +179,7 @@ case class Election(
 
     ElectionDTO(
       id,
-      config,
+      privacyConfig,
       state,
       startDate,
       endDate,
@@ -174,7 +190,9 @@ case class Election(
       resUp,
       virtual,
       tallyAllowed,
-      logo_url)
+      publicCandidates,
+      logo_url
+    )
   }
 }
 
@@ -195,6 +213,7 @@ class Elections(tag: Tag)
   def publishedResults = column[String]("published_results", O.Nullable, O.DBType("text"))
   def virtual = column[Boolean]("virtual")
   def tallyAllowed = column[Boolean]("tally_allowed")
+  def publicCandidates = column[Boolean]("public_candidates")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
 
   def * = (
@@ -211,6 +230,7 @@ class Elections(tag: Tag)
     publishedResults.?,
     virtual,
     tallyAllowed,
+    publicCandidates,
     logo_url.?
   ) <> (Election.tupled, Election.unapply _)
 }
@@ -334,6 +354,18 @@ object Elections {
     elections.filter(_.id === id).map(e => e.tallyAllowed).update(true)
   }
 
+  def setPublicCandidates(
+    id: Long,
+    publicCandidates: Boolean
+  ) (
+    implicit s: Session
+  ) = {
+    elections
+      .filter(_.id === id)
+      .map(e => e.publicCandidates)
+      .update(publicCandidates)
+  }
+
   def setStartDate(id: Long, startDate: Timestamp)(implicit s: Session) = {
     elections.filter(_.id === id).map(e => e.startDate).update(startDate)
   }
@@ -425,6 +457,11 @@ case class DateDTO(date: String)
 }
 
 /** used to return an election with config in structured form */
+case class PublicCandidatesDTO(
+  publicCandidates: Boolean
+)
+
+/** used to return an election with config in structured form */
 case class ElectionDTO(
   id: Long,
   configuration: ElectionConfig,
@@ -438,6 +475,7 @@ case class ElectionDTO(
   resultsUpdated: Option[Timestamp],
   virtual: Boolean,
   tallyAllowed: Boolean,
+  publicCandidates: Boolean,
   logo_url: Option[String]
 )
 
@@ -456,6 +494,7 @@ case class ElectionConfig(
   ballotBoxesResultsConfig: Option[String],
   virtual: Boolean,
   tally_allowed: Boolean,
+  publicCandidates: Boolean,
   virtualSubelections: Option[Array[Long]],
   logo_url: Option[String])
 {
