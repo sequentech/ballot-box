@@ -24,45 +24,31 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.{Crypto => PlayCrypto}
 
-/** Authorizes requests using hmac in Authorization header */
-case class HMACAuthAction(
-  userId: String, 
-  objType: String, 
-  objId: Long, 
-  perm: String, 
-  expiry: Int
-) extends ActionFilter[Request] {
-
-  val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
-
-  /** deny requests that dont pass hmac validations */
-  def filter[A](input: Request[A]) = Future.successful {
-
-    input.headers.get("Authorization").map(validate(input)) match {
-      case Some(true) => None
-      case _ => Some(Forbidden)
-    }
-  }
-
-  /** validate an hmac authorization code
-
-   Format is: "khmac://sha-256;<hash>/<message>"
-
-   Format of the message is:
-   "<userid:String>:<obj_type:String>:<obj_id:Long>:<perm:String>:<time:Long>"
-   */
-  def validate[A](request: Request[A])(value: String): Boolean = {
-
+case class HMACActionHelper(
+  userId: String,
+  objType: String,
+  objId: Long,
+  perm: String,
+  expiry: Int,
+  boothSecret: String,
+  authorizationHeader: String
+) {
+  def check(): Boolean =
+  {
     try {
       val start = "khmac:///sha-256;";
       val slashPos = start.length + 64;
 
-      if(!value.startsWith(start) || value.length < slashPos || value.charAt(slashPos) != '/') {
+      if(
+        !authorizationHeader.startsWith(start) ||
+        authorizationHeader.length < slashPos ||
+        authorizationHeader.charAt(slashPos) != '/'
+      ) {
         Logger.warn(s"Malformed authorization header")
         return false
       }
-      val hash = value.substring(start.length, slashPos)
-      val message = value.substring(slashPos + 1)
+      val hash = authorizationHeader.substring(start.length, slashPos)
+      val message = authorizationHeader.substring(slashPos + 1)
 
       val split = message.split(':')
       if (split.length < 5) {
@@ -98,12 +84,57 @@ case class HMACAuthAction(
         return true
       }
 
-      Logger.warn(s"Failed to authorize hmac:\n\tvalue=$value\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm")
+      Logger.warn(
+        s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm"
+      )
       return false
     }
     catch {
-      case e:Exception => Logger.warn(s"Exception verifying hmac ($value)", e); false
+      case e:Exception => {
+        Logger.warn(s"Exception verifying hmac ($authorizationHeader)", e)
+        return false
+      }
     }
+  }
+}
+
+/** Authorizes requests using hmac in Authorization header */
+case class HMACAuthAction(
+  userId: String, 
+  objType: String, 
+  objId: Long, 
+  perm: String, 
+  expiry: Int
+) extends ActionFilter[Request] {
+
+  val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
+
+  /** deny requests that dont pass hmac validations */
+  def filter[A](input: Request[A]) = Future.successful {
+
+    input.headers.get("Authorization").map(validate(input)) match {
+      case Some(true) => None
+      case _ => Some(Forbidden)
+    }
+  }
+
+  /** validate an hmac authorization code
+
+   Format is: "khmac://sha-256;<hash>/<message>"
+
+   Format of the message is:
+   "<userid:String>:<obj_type:String>:<obj_id:Long>:<perm:String>:<time:Long>"
+   */
+  def validate[A](request: Request[A])(value: String): Boolean = {
+    HMACActionHelper(
+      userId,
+      objType,
+      objId,
+      perm,
+      expiry,
+      boothSecret,
+      value
+    ).check()
   }
 }
 

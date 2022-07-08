@@ -58,6 +58,7 @@ trait TestContexts {
   "layout": "pcandidates-election",
   "virtual": false,
   "tally_allowed": true,
+  "publicCandidates": true,
   "presentation": {
     "theme": "foo",
     "urls": [

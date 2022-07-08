@@ -77,7 +77,25 @@ class ElectionsSpec extends Specification with TestContexts with Response {
 
       DB.withSession { implicit session =>
         val cfg = TestData.config.validate[ElectionConfig].get
-        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.REGISTERED, cfg.start_date, cfg.end_date, None, None, None, None, None, None, false, false, None))
+        Elections.insert(
+          Election(
+            /* id = */                        cfg.id,
+            /* configuration = */             TestData.config.toString,
+            /* state = */                     Elections.REGISTERED,
+            /* startDate = */                 cfg.start_date,
+            /* endDate = */                   cfg.end_date,
+            /* pks = */                       None,
+            /* tallyPipesConfig = */          None,
+            /* ballotBoxesResultsConfig = */  None,
+            /* results = */                   None,
+            /* resultsUpdated = */            None,
+            /* publishedResults = */          None,
+            /* virtual = */                   false,
+            /* tallyAllowed = */              false,
+            /* publicCandidates = */          true,
+            /* logo_url = */                  None
+          )
+        )
       }
 
       val response = route(FakeRequest(POST, routes.ElectionsApi.update(1).url)
@@ -90,15 +108,23 @@ class ElectionsSpec extends Specification with TestContexts with Response {
 
     "allow retrieving authority data" in new AppWithDbData() {
 
-      val response = route(FakeRequest(GET, routes.ElectionsApi.getAuthorities.url)
-        .withHeaders(("Authorization", "bogus"))
+      val response = route(
+        FakeRequest(GET, routes.ElectionsApi.getAuthorities.url)
+          .withHeaders(("Authorization", "bogus"))
       ).get
 
-      responseCheck(response, (r:Response[Map[String, AuthData]]) => r.payload.size == 2)
+      responseCheck(
+        response,
+        (r:Response[Map[String, AuthData]]) => r.payload.size == 2
+      )
     }
   }
 
-  def responseCheck[T: Reads](result: Future[play.api.mvc.Result], f: T => Boolean, code:Int = OK) = {
+  def responseCheck[T: Reads](
+    result: Future[play.api.mvc.Result],
+    f: T => Boolean,
+    code:Int = OK
+  ) = {
 
     status(result) must equalTo(code)
     contentType(result) must beSome.which(_ == "application/json")

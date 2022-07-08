@@ -16,6 +16,10 @@ jobs:
   unittest:
     runs-on: ubuntu-20.04
     container: ubuntu:20.04
+    env:
+      # define Java options for both official sbt and sbt-extras
+      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     services:
       postgres:
         image: postgres:12
@@ -50,8 +54,7 @@ jobs:
         java-version: "adopt@1.8"
 
     - name: Build
-      run: |
-        sbt clean stage
+      run: sbt -v clean stage
 
     - name: Create pom.xml
       run: |
@@ -72,9 +75,7 @@ jobs:
         cp -rf testdata/eopeers /etc
         cp -rf testdata/keystore.jks /tmp
 
-    - name: tests
+    - name: Run sbt test
       run: sbt test
       env:
         PGSYSCONFDIR: testdata
-
-

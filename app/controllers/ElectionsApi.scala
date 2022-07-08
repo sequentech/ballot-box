@@ -127,14 +127,86 @@ object ElectionsApi
     updateShareElection(id, request)
   }
 
-  /** gets an election */
-  def get(id: Long) = Action.async { request =>
-
-    val future = getElection(id).map { election =>
-      Ok(response(election.getDTO))
+  /** set if an election's candidates are public or not (i.e. private only to authenticated users) */
+  def setPublicCandidates(id: Long) =
+    HActionAdmin(
+      /* userId = */  "",
+      /* objType = */ "AuthEvent",
+      /* objId = */   id,
+      /* perm = */    "edit|set-public-candidates"
+    )
+    .async(BodyParsers.parse.json)
+    {
+      request => Future {
+        val inputData = request.body.as[JsObject].validate[PublicCandidatesDTO]
+        inputData.fold (
+          errors => BadRequest(response(s"Invalid date json $errors")),
+          data =>
+          {
+            try {
+              val ret = DAL.elections.setPublicCandidates(
+                id,
+                data.publicCandidates
+              )
+              Ok(response(ret))
+            } catch {
+              case e: Throwable => {
+                e.printStackTrace()
+                Logger.error(s"Exception Throwable ${e.getMessage}")
+                BadRequest(error(e.getMessage))
+              }
+            }
+          }
+        )
+      }
     }
-    future.recover {
-      case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.EO_ERROR))
+
+  /** gets an election */
+  def get(id: Long) = Action.async {
+    request => {
+      val authorizationHeader = request.headers.get("Authorization")
+      val boothSecret = Play
+        .current
+        .configuration
+        .getString("elections.auth.secret")
+        .get
+      val expiry = Play
+        .current
+        .configuration
+        .getString("elections.auth.expiry")
+        .get
+        .toInt
+      val isAuthenticated = authorizationHeader match {
+        case Some(someAuthorizationHeader) => HMACActionHelper(
+          /* userId = */ "",
+          /* objType = */ "AuthEvent",
+          /* objId = */ id,
+          /* perm = */ "edit|view|vote",
+          /* expiry = */ expiry,
+          /* boothSecret = */ boothSecret,
+          /* authorizationHeader = */ someAuthorizationHeader
+        ).check()
+        case _ => false
+      }
+      val future = getElection(id)
+        .map {
+          election => {
+            // show candidates only if isAuthenticated or
+            // election.publicCandidates
+            val showCandidates = isAuthenticated || election.publicCandidates
+            Ok(
+              response(
+                election.getDTO(showCandidates)
+              )
+            )
+          }
+        }
+      future.recover {
+        case e: NoSuchElementException =>
+          BadRequest(
+            error(s"Election $id not found", ErrorCodes.EO_ERROR)
+          )
+      }
     }
   }
 
@@ -942,6 +1014,10 @@ object ElectionsApi
         body = body.as[JsObject] + ("ballotBoxesResultsConfig" -> Json.toJson(""))
     }
 
+    if (!body.as[JsObject].keys.contains("publicCandidates")) {
+        body = body.as[JsObject] + ("publicCandidates" -> Json.toJson(true))
+    }
+
     if (body.as[JsObject].keys.contains("start_date") && 
         (0 == (body.as[JsObject] \ "start_date").toString.length ||
          "\"\"" == (body.as[JsObject] \ "start_date").toString)) {
@@ -988,6 +1064,7 @@ object ElectionsApi
                 results =                   None,
                 resultsUpdated =            None,
                 publishedResults =          None,
+                publicCandidates =          validated.publicCandidates,
                 virtual =                   validated.virtual,
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url
@@ -1061,7 +1138,9 @@ object ElectionsApi
             val future = getElection(id) map 
             {
               election =>
-                val oldConfig = election.getDTO.configuration
+                val oldConfig = election
+                  .getDTO(/* showCandidates = */ true)
+                  .configuration
                 val config = oldConfig.copy(
                   presentation = oldConfig.presentation.copy(share_text = jST.get)
                 )

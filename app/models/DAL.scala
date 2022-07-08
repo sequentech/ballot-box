@@ -151,6 +151,15 @@ object DAL {
       ret
     }
 
+    def setPublicCandidates(id: Long, publicCandidates: Boolean) =
+      DB.withSession {
+        implicit session => {
+          val ret = Elections.setPublicCandidates(id, publicCandidates)
+          Cache.remove(key(id))
+          ret
+        }
+      }
+
     def setStartDate(id: Long, startDate: Timestamp) = DB.withSession { implicit session =>
       val ret = Elections.setStartDate(id, startDate)
       Cache.remove(key(id))
