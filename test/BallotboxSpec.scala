@@ -71,9 +71,28 @@ class BallotboxSpec extends Specification with TestContexts with Response {
           errors => failure(s"Invalid election config json $errors"),
 
           cfg => {
-            Elections.insert(Election(cfg.id, TestData.config.toString, Elections.CREATED, cfg.start_date, cfg.end_date, None, None, None, None, None, None, false, true, None))
+            Elections.insert(
+              Election(
+                /* id = */                        cfg.id,
+                /* configuration = */             TestData.config.toString,
+                /* state = */                     Elections.CREATED,
+                /* startDate = */                 cfg.start_date,
+                /* endDate = */                   cfg.end_date,
+                /* pks = */                       None,
+                /* tallyPipesConfig = */          None,
+                /* ballotBoxesResultsConfig = */  None,
+                /* results = */                   None,
+                /* resultsUpdated = */            None,
+                /* publishedResults = */          None,
+                /* virtual = */                   false,
+                /* tallyAllowed = */              true,
+                /* publicCandidates = */          true,
+                /* logo_url = */                  None
+              )
+            )
 
-            // for validation to work we need to set the pk for the election manually (for election 1020)
+            // for validation to work we need to set the pk for the election
+            // manually (for election 1020)
             Elections.setPublicKeys(1, pks1020)
             Elections.updateState(1, Elections.CREATED, Elections.STARTED)
           }
@@ -95,9 +114,28 @@ class BallotboxSpec extends Specification with TestContexts with Response {
 
       DB.withSession { implicit session =>
         val cfg = TestData.config.validate[ElectionConfig].get
-        Elections.insert(Election(cfg.id, TestData.config.toString, Elections.CREATED, cfg.start_date, cfg.end_date, None, None, None, None, None, None, false, false, None))
+        Elections.insert(
+          Election(
+            /* id = */                        cfg.id,
+            /* configuration = */             TestData.config.toString,
+            /* state = */                     Elections.CREATED,
+            /* startDate = */                 cfg.start_date,
+            /* endDate = */                   cfg.end_date,
+            /* pks = */                       None,
+            /* tallyPipesConfig = */          None,
+            /* ballotBoxesResultsConfig = */  None,
+            /* results = */                   None,
+            /* resultsUpdated = */            None,
+            /* publishedResults = */          None,
+            /* virtual = */                   false,
+            /* tallyAllowed = */              false,
+            /* publicCandidates = */          true,
+            /* logo_url = */                  None
+          )
+        )
 
-        // for validation to work we need to set the pk for the election manually (for election 1020)
+        // for validation to work we need to set the pk for the election
+        // manually (for election 1020)
         Elections.setPublicKeys(1, pks1020)
         Elections.updateState(1, Elections.CREATED, Elections.STARTED)
       }
