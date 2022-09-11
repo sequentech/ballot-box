@@ -877,6 +877,7 @@ case class ElectionPresentation(
   extra_options: Option[ElectionExtra],
   show_login_link_on_home: Option[Boolean],
   conditional_questions: Option[Array[ConditionalQuestion]],
+  pdf_url: Option[Url],
 
   // Override translations for languages. Example:
   // {"en": {"avRegistration.forgotPassword": "Whatever"}}
