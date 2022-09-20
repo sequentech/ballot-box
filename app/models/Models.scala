@@ -876,7 +876,14 @@ case class ElectionPresentation(
   theme_css: String,
   extra_options: Option[ElectionExtra],
   show_login_link_on_home: Option[Boolean],
-  conditional_questions: Option[Array[ConditionalQuestion]])
+  conditional_questions: Option[Array[ConditionalQuestion]],
+  pdf_url: Option[Url],
+
+  // Override translations for languages. Example:
+  // {"en": {"avRegistration.forgotPassword": "Whatever"}}
+  i18n_override: Option[Map[String, Map[String, String]]]
+
+)
 {
   def shareTextConfig() : Option[Array[ShareTextItem]]  = {
     val allow_edit: Boolean = Play.current.configuration.getBoolean("share_social.allow_edit").getOrElse(false)
