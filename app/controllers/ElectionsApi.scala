@@ -912,6 +912,13 @@ object ElectionsApi
     }
   }
 
+  def getAuthorities = Action.async { request => Future {
+      Ok(response(authorities.mapValues( value => {
+          (value \ "public").get
+        }) 
+      ))
+  }}
+
   /** get share of private keys, this is an admin/trustee only command */
   def downloadPrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
@@ -919,7 +926,7 @@ object ElectionsApi
     val downloadRequestData = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
 
     downloadRequestData.fold (
-      errors => BadRequest(response(s"Invalid input $errors")),
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
       downloadRequest => {
         getElection(id)
         .map {
