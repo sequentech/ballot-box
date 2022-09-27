@@ -87,6 +87,7 @@ object ElectionsApi
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
   val authorities = getAuthorityData
+  val trustee_users = getTrusteeUsers
   val download_tally_timeout = Play.current.configuration.getInt("app.download_tally_timeout").get
   val download_tally_retries = Play.current.configuration.getInt("app.download_tally_retries").get
   val always_publish = Play.current.configuration.getBoolean("app.always_publish").getOrElse(false)
@@ -912,11 +913,43 @@ object ElectionsApi
     }
   }
 
-  def getAuthorities = Action.async { request => Future {
-      Ok(response(authorities.mapValues( value => {
-          (value \ "public").get
-        }) 
-      ))
+  /** get share of private keys, this is an admin/trustee only command */
+  def downloadPrivateKeyShare(id: Long) = Action.async(BodyParsers.parse.json) { request => Future {
+    Logger.info(s"download share ${request.body.toString}")
+    val downloadRequestData = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
+
+
+    downloadRequestData.fold (
+      errors => BadRequest(response(s"Invalid input $errors")),
+      downloadRequest => {
+        getElection(id)
+        .map {
+          election => {
+            if(!authorities.contains(downloadRequest.authority_id)) {
+              return BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH))
+            }
+            val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
+            val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
+            if (trusteeConfig.isEmpty)  {
+              return BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH))
+            }
+            val trustee = trusteeConfig.get
+            val trusteeUsername = trustee.getString("username")
+            val trusteePass = trustee.getString("password")
+            val trusteeAuthId = trustee.getString("authority_id")
+            if (
+              trusteeAuthId != downloadRequest.authority_id ||
+              trusteePass != downloadRequest.password
+            ) {
+              return BadRequest(error("Access Denied"))
+            }
+
+            Ok(Json.toJson(0))
+        }.recover {
+          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+        }
+      }
+    )
   }}
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
@@ -1515,6 +1548,11 @@ object ElectionsApi
     DAL.elections.findById(id).get
 
   }(slickExecutionContext)
+
+  /** create a Map[trustee_username -> trustee info] */
+  private def getTrusteeUsers: Map[String, JsObject] = {
+
+  }
 
   /** creates a Map[peer name => peer json] based on eopeer installed packages */
   private def getAuthorityData: Map[String, JsObject] = {

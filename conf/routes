@@ -53,6 +53,9 @@ GET     /api/election/:id/hash/:hash                          controllers.Ballot
 POST    /api/election/:id/keydone                             controllers.ElectionsApi.keydone(id: Long)
 POST    /api/election/:id/tallydone                           controllers.ElectionsApi.tallydone(id: Long)
 
+# authorities
+POST    /api/election/:id/download-private-share              controllers.ElectionsApi.downloadPrivateKeyShare(id: Long)
+
 # admin
 POST    /api/election/:id/dump-pks                            controllers.ElectionsApi.dumpPks(id: Long)
 POST    /api/election/:id/dump-votes                          controllers.BallotboxApi.dumpVotes(id: Long)

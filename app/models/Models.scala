@@ -979,6 +979,8 @@ case class Url(title: String, url: String) {
   }
 }
 
+/** */
+case class DownloadPrivateKeyShareRequest(authority_id: String, username: String, password: String)
 
 /** eo create election response message */
 case class CreateResponse(status: String, session_data: Array[PublicKeySession])

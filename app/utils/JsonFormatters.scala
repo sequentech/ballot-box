@@ -86,6 +86,7 @@ object JsonFormatters {
   implicit val publicKeyF = Json.format[PublicKey]
   implicit val publicKeySessionF = Json.format[PublicKeySession]
   implicit val createResponseF = Json.format[CreateResponse]
+  implicit val downloadPrivateKeyShareRequestF = Json.format[DownloadPrivateKeyShareRequest]
 
   implicit val popkF = Json.format[Popk]
   implicit val choiceF = Json.format[Choice]
