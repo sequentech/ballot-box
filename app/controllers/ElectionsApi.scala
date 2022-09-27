@@ -945,8 +945,9 @@ object ElectionsApi
             }
 
             Ok(Json.toJson(0))
-        }.recover {
-          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          }.recover {
+            case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          }
         }
       }
     )
