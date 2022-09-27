@@ -482,7 +482,8 @@ case class ElectionDTO(
 /** an election configuration defines an election */
 case class ElectionConfig(
   id: Long,
-  layout: String, director: String,
+  layout: String,
+  director: String,
   authorities: Array[String],
   title: String, description: String,
   questions: Array[Question],

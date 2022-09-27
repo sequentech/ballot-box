@@ -930,13 +930,13 @@ object ElectionsApi
       downloadRequest => {
         getElection(id)
         .map {
-          (election: Election): Result => {
+          election => {
             if(!authorities.contains(downloadRequest.authority_id)) {
               BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH))
             } else {
               val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
               val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
-              if (trusteeConfig.isEmpty)  {
+              if (trusteeConfig.isEmpty) {
                 BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH))
               } else {
                 val trustee = trusteeConfig.get
@@ -949,6 +949,16 @@ object ElectionsApi
                 ) {
                   Unauthorized(error("Access Denied"))
                 } else {
+                  val url = eoUrl(config.director, "public_api/download-private-share")
+                  WS.url(url).post(Results.EmptyContent()).map { resp =>
+
+                    if(resp.status == HTTP.ACCEPTED) {
+                      Ok(response("ok"))
+                    }
+                    else {
+                      BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                    }
+                  }
                   Ok(Json.toJson(0))
                 }
               }
@@ -960,6 +970,16 @@ object ElectionsApi
       }
     )
   }
+
+  def checkPrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+      Future { Ok(Json.toJson(0)) }
+    }
+
+  def deletePrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+      Future { Ok(Json.toJson(0)) }
+    }
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
 
