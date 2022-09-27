@@ -918,7 +918,6 @@ object ElectionsApi
     Logger.info(s"download share ${request.body.toString}")
     val downloadRequestData = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
 
-
     downloadRequestData.fold (
       errors => BadRequest(response(s"Invalid input $errors")),
       downloadRequest => {
@@ -926,12 +925,12 @@ object ElectionsApi
         .map {
           election => {
             if(!authorities.contains(downloadRequest.authority_id)) {
-              return BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH))
+              return Future { BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH)) }
             }
             val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
             val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
             if (trusteeConfig.isEmpty)  {
-              return BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH))
+              return Future { BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH)) }
             }
             val trustee = trusteeConfig.get
             val trusteeUsername = trustee.getString("username")
@@ -941,7 +940,7 @@ object ElectionsApi
               trusteeAuthId != downloadRequest.authority_id ||
               trusteePass != downloadRequest.password
             ) {
-              return BadRequest(error("Access Denied"))
+              return Future { Unauthorized(error("Access Denied")) }
             }
 
             Ok(Json.toJson(0))
