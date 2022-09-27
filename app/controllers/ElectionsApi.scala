@@ -930,27 +930,29 @@ object ElectionsApi
       downloadRequest => {
         getElection(id)
         .map {
-          election => {
+          (election: Election): Result => {
             if(!authorities.contains(downloadRequest.authority_id)) {
               BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH))
+            } else {
+              val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
+              val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
+              if (trusteeConfig.isEmpty)  {
+                BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH))
+              } else {
+                val trustee = trusteeConfig.get
+                val trusteeUsername = trustee.getString("username")
+                val trusteePass = trustee.getString("password")
+                val trusteeAuthId = trustee.getString("authority_id")
+                if (
+                  trusteeAuthId != downloadRequest.authority_id ||
+                  trusteePass != downloadRequest.password
+                ) {
+                  Unauthorized(error("Access Denied"))
+                } else {
+                  Ok(Json.toJson(0))
+                }
+              }
             }
-            val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
-            val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
-            if (trusteeConfig.isEmpty)  {
-              BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH))
-            }
-            val trustee = trusteeConfig.get
-            val trusteeUsername = trustee.getString("username")
-            val trusteePass = trustee.getString("password")
-            val trusteeAuthId = trustee.getString("authority_id")
-            if (
-              trusteeAuthId != downloadRequest.authority_id ||
-              trusteePass != downloadRequest.password
-            ) {
-              Unauthorized(error("Access Denied"))
-            }
-
-            Ok(Json.toJson(0))
           }
         }.recover {
           case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
