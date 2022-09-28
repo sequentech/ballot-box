@@ -953,7 +953,7 @@ object ElectionsApi
                   WS.url(url).post(Results.EmptyContent()).map { resp =>
 
                     if(resp.status == HTTP.ACCEPTED) {
-                      Ok(response("ok"))
+                      Ok(response("ok")) 
                     }
                     else {
                       BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
