@@ -1346,15 +1346,7 @@ object ElectionsApi
   private def updateResults(election: Election, results: String, updateStatus: Boolean) = Future {
 
     DAL.elections.updateResults(election.id, results, updateStatus)
-    .flatMap {
-      _ => Ok(Json.toJson("ok"))
-    }.recover {
-      case e: Throwable => {
-        e.printStackTrace()
-        Logger.error(s"Exception Throwable ${e.getMessage}")
-        InternalServerError(error(e.getMessage))
-      }
-    }
+    Ok(Json.toJson("ok"))
 
   }(slickExecutionContext)
 
