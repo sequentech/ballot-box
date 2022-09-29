@@ -949,26 +949,16 @@ object ElectionsApi
                 ) {
                   Future {  Unauthorized(error("Access Denied")) }
                 } else {
-                  val configurationValidation = 
-                    Json.parse(election.configuration)
-                    .as[JsObject]
-                    .validate[ElectionConfig]
+                  val url = eoUrl(trusteeAuthId, "public_api/download-private-share")
+                  WS.url(url).post(Results.EmptyContent()).map { resp =>
 
-                  configurationValidation.fold(
-                    error =>  Future { InternalServerError(response(s"Invalid election config $error")) },
-                    configuration => {
-                      val url = eoUrl(configuration.director, "public_api/download-private-share")
-                      WS.url(url).post(Results.EmptyContent()).map { resp =>
-
-                        if(resp.status == HTTP.ACCEPTED) {
-                          Ok(response("ok")) 
-                        }
-                        else {
-                          BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
-                        }
-                      }
+                    if(resp.status == HTTP.ACCEPTED) {
+                      Ok(response("ok")) 
                     }
-                  )
+                    else {
+                      BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                    }
+                  }
                   
                 }
               }
