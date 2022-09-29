@@ -949,7 +949,7 @@ object ElectionsApi
                 ) {
                   Future {  Unauthorized(error("Access Denied")) }
                 } else {
-                  val url = eoUrl(trusteeAuthId, "public_api/download-private-share")
+                  val url = eoUrl(trusteeAuthId, "public_api/download_private_share")
                   WS.url(url).post(
                     Json.obj(
                       "username" -> trusteeUsername,
