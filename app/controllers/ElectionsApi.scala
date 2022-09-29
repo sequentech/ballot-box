@@ -959,7 +959,7 @@ object ElectionsApi
                     )
                   ).map { resp =>
 
-                    if(resp.status == HTTP.ACCEPTED) {
+                    if(resp.status == HTTP.OK) {
                       Ok(response("ok")) 
                     }
                     else {
