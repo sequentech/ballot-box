@@ -929,6 +929,9 @@ object ElectionsApi
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       downloadRequest => {
         getElection(id)
+        .recover {
+          case e:NoSuchElementException => BadRequest(error(s"Maybe Election $id not found", ErrorCodes.NO_ELECTION))
+        }
         .flatMap {
           election => {
             if(!authorities.contains(downloadRequest.authority_id)) {
@@ -970,7 +973,11 @@ object ElectionsApi
             }
           }
         }.recover {
-          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when downloading share: $t")
+            BadRequest(error(e.getMessage))
+          }
         }
       }
     )
