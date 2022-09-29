@@ -923,9 +923,9 @@ object ElectionsApi
   def downloadPrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
     Logger.info(s"download share ${request.body.toString}")
-    val downloadRequestData = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
+    val downloadRequestValidation = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
 
-    downloadRequestData.fold (
+    downloadRequestValidation.fold (
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       downloadRequest => {
         getElection(id)
@@ -949,17 +949,27 @@ object ElectionsApi
                 ) {
                   Unauthorized(error("Access Denied"))
                 } else {
-                  val url = eoUrl(config.director, "public_api/download-private-share")
-                  WS.url(url).post(Results.EmptyContent()).map { resp =>
+                  val configurationValidation = 
+                    Json.parse(election.configuration)
+                    .as[JsObject]
+                    .validate[ElectionConfig].get
 
-                    if(resp.status == HTTP.ACCEPTED) {
-                      Ok(response("ok")) 
+                  configurationValidation.fold(
+                    error =>  InternalServerError(response(s"Invalid election config $error")),
+                    configuration => {
+                      val url = eoUrl(configuration.director, "public_api/download-private-share")
+                      WS.url(url).post(Results.EmptyContent()).map { resp =>
+
+                        if(resp.status == HTTP.ACCEPTED) {
+                          Ok(response("ok")) 
+                        }
+                        else {
+                          BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                        }
+                      }
                     }
-                    else {
-                      BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
-                    }
-                  }
-                  Ok(Json.toJson(0))
+                  )
+                  
                 }
               }
             }
