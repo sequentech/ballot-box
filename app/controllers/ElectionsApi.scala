@@ -943,7 +943,6 @@ object ElectionsApi
                 Future { BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH)) }
               } else {
                 val trustee = trusteeConfig.get
-                val trusteeUsername = trustee.getString("username").get
                 val trusteePass = trustee.getString("password").get
                 val trusteeAuthId = trustee.getString("authority_id").get
                 if (
@@ -955,7 +954,7 @@ object ElectionsApi
                   val url = eoUrl(trusteeAuthId, "public_api/download_private_share")
                   WS.url(url).post(
                     Json.obj(
-                      "username" -> trusteeUsername,
+                      "username" -> downloadRequest.username,
                       "password" -> trusteePass
                     )
                   ).map { resp =>
