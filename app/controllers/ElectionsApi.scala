@@ -976,7 +976,7 @@ object ElectionsApi
           case t: Throwable => {
             t.printStackTrace()
             Logger.warn(s"Exception caught when downloading share: $t")
-            BadRequest(error(e.getMessage))
+            BadRequest(error(t.getMessage))
           }
         }
       }
