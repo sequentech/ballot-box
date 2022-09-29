@@ -929,15 +929,15 @@ object ElectionsApi
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       downloadRequest => {
         getElection(id)
-        .map {
+        .flatMap {
           election => {
             if(!authorities.contains(downloadRequest.authority_id)) {
-              BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH))
+              Future { BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH)) }
             } else {
               val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
               val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
               if (trusteeConfig.isEmpty) {
-                BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH))
+                Future { BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH)) }
               } else {
                 val trustee = trusteeConfig.get
                 val trusteeUsername = trustee.getString("username")
@@ -947,15 +947,15 @@ object ElectionsApi
                   trusteeAuthId != downloadRequest.authority_id ||
                   trusteePass != downloadRequest.password
                 ) {
-                  Unauthorized(error("Access Denied"))
+                  Future {  Unauthorized(error("Access Denied")) }
                 } else {
                   val configurationValidation = 
                     Json.parse(election.configuration)
                     .as[JsObject]
-                    .validate[ElectionConfig].get
+                    .validate[ElectionConfig]
 
                   configurationValidation.fold(
-                    error =>  InternalServerError(response(s"Invalid election config $error")),
+                    error =>  Future { InternalServerError(response(s"Invalid election config $error")) },
                     configuration => {
                       val url = eoUrl(configuration.director, "public_api/download-private-share")
                       WS.url(url).post(Results.EmptyContent()).map { resp =>
