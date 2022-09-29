@@ -940,9 +940,9 @@ object ElectionsApi
                 Future { BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH)) }
               } else {
                 val trustee = trusteeConfig.get
-                val trusteeUsername = trustee.getString("username")
-                val trusteePass = trustee.getString("password")
-                val trusteeAuthId = trustee.getString("authority_id")
+                val trusteeUsername = trustee.getString("username").get
+                val trusteePass = trustee.getString("password").get
+                val trusteeAuthId = trustee.getString("authority_id").get
                 if (
                   trusteeAuthId != downloadRequest.authority_id ||
                   trusteePass != downloadRequest.password
@@ -950,7 +950,12 @@ object ElectionsApi
                   Future {  Unauthorized(error("Access Denied")) }
                 } else {
                   val url = eoUrl(trusteeAuthId, "public_api/download-private-share")
-                  WS.url(url).post(Results.EmptyContent()).map { resp =>
+                  WS.url(url).post(
+                    Json.obj(
+                      "username" -> trusteeUsername,
+                      "password" -> trusteePass
+                    )
+                  ).map { resp =>
 
                     if(resp.status == HTTP.ACCEPTED) {
                       Ok(response("ok")) 
