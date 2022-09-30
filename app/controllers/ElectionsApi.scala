@@ -954,8 +954,7 @@ object ElectionsApi
                   val url = eoUrl(trusteeAuthId, "public_api/download_private_share")
                   WS.url(url).post(
                     Json.obj(
-                      "username" -> downloadRequest.username,
-                      "password" -> trusteePass
+                      "election_id" -> id
                     )
                   ).map { resp =>
 
