@@ -959,7 +959,7 @@ object ElectionsApi
                   ).map { resp =>
 
                     if(resp.status == HTTP.OK) {
-                      Ok(response("ok")) 
+                      Ok(resp.body) 
                     }
                     else {
                       BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
