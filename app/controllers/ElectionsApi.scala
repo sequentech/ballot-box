@@ -998,7 +998,7 @@ object ElectionsApi
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(downloadRequest.authority_id, "public_api/check_private_share")
+              val url = eoUrl(checkRequest.authority_id, "public_api/check_private_share")
               WS.url(url).post(
                 Json.obj(
                   "election_id" -> id,
@@ -1029,24 +1029,24 @@ object ElectionsApi
   def deletePrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
       Logger.info(s"delete share ${request.body.toString}")
-      val checkRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      val deleteRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
       checkRequestValidation.fold (
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
-      checkRequest => {
+      deleteRequest => {
         getElection(id)
         .recover {
           case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
         }
         .flatMap {
           election => {
-            if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
+            if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(downloadRequest.authority_id, "public_api/delete_private_share")
+              val url = eoUrl(deleteRequest.authority_id, "public_api/delete_private_share")
               WS.url(url).delete(
                 Json.obj(
                   "election_id" -> id,
-                  "private_key" -> checkRequest.private_key_base64
+                  "private_key" -> deleteRequest.private_key_base64
                 )
               ).map { resp =>
 
@@ -1073,24 +1073,24 @@ object ElectionsApi
   def restorePrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
       Logger.info(s"restore share ${request.body.toString}")
-      val checkRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      val restoreRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
       checkRequestValidation.fold (
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
-      checkRequest => {
+      restoreRequest => {
         getElection(id)
         .recover {
           case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
         }
         .flatMap {
           election => {
-            if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
+            if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(downloadRequest.authority_id, "public_api/restore_private_share")
+              val url = eoUrl(restoreRequest.authority_id, "public_api/restore_private_share")
               WS.url(url).post(
                 Json.obj(
                   "election_id" -> id,
-                  "private_key" -> checkRequest.private_key_base64
+                  "private_key" -> restoreRequest.private_key_base64
                 )
               ).map { resp =>
 
