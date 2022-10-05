@@ -1030,7 +1030,7 @@ object ElectionsApi
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
       Logger.info(s"delete share ${request.body.toString}")
       val deleteRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
-      checkRequestValidation.fold (
+      deleteRequestValidation.fold (
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       deleteRequest => {
         getElection(id)
@@ -1074,7 +1074,7 @@ object ElectionsApi
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
       Logger.info(s"restore share ${request.body.toString}")
       val restoreRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
-      checkRequestValidation.fold (
+      restoreRequestValidation.fold (
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       restoreRequest => {
         getElection(id)
