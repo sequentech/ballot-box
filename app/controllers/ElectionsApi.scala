@@ -919,6 +919,24 @@ object ElectionsApi
       ))
   }}
 
+  def checkAuthorityUser(authority_id: String, username: String, password: String): Boolean {
+    if(!authorities.contains(authority_id)) {
+      Logger.info(s"Authority id not found")
+      return false
+    }
+    val trusteeKeyPath = s"app.trustee_users.${username}"
+    val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
+    if (trusteeConfig.isEmpty) {
+      Logger.info(s"Trustee user not found")
+      return false
+    } 
+    val trustee = trusteeConfig.get
+    val trusteePass = trustee.getString("password").get
+    val trusteeAuthId = trustee.getString("authority_id").get
+
+    return trusteeAuthId == authority_id && trusteePass == password
+  }
+
   /** get share of private keys, this is an admin/trustee only command */
   def downloadPrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
@@ -930,42 +948,25 @@ object ElectionsApi
       downloadRequest => {
         getElection(id)
         .recover {
-          case e:NoSuchElementException => BadRequest(error(s"Maybe Election $id not found", ErrorCodes.NO_ELECTION))
+          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
         }
         .flatMap {
           election => {
-            if(!authorities.contains(downloadRequest.authority_id)) {
-              Future { BadRequest(error("Authority not found", ErrorCodes.MISSING_AUTH)) }
-            } else {
-              val trusteeKeyPath = s"app.trustee_users.${downloadRequest.username}"
-              val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
-              if (trusteeConfig.isEmpty) {
-                Future { BadRequest(error("Trustee not found", ErrorCodes.MISSING_AUTH)) }
-              } else {
-                val trustee = trusteeConfig.get
-                val trusteePass = trustee.getString("password").get
-                val trusteeAuthId = trustee.getString("authority_id").get
-                if (
-                  trusteeAuthId != downloadRequest.authority_id ||
-                  trusteePass != downloadRequest.password
-                ) {
+            if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
-                } else {
-                  val url = eoUrl(trusteeAuthId, "public_api/download_private_share")
-                  WS.url(url).post(
-                    Json.obj(
-                      "election_id" -> id
-                    )
-                  ).map { resp =>
+            } else {
+              val url = eoUrl(trusteeAuthId, "public_api/download_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id
+                )
+              ).map { resp =>
 
-                    if(resp.status == HTTP.OK) {
-                      Ok(resp.body) 
-                    }
-                    else {
-                      BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
-                    }
-                  }
-                  
+                if(resp.status == HTTP.OK) {
+                  Ok(resp.body) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
                 }
               }
             }
@@ -983,13 +984,135 @@ object ElectionsApi
 
   def checkPrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
-      Future { Ok(Json.toJson(0)) }
-    }
+      Logger.info(s"download share ${request.body.toString}")
+      val checkRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      checkRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      checkRequest => {
+        getElection(id)
+        .recover {
+          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+        }
+        .flatMap {
+          election => {
+            if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
+                  Future {  Unauthorized(error("Access Denied")) }
+            } else {
+              val url = eoUrl(trusteeAuthId, "public_api/check_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id,
+                  "private_key" -> checkRequest.private_key_base64
+                )
+              ).map { resp =>
+
+                if(resp.status == HTTP.OK) {
+                  Ok(resp.body) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when checking share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
 
   def deletePrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
-      Future { Ok(Json.toJson(0)) }
-    }
+      Logger.info(s"delete share ${request.body.toString}")
+      val checkRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      checkRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      checkRequest => {
+        getElection(id)
+        .recover {
+          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+        }
+        .flatMap {
+          election => {
+            if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
+                  Future {  Unauthorized(error("Access Denied")) }
+            } else {
+              val url = eoUrl(trusteeAuthId, "public_api/delete_private_share")
+              WS.url(url).delete(
+                Json.obj(
+                  "election_id" -> id,
+                  "private_key" -> checkRequest.private_key_base64
+                )
+              ).map { resp =>
+
+                if(resp.status == HTTP.OK) {
+                  Ok(resp.body) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when checking share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
+  def restorePrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+      Logger.info(s"restore share ${request.body.toString}")
+      val checkRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      checkRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      checkRequest => {
+        getElection(id)
+        .recover {
+          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+        }
+        .flatMap {
+          election => {
+            if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
+                  Future {  Unauthorized(error("Access Denied")) }
+            } else {
+              val url = eoUrl(trusteeAuthId, "public_api/restore_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id,
+                  "private_key" -> checkRequest.private_key_base64
+                )
+              ).map { resp =>
+
+                if(resp.status == HTTP.OK) {
+                  Ok(resp.body) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when checking share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
 
   /*-------------------------------- EO Callbacks  --------------------------------*/
 
