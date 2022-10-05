@@ -1043,7 +1043,7 @@ object ElectionsApi
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
               val url = eoUrl(deleteRequest.authority_id, "public_api/delete_private_share")
-              WS.url(url).delete(
+              WS.url(url).post(
                 Json.obj(
                   "election_id" -> id,
                   "private_key" -> deleteRequest.private_key_base64
