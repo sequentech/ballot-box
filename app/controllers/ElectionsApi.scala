@@ -919,7 +919,7 @@ object ElectionsApi
       ))
   }}
 
-  def checkAuthorityUser(authority_id: String, username: String, password: String): Boolean {
+  def checkAuthorityUser(authority_id: String, username: String, password: String): Boolean = {
     if(!authorities.contains(authority_id)) {
       Logger.info(s"Authority id not found")
       return false
@@ -955,7 +955,7 @@ object ElectionsApi
             if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(trusteeAuthId, "public_api/download_private_share")
+              val url = eoUrl(downloadRequest.authority_id, "public_api/download_private_share")
               WS.url(url).post(
                 Json.obj(
                   "election_id" -> id
@@ -998,7 +998,7 @@ object ElectionsApi
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(trusteeAuthId, "public_api/check_private_share")
+              val url = eoUrl(downloadRequest.authority_id, "public_api/check_private_share")
               WS.url(url).post(
                 Json.obj(
                   "election_id" -> id,
@@ -1042,7 +1042,7 @@ object ElectionsApi
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(trusteeAuthId, "public_api/delete_private_share")
+              val url = eoUrl(downloadRequest.authority_id, "public_api/delete_private_share")
               WS.url(url).delete(
                 Json.obj(
                   "election_id" -> id,
@@ -1086,7 +1086,7 @@ object ElectionsApi
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else {
-              val url = eoUrl(trusteeAuthId, "public_api/restore_private_share")
+              val url = eoUrl(downloadRequest.authority_id, "public_api/restore_private_share")
               WS.url(url).post(
                 Json.obj(
                   "election_id" -> id,
