@@ -877,6 +877,7 @@ case class ElectionPresentation(
   theme_css: String,
   extra_options: Option[ElectionExtra],
   show_login_link_on_home: Option[Boolean],
+  election_board_ceremony: Option[Boolean] // default = false
   conditional_questions: Option[Array[ConditionalQuestion]],
   pdf_url: Option[Url],
 
@@ -933,8 +934,7 @@ case class ElectionExtra(
   success_screen__ballot_ticket__h4: Option[String],
   public_title: Option[String],
   review_screen__split_cast_edit: Option[Boolean],
-  show_skip_question_button: Option[Boolean],
-  election_board_ceremony: Option[Boolean] // default = false
+  show_skip_question_button: Option[Boolean]
 ) {
   def validate() = {
     if (success_screen__redirect_to_login__text.isDefined) 
