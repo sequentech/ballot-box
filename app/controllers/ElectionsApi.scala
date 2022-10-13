@@ -643,10 +643,10 @@ object ElectionsApi
     id: Long, 
     requestConfig: String, 
     updateDatabase: Boolean
-  ) = Future[Result] 
+  ): Future[Result] =
   {
     Logger.info(s"calculating results for election $id")
-    val future = getElection(id).flatMap
+    getElection(id).flatMap
     {
       election =>
         if (!requestConfig.isEmpty) 
@@ -751,7 +751,6 @@ object ElectionsApi
                       updateDatabase
                     )
                   )
-                  Future { Ok(response("ok")) }
               }
             } catch 
             {
@@ -769,7 +768,6 @@ object ElectionsApi
           }
         )
     }
-    Ok(response("ok"))
   }
 
   private def publishResultsLogic(id: Long) = {
