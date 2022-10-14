@@ -109,6 +109,12 @@ object Votes {
   }
 }
 
+/** trustee key state object */
+case class TrusteeKeyState (
+  id: String,
+  state: String
+)
+
 /** election object */
 case class Election(
   id: Long,
@@ -125,7 +131,8 @@ case class Election(
   virtual: Boolean,
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
-  logo_url: Option[String]
+  logo_url: Option[String],
+  trusteeKeysState: Option[String]
 )
 {
 
@@ -177,6 +184,9 @@ case class Election(
         resUp = resultsUpdated
     }
 
+    val trusteeKeysStateJson = trusteeKeysState.getOrElse("[]")
+    val trusteeKeysStateParsed = trusteeKeysStateJson.validate[Array[TrusteeKeyState]].get
+
     ElectionDTO(
       id,
       privacyConfig,
@@ -191,7 +201,8 @@ case class Election(
       virtual,
       tallyAllowed,
       publicCandidates,
-      logo_url
+      logo_url,
+      trusteeKeysStateParsed
     )
   }
 }
@@ -215,6 +226,7 @@ class Elections(tag: Tag)
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
+  def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
 
   def * = (
     id,
@@ -231,7 +243,8 @@ class Elections(tag: Tag)
     virtual,
     tallyAllowed,
     publicCandidates,
-    logo_url.?
+    logo_url.?,
+    trusteeKeysState.?
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -476,7 +489,8 @@ case class ElectionDTO(
   virtual: Boolean,
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
-  logo_url: Option[String]
+  logo_url: Option[String],
+  trustee_keys_state: Array[TrusteeKeyState]
 )
 
 /** an election configuration defines an election */
