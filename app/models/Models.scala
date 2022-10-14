@@ -184,7 +184,7 @@ case class Election(
         resUp = resultsUpdated
     }
 
-    val trusteeKeysStateJson = trusteeKeysState.getOrElse("[]")
+    val trusteeKeysStateJson = Json.parse(trusteeKeysState.getOrElse("[]"))
     val trusteeKeysStateParsed = trusteeKeysStateJson.validate[Array[TrusteeKeyState]].get
 
     ElectionDTO(
@@ -891,7 +891,7 @@ case class ElectionPresentation(
   theme_css: String,
   extra_options: Option[ElectionExtra],
   show_login_link_on_home: Option[Boolean],
-  election_board_ceremony: Option[Boolean] // default = false
+  election_board_ceremony: Option[Boolean], // default = false
   conditional_questions: Option[Array[ConditionalQuestion]],
   pdf_url: Option[Url],
 
