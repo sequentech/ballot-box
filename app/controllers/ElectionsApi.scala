@@ -938,7 +938,7 @@ object ElectionsApi
   }
 
   private def checkTrusteeState(election: Election, trusteeId: String, states: Array[String]): Boolean = {
-    val electionDTO = election.getDTO
+    val electionDTO = election..getDTO(/* showCandidates = */ false)
     val trusteeState = electionDTO.trusteeKeysState.find { trusteeState =>
       trusteeState.id == trusteeId && states.contains(trusteeState.state)
     }
@@ -946,10 +946,10 @@ object ElectionsApi
   }
 
   private def setTrusteeKeysState(election: Election, trusteeId: String, state: String) = {
-    val electionDTO = election.getDTO
+    val electionDTO = election..getDTO(/* showCandidates = */ false)
     val trusteeState = electionDTO.trusteeKeysState
     val newTrusteeState = trusteeState.filter { el => el.id != trusteeId} ++ TrusteeKeyState(trusteeId, state)
-    val updatedElection = election.copy(trusteeKeysState = JSON.toJson(newTrusteeState).toString)
+    val updatedElection = election.copy(trusteeKeysState = Json.toJson(newTrusteeState).toString)
     DAL.elections.update(election.id, updatedElection)
   }
 
@@ -974,7 +974,7 @@ object ElectionsApi
               !checkTrusteeState(
                 election,
                 downloadRequest.authority_id,
-                [TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED]
+                Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
               )
             ) {
               Future { BadRequest(error("Invalid authority keys state")) }
