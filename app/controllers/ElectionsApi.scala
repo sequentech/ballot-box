@@ -938,7 +938,7 @@ object ElectionsApi
   }
 
   private def checkTrusteeState(election: Election, trusteeId: String, states: Array[String]): Boolean = {
-    val electionDTO = election..getDTO(/* showCandidates = */ false)
+    val electionDTO = election.getDTO(/* showCandidates = */ false)
     val trusteeState = electionDTO.trusteeKeysState.find { trusteeState =>
       trusteeState.id == trusteeId && states.contains(trusteeState.state)
     }
@@ -946,10 +946,10 @@ object ElectionsApi
   }
 
   private def setTrusteeKeysState(election: Election, trusteeId: String, state: String) = {
-    val electionDTO = election..getDTO(/* showCandidates = */ false)
+    val electionDTO = election.getDTO(/* showCandidates = */ false)
     val trusteeState = electionDTO.trusteeKeysState
-    val newTrusteeState = trusteeState.filter { el => el.id != trusteeId} ++ TrusteeKeyState(trusteeId, state)
-    val updatedElection = election.copy(trusteeKeysState = Json.toJson(newTrusteeState).toString)
+    val newTrusteeState = trusteeState.filter { el => el.id != trusteeId} :+ TrusteeKeyState(trusteeId, state)
+    val updatedElection = election.copy(trusteeKeysState = Some(Json.toJson(newTrusteeState).toString))
     DAL.elections.update(election.id, updatedElection)
   }
 
@@ -963,9 +963,6 @@ object ElectionsApi
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       downloadRequest => {
         getElection(id)
-        .recover {
-          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
-        }
         .flatMap {
           election => {
             if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
@@ -997,6 +994,7 @@ object ElectionsApi
             }
           }
         }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
           case t: Throwable => {
             t.printStackTrace()
             Logger.warn(s"Exception caught when downloading share: $t")
