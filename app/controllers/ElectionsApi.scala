@@ -1019,7 +1019,7 @@ object ElectionsApi
             } else if (
               !checkTrusteeState(
                 election,
-                downloadRequest.authority_id,
+                checkRequest.authority_id,
                 Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
               )
             ) {
@@ -1068,7 +1068,7 @@ object ElectionsApi
             } else if (
               !checkTrusteeState(
                 election,
-                downloadRequest.authority_id,
+                deleteRequest.authority_id,
                 Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
               )
             ) {
@@ -1118,7 +1118,7 @@ object ElectionsApi
             } else if (
               !checkTrusteeState(
                 election,
-                downloadRequest.authority_id,
+                restoreRequest.authority_id,
                 Array(TrusteeKeysStates.DELETED)
               )
             ) {
