@@ -115,6 +115,13 @@ case class TrusteeKeyState (
   state: String
 )
 
+object TrusteeKeysStates {
+  val INITIAL = "initial"
+  val DOWNLOADED = "downloaded"
+  val DELETED = "deleted"
+  val RESTORED = "restored"
+}
+
 /** election object */
 case class Election(
   id: Long,
@@ -490,7 +497,7 @@ case class ElectionDTO(
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
   logo_url: Option[String],
-  trustee_keys_state: Array[TrusteeKeyState]
+  trusteeKeysState: Array[TrusteeKeyState]
 )
 
 /** an election configuration defines an election */

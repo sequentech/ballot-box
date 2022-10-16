@@ -937,6 +937,22 @@ object ElectionsApi
     return trusteeAuthId == authority_id && trusteePass == password
   }
 
+  private def checkTrusteeState(election: Election, trusteeId: String, states: Array[String]): Boolean = {
+    val electionDTO = election.getDTO
+    val trusteeState = electionDTO.trusteeKeysState.find { trusteeState =>
+      trusteeState.id == trusteeId && states.contains(trusteeState.state)
+    }
+    trusteeState.isDefined
+  }
+
+  private def setTrusteeKeysState(election: Election, trusteeId: String, state: String) = {
+    val electionDTO = election.getDTO
+    val trusteeState = electionDTO.trusteeKeysState
+    val newTrusteeState = trusteeState.filter { el => el.id != trusteeId} ++ TrusteeKeyState(trusteeId, state)
+    val updatedElection = election.copy(trusteeKeysState = JSON.toJson(newTrusteeState).toString)
+    DAL.elections.update(election.id, updatedElection)
+  }
+
   /** get share of private keys, this is an admin/trustee only command */
   def downloadPrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
@@ -953,7 +969,15 @@ object ElectionsApi
         .flatMap {
           election => {
             if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
-                  Future {  Unauthorized(error("Access Denied")) }
+              Future { Unauthorized(error("Access Denied")) }
+            } else if (
+              !checkTrusteeState(
+                election,
+                downloadRequest.authority_id,
+                [TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED]
+              )
+            ) {
+              Future { BadRequest(error("Invalid authority keys state")) }
             } else {
               val url = eoUrl(downloadRequest.authority_id, "public_api/download_private_share")
               WS.url(url).post(
@@ -963,6 +987,7 @@ object ElectionsApi
               ).map { resp =>
 
                 if(resp.status == HTTP.OK) {
+                  setTrusteeKeysState(election, downloadRequest.authority_id, TrusteeKeysStates.DOWNLOADED)
                   Ok(resp.body) 
                 }
                 else {
@@ -1239,6 +1264,10 @@ object ElectionsApi
           val validated = config
             .validate(authorities, id)
             .copy(start_date=None, end_date=None)
+          
+          val trusteeKeysState = authorities.keys.map { key =>
+            TrusteeKeyState(key, "present")
+          }
 
           DB.withSession
           {
@@ -1263,7 +1292,7 @@ object ElectionsApi
                 virtual =                   validated.virtual,
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url,
-                trusteeKeysState =          None
+                trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString)
               )
               existing match
               {
