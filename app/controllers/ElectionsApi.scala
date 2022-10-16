@@ -982,7 +982,6 @@ object ElectionsApi
                   "election_id" -> id
                 )
               ).map { resp =>
-
                 if(resp.status == HTTP.OK) {
                   setTrusteeKeysState(election, downloadRequest.authority_id, TrusteeKeysStates.DOWNLOADED)
                   Ok(resp.body) 
@@ -1013,13 +1012,18 @@ object ElectionsApi
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       checkRequest => {
         getElection(id)
-        .recover {
-          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
-        }
         .flatMap {
           election => {
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
+            } else if (
+              !checkTrusteeState(
+                election,
+                downloadRequest.authority_id,
+                Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
+              )
+            ) {
+              Future { BadRequest(error("Invalid authority keys state")) }
             } else {
               val url = eoUrl(checkRequest.authority_id, "public_api/check_private_share")
               WS.url(url).post(
@@ -1028,7 +1032,6 @@ object ElectionsApi
                   "private_key" -> checkRequest.private_key_base64
                 )
               ).map { resp =>
-
                 if(resp.status == HTTP.OK) {
                   Ok(resp.body) 
                 }
@@ -1039,6 +1042,7 @@ object ElectionsApi
             }
           }
         }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
           case t: Throwable => {
             t.printStackTrace()
             Logger.warn(s"Exception caught when checking share: $t")
@@ -1057,13 +1061,18 @@ object ElectionsApi
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       deleteRequest => {
         getElection(id)
-        .recover {
-          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
-        }
         .flatMap {
           election => {
             if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
+            } else if (
+              !checkTrusteeState(
+                election,
+                downloadRequest.authority_id,
+                Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
+              )
+            ) {
+              Future { BadRequest(error("Invalid authority keys state")) }
             } else {
               val url = eoUrl(deleteRequest.authority_id, "public_api/delete_private_share")
               WS.url(url).post(
@@ -1083,6 +1092,7 @@ object ElectionsApi
             }
           }
         }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
           case t: Throwable => {
             t.printStackTrace()
             Logger.warn(s"Exception caught when checking share: $t")
@@ -1101,13 +1111,18 @@ object ElectionsApi
       errors => Future { BadRequest(response(s"Invalid input $errors")) },
       restoreRequest => {
         getElection(id)
-        .recover {
-          case e:NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
-        }
         .flatMap {
           election => {
             if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
+            } else if (
+              !checkTrusteeState(
+                election,
+                downloadRequest.authority_id,
+                Array(TrusteeKeysStates.DELETED)
+              )
+            ) {
+              Future { BadRequest(error("Invalid authority keys state")) }
             } else {
               val url = eoUrl(restoreRequest.authority_id, "public_api/restore_private_share")
               WS.url(url).post(
@@ -1116,7 +1131,6 @@ object ElectionsApi
                   "private_key" -> restoreRequest.private_key_base64
                 )
               ).map { resp =>
-
                 if(resp.status == HTTP.OK) {
                   Ok(resp.body) 
                 }
@@ -1127,6 +1141,7 @@ object ElectionsApi
             }
           }
         }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
           case t: Throwable => {
             t.printStackTrace()
             Logger.warn(s"Exception caught when checking share: $t")
