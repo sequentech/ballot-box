@@ -1279,7 +1279,7 @@ object ElectionsApi
             .copy(start_date=None, end_date=None)
           
           val trusteeKeysState = authorities.keys.map { key =>
-            TrusteeKeyState(key, "present")
+            TrusteeKeyState(key, TrusteeKeysStates.INITIAL)
           }
 
           DB.withSession
