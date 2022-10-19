@@ -939,7 +939,7 @@ object ElectionsApi
 
   private def getTrusteeState(election: Election, trusteeId: String): Option[TrusteeKeyState] = {
     val electionDTO = election.getDTO(/* showCandidates = */ false)
-    val trusteeState = electionDTO.trusteeKeysState.find { trusteeState =>
+    electionDTO.trusteeKeysState.find { trusteeState =>
       trusteeState.id == trusteeId
     }
   }
@@ -1012,7 +1012,7 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
-            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val trusteeStateOpt = getTrusteeState(election, checkRequest.authority_id)
             val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
@@ -1060,7 +1060,7 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
-            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val trusteeStateOpt = getTrusteeState(election, deleteRequest.authority_id)
             val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
             if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
@@ -1109,7 +1109,7 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
-            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val trusteeStateOpt = getTrusteeState(election, restoreRequest.authority_id)
             val validStates = Array(TrusteeKeysStates.DELETED)
             if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
