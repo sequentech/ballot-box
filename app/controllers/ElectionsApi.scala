@@ -937,12 +937,11 @@ object ElectionsApi
     return trusteeAuthId == authority_id && trusteePass == password
   }
 
-  private def checkTrusteeState(election: Election, trusteeId: String, states: Array[String]): Boolean = {
+  private def getTrusteeState(election: Election, trusteeId: String): Option[TrusteeKeyState] = {
     val electionDTO = election.getDTO(/* showCandidates = */ false)
     val trusteeState = electionDTO.trusteeKeysState.find { trusteeState =>
-      trusteeState.id == trusteeId && states.contains(trusteeState.state)
+      trusteeState.id == trusteeId
     }
-    trusteeState.isDefined
   }
 
   private def setTrusteeKeysState(election: Election, trusteeId: String, state: String) = {
@@ -965,16 +964,15 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
+            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
             if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
               Future { Unauthorized(error("Access Denied")) }
             } else if (
-              !checkTrusteeState(
-                election,
-                downloadRequest.authority_id,
-                Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
-              )
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
             ) {
-              Future { BadRequest(error("Invalid authority keys state")) }
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
             } else {
               val url = eoUrl(downloadRequest.authority_id, "public_api/download_private_share")
               WS.url(url).post(
@@ -1014,16 +1012,15 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
+            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else if (
-              !checkTrusteeState(
-                election,
-                checkRequest.authority_id,
-                Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
-              )
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
             ) {
-              Future { BadRequest(error("Invalid authority keys state")) }
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
             } else {
               val url = eoUrl(checkRequest.authority_id, "public_api/check_private_share")
               WS.url(url).post(
@@ -1063,16 +1060,15 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
+            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
             if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else if (
-              !checkTrusteeState(
-                election,
-                deleteRequest.authority_id,
-                Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
-              )
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
             ) {
-              Future { BadRequest(error("Invalid authority keys state")) }
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
             } else {
               val url = eoUrl(deleteRequest.authority_id, "public_api/delete_private_share")
               WS.url(url).post(
@@ -1113,16 +1109,15 @@ object ElectionsApi
         getElection(id)
         .flatMap {
           election => {
+            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.DELETED)
             if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else if (
-              !checkTrusteeState(
-                election,
-                restoreRequest.authority_id,
-                Array(TrusteeKeysStates.DELETED)
-              )
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
             ) {
-              Future { BadRequest(error("Invalid authority keys state")) }
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
             } else {
               val url = eoUrl(restoreRequest.authority_id, "public_api/restore_private_share")
               WS.url(url).post(
