@@ -937,11 +937,11 @@ object ElectionsApi
     return trusteeAuthId == authority_id && trusteePass == password
   }
 
-  private def getTrusteeState(election: Election, trusteeId: String): Option[TrusteeKeyState] = {
+  private def getTrusteeState(election: Election, trusteeId: String): Option[String] = {
     val electionDTO = election.getDTO(/* showCandidates = */ false)
     electionDTO.trusteeKeysState.find { trusteeState =>
       trusteeState.id == trusteeId
-    }
+    }.map { trustee => trustee.state }
   }
 
   private def setTrusteeKeysState(election: Election, trusteeId: String, state: String) = {
