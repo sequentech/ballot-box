@@ -1078,6 +1078,7 @@ object ElectionsApi
                 )
               ).map { resp =>
                 if(resp.status == HTTP.OK) {
+                  setTrusteeKeysState(election, downloadRequest.authority_id, TrusteeKeysStates.DELETED)
                   Ok(response(resp.body)) 
                 }
                 else {
@@ -1126,6 +1127,7 @@ object ElectionsApi
                 )
               ).map { resp =>
                 if(resp.status == HTTP.OK) {
+                  setTrusteeKeysState(election, downloadRequest.authority_id, TrusteeKeysStates.RESTORED)
                   Ok(resp.body) 
                 }
                 else {
