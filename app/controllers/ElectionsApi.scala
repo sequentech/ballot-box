@@ -1030,7 +1030,7 @@ object ElectionsApi
                 )
               ).map { resp =>
                 if(resp.status == HTTP.OK) {
-                  Ok(resp.body) 
+                  Ok(response("True" == resp.body))
                 }
                 else {
                   BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
@@ -1077,9 +1077,8 @@ object ElectionsApi
                   "private_key" -> deleteRequest.private_key_base64
                 )
               ).map { resp =>
-
                 if(resp.status == HTTP.OK) {
-                  Ok(resp.body) 
+                  Ok(response(resp.body)) 
                 }
                 else {
                   BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
