@@ -966,7 +966,10 @@ object ElectionsApi
           election => {
             val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
             val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
-            if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
+
+            if (election.state != Elections.CREATED) {
+              Future { BadRequest(error(s"Invalid election state: ${election.state}")) }
+            } else if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
               Future { Unauthorized(error("Access Denied")) }
             } else if (
               trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
@@ -1062,7 +1065,10 @@ object ElectionsApi
           election => {
             val trusteeStateOpt = getTrusteeState(election, deleteRequest.authority_id)
             val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
-            if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
+
+            if (election.state != Elections.CREATED) {
+              Future { BadRequest(error(s"Invalid election state: ${election.state}")) }
+            } else if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else if (
               trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
@@ -1111,8 +1117,11 @@ object ElectionsApi
           election => {
             val trusteeStateOpt = getTrusteeState(election, restoreRequest.authority_id)
             val validStates = Array(TrusteeKeysStates.DELETED)
-            if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
-                  Future {  Unauthorized(error("Access Denied")) }
+
+            if (election.state != Elections.STOPPED) {
+              Future { BadRequest(error(s"Invalid election state: ${election.state}")) }
+            } else if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
+              Future {  Unauthorized(error("Access Denied")) }
             } else if (
               trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
             ) {
