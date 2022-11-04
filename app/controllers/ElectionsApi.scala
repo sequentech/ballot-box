@@ -967,7 +967,7 @@ object ElectionsApi
             if (!checkAuthorityUser(loginRequest.authority_id, loginRequest.username, loginRequest.password)) {
               Future { Unauthorized(error("Access Denied")) }
             } else {
-              Future { Ok(resp.body) }
+              Future { Ok("") }
             }
           }
         }.recover {
