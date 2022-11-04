@@ -952,6 +952,36 @@ object ElectionsApi
     DAL.elections.update(election.id, updatedElection)
   }
 
+  /** check trustee login, this is an admin/trustee only command */
+  def loginTrusteePrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+    Logger.info(s"login trustee ${request.body.toString}")
+    val loginRequestValidation = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
+
+    loginRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      loginRequest => {
+        getElection(id)
+        .flatMap {
+          election => {
+            if (!checkAuthorityUser(loginRequest.authority_id, loginRequest.username, loginRequest.password)) {
+              Future { Unauthorized(error("Access Denied")) }
+            } else {
+              Future { Ok(resp.body) }
+            }
+          }
+        }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when login trustee: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
   /** get share of private keys, this is an admin/trustee only command */
   def downloadPrivateKeyShare(id: Long) =
     HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>

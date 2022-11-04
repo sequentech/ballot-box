@@ -54,6 +54,7 @@ POST    /api/election/:id/keydone                             controllers.Electi
 POST    /api/election/:id/tallydone                           controllers.ElectionsApi.tallydone(id: Long)
 
 # authorities
+POST    /api/election/:id/private-keys/login-trustee          controllers.ElectionsApi.loginTrusteePrivateKeyShare(id: Long)
 POST    /api/election/:id/private-keys/download-share         controllers.ElectionsApi.downloadPrivateKeyShare(id: Long)
 POST    /api/election/:id/private-keys/check-share            controllers.ElectionsApi.checkPrivateKeyShare(id: Long)
 POST    /api/election/:id/private-keys/delete-share           controllers.ElectionsApi.deletePrivateKeyShare(id: Long)
