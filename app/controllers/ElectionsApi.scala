@@ -1046,7 +1046,7 @@ object ElectionsApi
         .flatMap {
           election => {
             val trusteeStateOpt = getTrusteeState(election, checkRequest.authority_id)
-            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.DELETED, TrusteeKeysStates.RESTORED)
             if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
                   Future {  Unauthorized(error("Access Denied")) }
             } else if (
