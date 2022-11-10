@@ -20,6 +20,9 @@ import json
 import csv
 import copy
 
+def is_quadratic_residue(value, p, q):
+    return pow(value, q, p) == 1 
+
 def get_encrypted_categories(question, category_names):
     '''
     Creates a dictionary with the key being the category name and the value a
@@ -28,16 +31,21 @@ def get_encrypted_categories(question, category_names):
     g = question['pub_keys']['g']
     y = question['pub_keys']['y']
     p = question['pub_keys']['p']
+    q = question['pub_keys']['q']
 
     # the categories are encoded as 2^index
     encoded_category = 2
     encrypted_categories = dict()
     for category in category_names:
+        while not is_quadratic_residue(encoded_category, p, q):
+            encoded_category <<= 1
+        assert encoded_category < q, f"too many categories ({len(category_names)})"
         encrypted_categories[category] = {
             "gr": g,
             "mhr": (encoded_category * y) % p
         }
         encoded_category <<= 1
+
     return encrypted_categories
     
 def get_public_keys(pks_str):
@@ -59,8 +67,7 @@ def get_public_keys(pks_str):
 def create_output_ballot(
     category_name,
     input_ballot,
-    questions,
-    election_config
+    questions
 ):
     '''
     Create an output ballot, which will be the same as the input ballot except
@@ -70,23 +77,24 @@ def create_output_ballot(
     '''
     output_ballot = copy.deepcopy(input_ballot)
     output_ciphertexts = []
-    for question_index, input_ciphertext in enumerate(input_ballot['choices']):
-        question = questions[question_index]
-        p = question['pub_keys']['p']
+    for i in range(45000):
+        for question_index, input_ciphertext in enumerate(input_ballot['choices']):
+            question = questions[question_index]
+            p = question['pub_keys']['p']
 
-        encrypted_categories = question['encrypted_categories']
-        encrypted_category = encrypted_categories[category_name]
-        cat_gr = encrypted_category['gr']
-        cat_mhr = encrypted_category['mhr']
+            encrypted_categories = question['encrypted_categories']
+            encrypted_category = encrypted_categories[category_name]
+            cat_gr = encrypted_category['gr']
+            cat_mhr = encrypted_category['mhr']
 
-        ballot_gr = int(input_ciphertext['alpha'])
-        ballot_mhr = int(input_ciphertext['beta'])
+            ballot_gr = int(input_ciphertext['alpha'])
+            ballot_mhr = int(input_ciphertext['beta'])
 
-        output_ciphertext = {
-            "alpha": str((cat_gr * ballot_gr) % p),
-            "beta": str((cat_mhr * ballot_mhr) % p)
-        }
-        output_ciphertexts.append(output_ciphertext)
+            output_ciphertext = {
+                "alpha": str((cat_gr * ballot_gr) % p),
+                "beta": str((cat_mhr * ballot_mhr) % p)
+            }
+            output_ciphertexts.append(output_ciphertext)
     output_ballot['choices'] = output_ciphertexts
     return json.dumps(output_ballot)
 
@@ -177,8 +185,7 @@ def main():
             create_output_ballot(
                 category_name,
                 input_ballot,
-                questions,
-                election_config
+                questions
             )
             + '\n'
         )
