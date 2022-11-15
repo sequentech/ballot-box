@@ -33,6 +33,7 @@ import play.api.libs.ws._
 
 import play.api.libs.ws.ning.NingAsyncHttpClientConfigBuilder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.{Crypto => PlayCrypto}
 
 import scala.concurrent._
 import scala.sys.process._
@@ -934,7 +935,8 @@ object ElectionsApi
     val trusteePass = trustee.getString("password").get
     val trusteeAuthId = trustee.getString("authority_id").get
 
-    return trusteeAuthId == authority_id && trusteePass == password
+    return PlayCrypto.constantTimeEquals(trusteeAuthId, authority_id) &&
+      PlayCrypto.constantTimeEquals(trusteePass, password)
   }
 
   private def getTrusteeState(election: Election, trusteeId: String): Option[String] = {
