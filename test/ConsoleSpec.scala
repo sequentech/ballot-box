@@ -123,7 +123,8 @@ class ConsoleSpec extends Specification with TestContexts
   "virtual": false,
   "tallyAllowed": true,
   "publicCandidates": true,
-  "logo_url": ""
+  "logo_url": "",
+  "trusteeKeysState": []
 }"""
   val dto : ElectionDTO = Json.parse(dtoStr).validate[ElectionDTO].get
 
