@@ -84,6 +84,17 @@ application.local.conf
       }
     }
 
+    app.trustee_users {
+      user-auth1 = {
+        password = "password",
+        authority_id = "test-auth1.sequentech.io"
+      },
+      user-auth2 = {
+        password = "password",
+        authority_id = "test-auth2.sequentech.io"
+      }
+    }
+
     # app.vote_callback_url="podemos.sequentech.io"
 
     # memcached
@@ -139,6 +150,17 @@ test.local.conf
         description = "My authority 2"
         url = "http://foo.bar.2"
         image = "http://foo.bar.2/img"
+      }
+    }
+
+    app.trustee_users {
+      user-auth1 = {
+        password = "password",
+        authority_id = "test-auth1.sequentech.io"
+      },
+      user-auth2 = {
+        password = "password",
+        authority_id = "test-auth2.sequentech.io"
       }
     }
 
