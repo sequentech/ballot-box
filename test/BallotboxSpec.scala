@@ -87,7 +87,8 @@ class BallotboxSpec extends Specification with TestContexts with Response {
                 /* virtual = */                   false,
                 /* tallyAllowed = */              true,
                 /* publicCandidates = */          true,
-                /* logo_url = */                  None
+                /* logo_url = */                  None,
+                /* trusteeKeysState = */          None
               )
             )
 
@@ -130,7 +131,8 @@ class BallotboxSpec extends Specification with TestContexts with Response {
             /* virtual = */                   false,
             /* tallyAllowed = */              false,
             /* publicCandidates = */          true,
-            /* logo_url = */                  None
+            /* logo_url = */                  None,
+            /* trusteeKeysState = */          None
           )
         )
 
