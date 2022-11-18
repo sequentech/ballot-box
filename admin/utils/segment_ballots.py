@@ -189,7 +189,7 @@ def main():
     questions = election_config['configuration']['questions']
 
     # for simplicity assign each pub key to each question
-    category_names = election_config['mixing-category-segmentation']["categories"]
+    category_names = election_config['configuration']['mixingCategorySegmentation']["categories"]
     print(f"encrypting {len(category_names)} categories for {len(questions)} questions..")
     for i, question in enumerate(questions):
         question['pub_keys'] = pub_keys[i]

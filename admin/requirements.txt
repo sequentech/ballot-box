@@ -5,3 +5,4 @@ requests==2.20.0
 psycopg2-binary==2.8.6
 geoip2==2.1.0
 ipaddr==2.2.0
+asyncproc==0.0.5

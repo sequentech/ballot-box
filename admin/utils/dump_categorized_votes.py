@@ -16,13 +16,54 @@
 # along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import time
+import os
+import signal
 import json
+import tempfile
+import subprocess
+import hashlib
+from asyncproc import Process
+
+from sqlalchemy import select
 from ..admin import (
     get_iam_db_connection,
-    get_db_connection,
-    get_votes_table,
     get_elections_table
 )
+
+def call_cmd(cmd, timeout=-1, output_filter=None, cwd=None, check_ret=None):
+    '''
+    Utility to call a command.
+    timeout is in seconds.
+    '''
+    print("call_cmd: calling " + " ".join(cmd))
+    p = Process(cmd, cwd=cwd, stderr=subprocess.STDOUT)
+    launch_time = time.process_time()
+    output = ""
+
+    while True:
+        # check to see if process has ended
+        ret = p.wait(os.WNOHANG)
+        # print any new output
+        o = p.read().decode('utf-8')
+        if len(o) > 0:
+            print("output = %s" % o)
+
+        if output_filter:
+            output_filter(p, o, output)
+        output += o
+        time.sleep(1)
+
+        if ret is not None:
+            if check_ret is not None:
+                assert check_ret == ret
+            return ret, output
+
+        if timeout > 0 and time.process_time() - launch_time > timeout:
+            p.kill(signal.SIGKILL)
+            if check_ret is not None:
+                assert check_ret == -1
+            return -1, output
 
 def dump_election_config(election_id, election_config_path):
     '''
@@ -30,27 +71,43 @@ def dump_election_config(election_id, election_config_path):
     election config path and returning the election's segmentation category
     name.
     '''
-    pass
+    db_connection = get_iam_db_connection()
+    elections = get_elections_table()
+    sentence = select([elections])\
+        .where(
+            elections.c.id == election_id,
+            elections.c.segmentedMixing == True
+        )
+    result = db_connection.execute(sentence)
+    rows = list(result.fetchall())
+    assert(len(rows) == 1)
+    election_config_str = rows[0]['configuration']
+    election_config = json.loads(election_config_str)
+    with open(election_config_path, "w") as election_config_file:
+        election_config_file.write(election_config_str)
+    
+    assert("mixingCategorySegmentation" in election_config)
+    return election_config['mixingCategorySegmentation']['categoryName']
 
-def get_categorized_voters_path(election_id):
+def get_categorized_voters_file(election_id):
     '''
-    Returns a temporal file path containing in CSV format the eligible voter
+    Returns a temporal file containing in CSV format the eligible voter
     list of an election, with two columns: the segmentation category of the
     voter and the voter id. Sorted by voter id descending.
     '''
     pass
 
-def get_ballots_with_voters_path(election_id):
+def get_ballots_with_voters_file(election_id):
     '''
-    Returns a temporal file path containing in CSV format the list of cast
+    Returns a temporal file containing in CSV format the list of cast
     ballots along with their voter ids. Sorted by voter id descending.
     '''
     pass
 
 def dump_categorized_votes(
     election_id,
-    categorized_voters_path,
-    ballots_with_voters_path,
+    categorized_voters_file,
+    ballots_with_voters_file,
     output_path
 ):
     '''
@@ -102,15 +159,15 @@ def main():
         election_id,
         election_config_path
     )
-    categorized_voters_path = get_categorized_voters_path(
+    categorized_voters_file = get_categorized_voters_file(
         election_id,
         segmentation_category_name
     )
-    ballots_with_voters_path = get_ballots_with_voters_path(election_id)
+    ballots_with_voters_file = get_ballots_with_voters_file(election_id)
     dump_categorized_votes(
         election_id,
-        categorized_voters_path,
-        ballots_with_voters_path,
+        categorized_voters_file,
+        ballots_with_voters_file,
         output_ballots_path
     )
 

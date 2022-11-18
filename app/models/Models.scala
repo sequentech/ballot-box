@@ -509,6 +509,30 @@ case class ElectionDTO(
   segmentedMixing: Boolean
 )
 
+case class MixingCategorySegmentation(
+  categoryName: String,
+  categories: Array[String]
+)
+{
+  def validate() =
+  {
+    assert(
+      categoryName.length <= SHORT_STRING && categoryName.length > 0,
+      s"invalid mixing category name '${categoryName}'"
+    )
+    categories.foreach { category =>
+      assert(
+        category.length <= SHORT_STRING && category.length > 0, 
+        s"Invalid category name '${category}'"
+      )
+    }
+    assert(
+        categories.size == categories.toSet.size,
+        s"repeated categories in: ${categories}"
+      )
+  }
+}
+
 /** an election configuration defines an election */
 case class ElectionConfig(
   id: Long,
@@ -528,6 +552,7 @@ case class ElectionConfig(
   publicCandidates: Boolean,
   segmentedMixing: Boolean,
   virtualSubelections: Option[Array[Long]],
+  mixingCategorySegmentation: Option[MixingCategorySegmentation],
   logo_url: Option[String])
 {
 
@@ -589,6 +614,11 @@ case class ElectionConfig(
     assert(
       !virtual || virtualElectionsAllowed,
       "virtual elections are not allowed"
+    )
+
+    assert(
+      !segmentedMixing || mixingCategorySegmentation.isDefined,
+      "mixingCategorySegmentation needs to be defined if segmentedMixing is enabled"
     )
 
     assert(
