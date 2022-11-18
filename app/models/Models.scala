@@ -139,7 +139,8 @@ case class Election(
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
   logo_url: Option[String],
-  trusteeKeysState: Option[String]
+  trusteeKeysState: Option[String],
+  segmentedMixing: Boolean
 )
 {
 
@@ -172,6 +173,10 @@ case class Election(
 
     if (!configJson.as[JsObject].keys.contains("publicCandidates")) {
         configJson = configJson.as[JsObject] + ("publicCandidates" -> Json.toJson(publicCandidates))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("segmentedMixing")) {
+        configJson = configJson.as[JsObject] + ("segmentedMixing" -> Json.toJson(segmentedMixing))
     }
 
     var config = configJson.validate[ElectionConfig].get
@@ -209,7 +214,8 @@ case class Election(
       tallyAllowed,
       publicCandidates,
       logo_url,
-      trusteeKeysStateParsed
+      trusteeKeysStateParsed,
+      segmentedMixing
     )
   }
 }
@@ -232,6 +238,7 @@ class Elections(tag: Tag)
   def virtual = column[Boolean]("virtual")
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
+  def segmentedMixing = column[Boolean]("segmented_mixing")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
 
@@ -251,7 +258,8 @@ class Elections(tag: Tag)
     tallyAllowed,
     publicCandidates,
     logo_url.?,
-    trusteeKeysState.?
+    trusteeKeysState.?,
+    segmentedMixing
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -497,7 +505,8 @@ case class ElectionDTO(
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
   logo_url: Option[String],
-  trusteeKeysState: Array[TrusteeKeyState]
+  trusteeKeysState: Array[TrusteeKeyState],
+  segmentedMixing: Boolean
 )
 
 /** an election configuration defines an election */
@@ -517,6 +526,7 @@ case class ElectionConfig(
   virtual: Boolean,
   tally_allowed: Boolean,
   publicCandidates: Boolean,
+  segmentedMixing: Boolean,
   virtualSubelections: Option[Array[Long]],
   logo_url: Option[String])
 {
