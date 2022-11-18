@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
-from ballot_codec.sequent_codec import NVotesCodec
+from utils.ballot_codec.sequent_codec import NVotesCodec
 import argparse
 import json
 import csv

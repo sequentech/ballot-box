@@ -46,7 +46,16 @@ import os as _os
 from tempfile import mkdtemp
 
 from sqlalchemy import create_engine, select, func, text, update as update_sql
-from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
+from sqlalchemy import (
+    Table,
+    Column,
+    Integer,
+    String,
+    TIMESTAMP,
+    MetaData,
+    ForeignKey,
+    Boolean
+)
 from sqlalchemy import distinct
 
 from utils.votesfilter import VotesFilter
@@ -166,7 +175,7 @@ def get_elections_table():
         Column('results', String),
         Column('results_updated', String),
         Column('results_config', String),
-        Column('segmented_mixing', bool)
+        Column('segmented_mixing', Boolean)
     )
     return elections
 
