@@ -109,6 +109,19 @@ object Votes {
   }
 }
 
+/** trustee key state object */
+case class TrusteeKeyState (
+  id: String,
+  state: String
+)
+
+object TrusteeKeysStates {
+  val INITIAL = "initial"
+  val DOWNLOADED = "downloaded"
+  val DELETED = "deleted"
+  val RESTORED = "restored"
+}
+
 /** election object */
 case class Election(
   id: Long,
@@ -125,7 +138,8 @@ case class Election(
   virtual: Boolean,
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
-  logo_url: Option[String]
+  logo_url: Option[String],
+  trusteeKeysState: Option[String]
 )
 {
 
@@ -177,6 +191,9 @@ case class Election(
         resUp = resultsUpdated
     }
 
+    val trusteeKeysStateJson = Json.parse(trusteeKeysState.getOrElse("[]"))
+    val trusteeKeysStateParsed = trusteeKeysStateJson.validate[Array[TrusteeKeyState]].get
+
     ElectionDTO(
       id,
       privacyConfig,
@@ -191,7 +208,8 @@ case class Election(
       virtual,
       tallyAllowed,
       publicCandidates,
-      logo_url
+      logo_url,
+      trusteeKeysStateParsed
     )
   }
 }
@@ -215,6 +233,7 @@ class Elections(tag: Tag)
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
+  def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
 
   def * = (
     id,
@@ -231,7 +250,8 @@ class Elections(tag: Tag)
     virtual,
     tallyAllowed,
     publicCandidates,
-    logo_url.?
+    logo_url.?,
+    trusteeKeysState.?
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -476,13 +496,15 @@ case class ElectionDTO(
   virtual: Boolean,
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
-  logo_url: Option[String]
+  logo_url: Option[String],
+  trusteeKeysState: Array[TrusteeKeyState]
 )
 
 /** an election configuration defines an election */
 case class ElectionConfig(
   id: Long,
-  layout: String, director: String,
+  layout: String,
+  director: String,
   authorities: Array[String],
   title: String, description: String,
   questions: Array[Question],
@@ -876,6 +898,7 @@ case class ElectionPresentation(
   theme_css: String,
   extra_options: Option[ElectionExtra],
   show_login_link_on_home: Option[Boolean],
+  election_board_ceremony: Option[Boolean], // default = false
   conditional_questions: Option[Array[ConditionalQuestion]],
   pdf_url: Option[Url],
 
@@ -979,6 +1002,11 @@ case class Url(title: String, url: String) {
   }
 }
 
+/** */
+case class DownloadPrivateKeyShareRequest(authority_id: String, username: String, password: String)
+
+/** */
+case class CheckPrivateKeyShareRequest(authority_id: String, username: String, password: String, private_key_base64: String)
 
 /** eo create election response message */
 case class CreateResponse(status: String, session_data: Array[PublicKeySession])

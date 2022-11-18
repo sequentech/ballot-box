@@ -33,6 +33,7 @@ import play.api.libs.ws._
 
 import play.api.libs.ws.ning.NingAsyncHttpClientConfigBuilder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.{Crypto => PlayCrypto}
 
 import scala.concurrent._
 import scala.sys.process._
@@ -919,6 +920,275 @@ object ElectionsApi
       ))
   }}
 
+  def checkAuthorityUser(authority_id: String, username: String, password: String): Boolean = {
+    if(!authorities.contains(authority_id)) {
+      Logger.info(s"Authority id not found")
+      return false
+    }
+    val trusteeKeyPath = s"app.trustee_users.${username}"
+    val trusteeConfig = Play.current.configuration.getConfig(trusteeKeyPath)
+    if (trusteeConfig.isEmpty) {
+      Logger.info(s"Trustee user not found")
+      return false
+    } 
+    val trustee = trusteeConfig.get
+    val trusteePass = trustee.getString("password").get
+    val trusteeAuthId = trustee.getString("authority_id").get
+
+    return PlayCrypto.constantTimeEquals(trusteeAuthId, authority_id) &&
+      PlayCrypto.constantTimeEquals(trusteePass, password)
+  }
+
+  private def getTrusteeState(election: Election, trusteeId: String): Option[String] = {
+    val electionDTO = election.getDTO(/* showCandidates = */ false)
+    electionDTO.trusteeKeysState.find { trusteeState =>
+      trusteeState.id == trusteeId
+    }.map { trustee => trustee.state }
+  }
+
+  private def setTrusteeKeysState(election: Election, trusteeId: String, state: String) = {
+    val electionDTO = election.getDTO(/* showCandidates = */ false)
+    val trusteeState = electionDTO.trusteeKeysState
+    val newTrusteeState = trusteeState.filter { el => el.id != trusteeId} :+ TrusteeKeyState(trusteeId, state)
+    val updatedElection = election.copy(trusteeKeysState = Some(Json.toJson(newTrusteeState).toString))
+    DAL.elections.update(election.id, updatedElection)
+  }
+
+  /** check trustee login, this is an admin/trustee only command */
+  def loginTrusteePrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+    Logger.info(s"login trustee ${request.body.toString}")
+    val loginRequestValidation = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
+
+    loginRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      loginRequest => {
+        getElection(id)
+        .flatMap {
+          election => {
+            if (!checkAuthorityUser(loginRequest.authority_id, loginRequest.username, loginRequest.password)) {
+              Future { Unauthorized(error("Access Denied")) }
+            } else {
+              Future { Ok("") }
+            }
+          }
+        }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when login trustee: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
+  /** get share of private keys, this is an admin/trustee only command */
+  def downloadPrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+    Logger.info(s"download share ${request.body.toString}")
+    val downloadRequestValidation = request.body.as[JsObject].validate[DownloadPrivateKeyShareRequest]
+
+    downloadRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      downloadRequest => {
+        getElection(id)
+        .flatMap {
+          election => {
+            val trusteeStateOpt = getTrusteeState(election, downloadRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
+
+            if (election.state != Elections.CREATED) {
+              Future { BadRequest(error(s"Invalid election state: ${election.state}")) }
+            } else if (!checkAuthorityUser(downloadRequest.authority_id, downloadRequest.username, downloadRequest.password)) {
+              Future { Unauthorized(error("Access Denied")) }
+            } else if (
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
+            ) {
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
+            } else {
+              val url = eoUrl(downloadRequest.authority_id, "public_api/download_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id
+                )
+              ).map { resp =>
+                if(resp.status == HTTP.OK) {
+                  setTrusteeKeysState(election, downloadRequest.authority_id, TrusteeKeysStates.DOWNLOADED)
+                  Ok(resp.body) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when downloading share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
+  def checkPrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+      Logger.info(s"download share ${request.body.toString}")
+      val checkRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      checkRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      checkRequest => {
+        getElection(id)
+        .flatMap {
+          election => {
+            val trusteeStateOpt = getTrusteeState(election, checkRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.DELETED, TrusteeKeysStates.RESTORED)
+            if (!checkAuthorityUser(checkRequest.authority_id, checkRequest.username, checkRequest.password)) {
+                  Future {  Unauthorized(error("Access Denied")) }
+            } else if (
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
+            ) {
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
+            } else {
+              val url = eoUrl(checkRequest.authority_id, "public_api/check_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id,
+                  "private_key" -> checkRequest.private_key_base64
+                )
+              ).map { resp =>
+                if(resp.status == HTTP.OK) {
+                  Ok(response("True" == resp.body))
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when checking share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
+  def deletePrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+      Logger.info(s"delete share ${request.body.toString}")
+      val deleteRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      deleteRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      deleteRequest => {
+        getElection(id)
+        .flatMap {
+          election => {
+            val trusteeStateOpt = getTrusteeState(election, deleteRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.INITIAL, TrusteeKeysStates.DOWNLOADED, TrusteeKeysStates.RESTORED)
+
+            if (election.state != Elections.CREATED) {
+              Future { BadRequest(error(s"Invalid election state: ${election.state}")) }
+            } else if (!checkAuthorityUser(deleteRequest.authority_id, deleteRequest.username, deleteRequest.password)) {
+                  Future {  Unauthorized(error("Access Denied")) }
+            } else if (
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
+            ) {
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
+            } else {
+              val url = eoUrl(deleteRequest.authority_id, "public_api/delete_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id,
+                  "private_key" -> deleteRequest.private_key_base64
+                )
+              ).map { resp =>
+                if(resp.status == HTTP.OK) {
+                  setTrusteeKeysState(election, deleteRequest.authority_id, TrusteeKeysStates.DELETED)
+                  Ok(response(resp.body)) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when checking share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
+  def restorePrivateKeyShare(id: Long) =
+    HActionAdmin("", "AuthEvent", id, "edit").async(BodyParsers.parse.json) { request =>
+      Logger.info(s"restore share ${request.body.toString}")
+      val restoreRequestValidation = request.body.as[JsObject].validate[CheckPrivateKeyShareRequest]
+      restoreRequestValidation.fold (
+      errors => Future { BadRequest(response(s"Invalid input $errors")) },
+      restoreRequest => {
+        getElection(id)
+        .flatMap {
+          election => {
+            val trusteeStateOpt = getTrusteeState(election, restoreRequest.authority_id)
+            val validStates = Array(TrusteeKeysStates.DELETED)
+
+            if (election.state != Elections.STOPPED) {
+              Future { BadRequest(error(s"Invalid election state: ${election.state}")) }
+            } else if (!checkAuthorityUser(restoreRequest.authority_id, restoreRequest.username, restoreRequest.password)) {
+              Future {  Unauthorized(error("Access Denied")) }
+            } else if (
+              trusteeStateOpt.isEmpty || !validStates.contains(trusteeStateOpt.get)
+            ) {
+              val trusteeState = trusteeStateOpt.getOrElse("undefined")
+              Future { BadRequest(error(s"Invalid authority keys state: $trusteeState")) }
+            } else {
+              val url = eoUrl(restoreRequest.authority_id, "public_api/restore_private_share")
+              WS.url(url).post(
+                Json.obj(
+                  "election_id" -> id,
+                  "private_key" -> restoreRequest.private_key_base64
+                )
+              ).map { resp =>
+                if(resp.status == HTTP.OK) {
+                  setTrusteeKeysState(election, restoreRequest.authority_id, TrusteeKeysStates.RESTORED)
+                  Ok(resp.body) 
+                }
+                else {
+                  BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+                }
+              }
+            }
+          }
+        }.recover {
+          case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+          case t: Throwable => {
+            t.printStackTrace()
+            Logger.warn(s"Exception caught when checking share: $t")
+            BadRequest(error(t.getMessage))
+          }
+        }
+      }
+    )
+  }
+
   /*-------------------------------- EO Callbacks  --------------------------------*/
 
   /** Called by EO when the keys are generated, this saves them and updates state */
@@ -1044,6 +1314,10 @@ object ElectionsApi
           val validated = config
             .validate(authorities, id)
             .copy(start_date=None, end_date=None)
+          
+          val trusteeKeysState = authorities.keys.map { key =>
+            TrusteeKeyState(key, TrusteeKeysStates.INITIAL)
+          }
 
           DB.withSession
           {
@@ -1067,7 +1341,8 @@ object ElectionsApi
                 publicCandidates =          validated.publicCandidates,
                 virtual =                   validated.virtual,
                 tallyAllowed =              validated.tally_allowed,
-                logo_url =                  validated.logo_url
+                logo_url =                  validated.logo_url,
+                trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString)
               )
               existing match
               {
