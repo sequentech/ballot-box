@@ -305,9 +305,9 @@ object BallotboxApi extends Controller with Response {
             "--election-id",
             s"$electionId",
             "--output-ballots-path",
-            categorizedVotesPath,
+            s"$categorizedVotesPath",
             "--election-config-path",
-            electionConfigPath
+            s"$electionConfigPath"
           )
 
           Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting encrypted votes:\n '$dumpCommand'")
@@ -321,9 +321,9 @@ object BallotboxApi extends Controller with Response {
             "--election-config",
             electionConfigPath,
             "--input-ballots",
-            categorizedVotesPath,
+            s"$categorizedVotesPath",
             "--output-ballots",
-            votesPath
+            s"$votesPath"
           )
 
           Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): segmenting encrypted votes:\n '$segmentVotesCommand'")
