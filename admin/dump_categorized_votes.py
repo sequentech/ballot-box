@@ -106,7 +106,7 @@ def get_categorized_voters_path(election_id, segmentation_category_name):
             "service = iam",
             "-tAc",
             f"""
-            SELECT auth_user.username,api_userdata.metadata->>'{segmentation_category_name}'
+SELECT auth_user.username,api_userdata.metadata->>'{segmentation_category_name}'
 FROM api_acl
 INNER JOIN api_userdata ON api_acl.user_id = api_userdata.id
 INNER JOIN auth_user ON auth_user.id = api_userdata.user_id

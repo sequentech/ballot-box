@@ -82,8 +82,8 @@ object ElectionsApi
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
-  val sequentResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
-  val createEmptyTally = Play.current.configuration.getString("app.results.script").getOrElse("./admin/create_empty_tally.py")
+  val sequentResults = Play.current.configuration.getString("app.scripts.results").getOrElse("./admin/results.sh")
+  val createEmptyTally = Play.current.configuration.getString("app.scripts.createEmptyTally").getOrElse("./admin/create_empty_tally.py")
   val pipesWhitelist = Play.current.configuration.getString("app.sequentResults.pipesWhitelist").getOrElse("")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)

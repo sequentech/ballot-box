@@ -41,12 +41,15 @@ object Datastore {
   val privateDs = Play.current.configuration.getString("app.datastore.private").get
 
   val ALL_CIPHERTEXTS = "all_ciphertexts"
+  val ORIGINAL_CIPHERTEXTS = "original_ciphertexts"
+  val CATEGORIZED_CIPHERTEXTS = "categorized_ciphertexts"
   val CIPHERTEXTS = "ciphertexts"
   val VOTERIDS = "voterids"
   val REMOVED_VOTE_HASHES = "removed_vote_hashes"
   val PKS = "pks"
   val TALLY = "tally.tar.gz"
   val CONFIG = "config.json"
+  val CATEGORY_ELECTION_CONFIG = "cat_election_config.json"
   val RESULTS = "results.json"
   val RESULTS_DIR_PREFIX = "results-"
 
