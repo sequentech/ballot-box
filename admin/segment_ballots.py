@@ -200,7 +200,7 @@ def main():
     print("..done")
     
     input_ballots_path = args.input_ballots
-    input_ballots = csv.reader(open(input_ballots_path))
+    input_ballots = csv.reader(open(input_ballots_path), delimiter='|')
     output_ballots_path = args.output_ballots
     output_ballots_file = open(output_ballots_path, 'w')
 

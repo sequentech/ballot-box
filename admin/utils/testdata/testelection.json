@@ -143,6 +143,6 @@
     "virtual":false,
     "tallyAllowed":true,
     "publicCandidates":true,
-    segmentedMixing: true,
+    "segmentedMixing": true,
     "logo_url":""
 }

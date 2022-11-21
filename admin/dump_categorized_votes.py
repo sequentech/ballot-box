@@ -79,12 +79,16 @@ def dump_election_config(election_id, election_config_path):
     rows = list(result.fetchall())
     assert(len(rows) == 1)
     election_config_str = rows[0]['configuration']
-    election_config = json.loads(election_config_str)
+    election_pub_keys = rows[0]['pks']
+    election_config = dict(
+        configuration=json.loads(election_config_str),
+        pks=election_pub_keys
+    )
     with open(election_config_path, "w") as election_config_file:
-        election_config_file.write(election_config_str)
+        election_config_file.write(json.dumps(election_config))
     
-    assert("mixingCategorySegmentation" in election_config)
-    return election_config['mixingCategorySegmentation']['categoryName']
+    assert("mixingCategorySegmentation" in election_config['configuration'])
+    return election_config['configuration']['mixingCategorySegmentation']['categoryName']
 
 def get_categorized_voters_path(election_id, segmentation_category_name):
     '''
