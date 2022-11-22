@@ -319,7 +319,7 @@ object BallotboxApi extends Controller with Response {
             "python3",
             segmentBallotsBin,
             "--election-config",
-            electionConfigPath,
+            s"$electionConfigPath",
             "--input-ballots",
             s"$categorizedVotesPath",
             "--output-ballots",
