@@ -60,7 +60,14 @@ from sqlalchemy import distinct
 
 from utils.votesfilter import VotesFilter
 
-settings = json.loads(open('settings.json').read())
+settings = json.loads(
+    open(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'settings.json'
+        )
+    ).read()
+)
 
 class TemporaryDirectory(object):
     """Create and return a temporary directory.  This has the same
