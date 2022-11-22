@@ -90,7 +90,11 @@ def dump_election_config(election_id, election_config_path):
     assert("mixingCategorySegmentation" in election_config['configuration'])
     return election_config['configuration']['mixingCategorySegmentation']['categoryName']
 
-def get_categorized_voters_path(election_id, segmentation_category_name):
+def get_categorized_voters_path(
+    election_id,
+    segmentation_category_name,
+    active_voters_only
+):
     '''
     Returns a temporal file containing in CSV format the eligible voter
     list of an election, with two columns: the segmentation category of the
@@ -99,6 +103,9 @@ def get_categorized_voters_path(election_id, segmentation_category_name):
     temp_dir_path = tempfile.mkdtemp()
     categorized_voters_file_path = os.path.join(
         temp_dir_path, "categorized_voters_file"
+    )
+    active_voters_only_filter = (
+        "auth_user.is_active = true" if active_voters_only else ""
     )
     call_cmd(
         cmd=[
@@ -111,8 +118,8 @@ FROM api_acl
 INNER JOIN api_userdata ON api_acl.user_id = api_userdata.id
 INNER JOIN auth_user ON auth_user.id = api_userdata.user_id
 INNER JOIN api_authevent ON api_authevent.id = '{election_id}'
-WHERE 
-  auth_user.is_active = true
+WHERE
+  {active_voters_only_filter}
   AND api_acl.object_id IS NOT NULL
   AND api_acl.object_type = 'AuthEvent'
   AND api_acl.perm = 'vote'
@@ -208,10 +215,20 @@ def main():
             'File path where the election config should be written to'
         )
     )
+    parser.add_argument(
+        '--active-voters-only',
+        action='store_true',
+        default=False,
+        required=False,
+        help=(
+            'If set, dump only votes from enabled voters'
+        )
+    )
     args = parser.parse_args()
     election_id = args.election_id
     election_config_path = args.election_config_path
     output_ballots_path = args.output_ballots_path
+    active_voters_only = args.active_voters_only
 
     segmentation_category_name = dump_election_config(
         election_id,
@@ -220,7 +237,8 @@ def main():
     try:
         categorized_voters_path = get_categorized_voters_path(
             election_id,
-            segmentation_category_name
+            segmentation_category_name,
+            active_voters_only
         )
         ballots_with_voters_path = get_ballots_with_voters_path(election_id)
         dump_categorized_votes(
