@@ -48,8 +48,7 @@ object BallotboxApi extends Controller with Response {
 
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val maxRevotes = Play.current.configuration.getInt("app.api.max_revotes").getOrElse(20)
-  val dumpCategorizedVotesBin = Play.current.configuration.getString("app.scripts.dumpCategorizedVotes").getOrElse("./admin/dump_categorized_votes.py")
-  val segmentBallotsBin = Play.current.configuration.getString("app.scripts.segmentBallots").getOrElse("./admin/segment_ballots.py")
+  val adminEnvBin = Play.current.configuration.getString("app.scripts.adminEnv").getOrElse("./admin/admin_env.sh")
   val voteCallbackUrl = Play.current.configuration.getString("app.callbacks.vote").
     flatMap { vote_str =>
       if (vote_str.length > 0) {
@@ -301,7 +300,8 @@ object BallotboxApi extends Controller with Response {
           
           val dumpCommand = Seq(
             "python3",
-            dumpCategorizedVotesBin,
+            s"$adminEnvBin",
+            "./admin/dump_categorized_votes.py",
             "--election-id",
             s"$electionId",
             "--output-ballots-path",
@@ -317,7 +317,8 @@ object BallotboxApi extends Controller with Response {
           // 2. Segment encrypted ballots
           val segmentVotesCommand = Seq(
             "python3",
-            segmentBallotsBin,
+            s"$adminEnvBin",
+            "./admin/segment_ballots.py",
             "--election-config",
             s"$electionConfigPath",
             "--input-ballots",
