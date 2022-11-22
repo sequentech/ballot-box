@@ -299,8 +299,8 @@ object BallotboxApi extends Controller with Response {
           )
           
           val dumpCommand = Seq(
-            "python3",
             s"$adminEnvBin",
+            "python3",
             "./admin/dump_categorized_votes.py",
             "--election-id",
             s"$electionId",
@@ -316,8 +316,8 @@ object BallotboxApi extends Controller with Response {
 
           // 2. Segment encrypted ballots
           val segmentVotesCommand = Seq(
-            "python3",
             s"$adminEnvBin",
+            "python3",
             "./admin/segment_ballots.py",
             "--election-config",
             s"$electionConfigPath",
