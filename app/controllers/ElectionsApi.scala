@@ -735,7 +735,8 @@ object ElectionsApi
                   calcResults(
                     id, 
                     config, 
-                    validated.virtualSubelections.get
+                    validated.virtualSubelections.get,
+                    election.segmentedMixing
                   )
                   .flatMap( 
                     r => updateResults(
@@ -1539,7 +1540,8 @@ object ElectionsApi
   private def calcResults(
     id: Long,
     config: String,
-    subelections: Array[Long]
+    subelections: Array[Long],
+    segmentedMixing: Boolean
   ) = Future
   {
     Logger.info(s"Calling to update results for $id")
@@ -1550,6 +1552,10 @@ object ElectionsApi
     ).toString.r
     val electionPublicPath = new java.io.File(
       Datastore.getDirPath(id, /*isPublic?*/true).toString
+    )
+    val categoryElectionConfigPath = Datastore.getPath(
+      id,
+      Datastore.CATEGORY_ELECTION_CONFIG
     )
 
     if (electionPublicPath.isDirectory())
@@ -1583,10 +1589,20 @@ object ElectionsApi
         ).mkString(" ")
     }
     val dirPath = Datastore.getDirPath(id)
-    val cmd = if (pipesWhitelist.length > 0)
-        s"$sequentResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id -p $pipesWhitelist"
-      else
-        s"$sequentResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id"
+    val cmd = (
+      s"$sequentResults " +
+      s"--tally $tallyPath " +
+      s"--config $configPath " +
+      "--stdout " +
+      s"--tar $dirPath" +
+      s"--election-id $id " +
+      (if (pipesWhitelist.length > 0)  s"-p $pipesWhitelist " else "") +
+      (
+        if (segmentedMixing)
+          s"--segmented-election-config $categoryElectionConfigPath"
+        else ""
+      )
+    )
 
     Logger.info(s"tally for $id: calculating results with command: '$cmd'")
     val output = cmd.!!
