@@ -1594,7 +1594,7 @@ object ElectionsApi
       s"--tally $tallyPath " +
       s"--config $configPath " +
       "--stdout " +
-      s"--tar $dirPath" +
+      s"--tar $dirPath " +
       s"--election-id $id " +
       (if (pipesWhitelist.length > 0)  s"-p $pipesWhitelist " else "") +
       (
