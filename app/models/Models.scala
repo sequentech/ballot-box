@@ -713,12 +713,25 @@ case class Question(
       )
     }
     
+    assert(
+      (
+        !extra_options.isDefined ||
+        !extra_options.get.enable_checkable_lists.isDefined ||
+        List(
+          "disabled",
+          "allow-selecting-candidates-and-lists",
+          "allow-selecting-candidates",
+          "allow-selecting-lists"
+        ).contains(extra_options.get.enable_checkable_lists.get)
+      ),
+      "enable_checkable_lists must be one of 'disabled', 'allow-selecting-candidates-and-lists', 'allow-selecting-candidates', 'allow-selecting-lists'"
+    )
+
     // if enable_checkable_lists is set, verify that for each category there
     // is an list answer
     if (
       extra_options.isDefined &&
-      extra_options.get.enable_checkable_lists.isDefined &&
-      extra_options.get.enable_checkable_lists.get == true
+      extra_options.get.enable_checkable_lists.isDefined
     ) {
       // getting category names from answers
       val answerCategoryNames = answers
@@ -741,7 +754,7 @@ case class Question(
         .toSet
       assert(
         categoryNames == answerCategoryNames,
-        s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is enabled"
+        s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is not 'disabled'"
       )
     }
 
@@ -777,7 +790,7 @@ case class QuestionExtra(
   select_all_category_clicks: Option[Int],
   enable_panachage: Option[Boolean], // default = true
   cumulative_number_of_checkboxes: Option[Int], // default = 1
-  enable_checkable_lists: Option[Boolean], // default = false
+  enable_checkable_lists: Option[String], // default = "disabled"
   allow_writeins: Option[Boolean], // default = false
   invalid_vote_policy: Option[String], // allowed, warn, not-allowed
   review_screen__show_question_description: Option[Boolean] // default = false
