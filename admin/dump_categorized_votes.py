@@ -105,7 +105,7 @@ def get_categorized_voters_path(
         temp_dir_path, "categorized_voters_file"
     )
     active_voters_only_filter = (
-        "auth_user.is_active = true" if active_voters_only else ""
+        "auth_user.is_active = true AND " if active_voters_only else ""
     )
     call_cmd(
         cmd=[
@@ -120,7 +120,7 @@ INNER JOIN auth_user ON auth_user.id = api_userdata.user_id
 INNER JOIN api_authevent ON api_authevent.id = '{election_id}'
 WHERE
   {active_voters_only_filter}
-  AND api_acl.object_id IS NOT NULL
+  api_acl.object_id IS NOT NULL
   AND api_acl.object_type = 'AuthEvent'
   AND api_acl.perm = 'vote'
   AND api_acl.object_id = '{election_id}'
