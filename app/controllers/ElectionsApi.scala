@@ -1342,6 +1342,7 @@ object ElectionsApi
                 publicCandidates =          validated.publicCandidates,
                 virtual =                   validated.virtual,
                 tallyAllowed =              validated.tally_allowed,
+                logo_url =                  validated.logo_url,
                 trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString),
                 segmentedMixing =           validated.segmentedMixing
               )
