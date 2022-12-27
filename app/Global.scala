@@ -77,7 +77,7 @@ object Global extends WithFilters(LoggingFilter) with Response {
 
   override def onBadRequest(request: RequestHeader, error: String) = {
     Logger.warn(s"Bad Request: $error")
-    Future.successful(BadRequest(response("Bad Request: " + error)))
+    Future.successful(BadRequest(response("Bad Request")))
   }
 
   /** ensures the configuration property is set */
