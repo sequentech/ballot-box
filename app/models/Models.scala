@@ -140,7 +140,7 @@ case class Election(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Option[String],
-  segmentedMixing: Boolean
+  segmentedMixing: Option[Boolean]
 )
 {
 
@@ -506,7 +506,7 @@ case class ElectionDTO(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
-  segmentedMixing: Boolean
+  segmentedMixing: Option[Boolean]
 )
 
 case class MixingCategorySegmentation(
@@ -617,8 +617,11 @@ case class ElectionConfig(
     )
 
     assert(
-      !segmentedMixing || mixingCategorySegmentation.isDefined,
-      "mixingCategorySegmentation needs to be defined if segmentedMixing is enabled"
+      (
+        (!segmentedMixing.isDefined || !segmentedMixing.get) &&
+        mixingCategorySegmentation.isDefined
+      ),
+      "mixingCategorySegmentation needs to be set to true if segmentedMixing is enabled"
     )
 
     assert(

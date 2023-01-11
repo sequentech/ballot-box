@@ -1542,7 +1542,7 @@ object ElectionsApi
     id: Long,
     config: String,
     subelections: Array[Long],
-    segmentedMixing: Boolean
+    segmentedMixing: Option[Boolean]
   ) = Future
   {
     Logger.info(s"Calling to update results for $id")
@@ -1599,7 +1599,7 @@ object ElectionsApi
       s"--election-id $id " +
       (if (pipesWhitelist.length > 0)  s"-p $pipesWhitelist " else "") +
       (
-        if (segmentedMixing)
+        if (segmentedMixing.isDefined && segmentedMixing.get)
           s"--segmented-election-config $categoryElectionConfigPath"
         else ""
       )
