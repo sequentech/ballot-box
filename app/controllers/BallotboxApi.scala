@@ -214,7 +214,7 @@ object BallotboxApi extends Controller with Response {
       DB.withSession { implicit session =>
         val election = DAL.elections.findByIdWithSession(electionId).get
       // Do not filter active voters
-      if (election.segmentedMixing)
+      if (election.segmentedMixing.isDefined && election.segmentedMixing.get)
       {
         // Apply segmented mixing for this election
         // 1. Dump categorized ballots

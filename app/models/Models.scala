@@ -238,7 +238,7 @@ class Elections(tag: Tag)
   def virtual = column[Boolean]("virtual")
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
-  def segmentedMixing = column[Boolean]("segmented_mixing")
+  def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
 
@@ -259,7 +259,7 @@ class Elections(tag: Tag)
     publicCandidates,
     logo_url.?,
     trusteeKeysState.?,
-    segmentedMixing
+    segmentedMixing.?
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -550,7 +550,7 @@ case class ElectionConfig(
   virtual: Boolean,
   tally_allowed: Boolean,
   publicCandidates: Boolean,
-  segmentedMixing: Boolean,
+  segmentedMixing: Option[Boolean],
   virtualSubelections: Option[Array[Long]],
   mixingCategorySegmentation: Option[MixingCategorySegmentation],
   logo_url: Option[String])
