@@ -618,10 +618,10 @@ case class ElectionConfig(
 
     assert(
       (
-        (!segmentedMixing.isDefined || !segmentedMixing.get) &&
-        mixingCategorySegmentation.isDefined
+        !mixingCategorySegmentation.isDefined ||
+        (segmentedMixing.isDefined && segmentedMixing.get)
       ),
-      "mixingCategorySegmentation needs to be set to true if segmentedMixing is enabled"
+      "segmentedMixing needs to be enabled if mixingCategorySegmentation is set"
     )
 
     assert(
