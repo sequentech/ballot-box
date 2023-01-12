@@ -60,7 +60,7 @@ def get_encrypted_categories(question, category_names):
     for category in category_names:
         encoded_category = PRIME_NUMBERS[prime_index]
         while (
-            encoded_category < max_encodable_normal_ballot or
+            encoded_category <= max_encodable_normal_ballot or
             not is_quadratic_residue(encoded_category, p, q)
         ):
             prime_index += 1
