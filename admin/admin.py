@@ -46,28 +46,28 @@ import os as _os
 from tempfile import mkdtemp
 
 from sqlalchemy import create_engine, select, func, text, update as update_sql
-from sqlalchemy import Table, Column, Integer, String, TIMESTAMP, MetaData, ForeignKey
+from sqlalchemy import (
+    Table,
+    Column,
+    Integer,
+    String,
+    TIMESTAMP,
+    MetaData,
+    ForeignKey,
+    Boolean
+)
 from sqlalchemy import distinct
 
 from utils.votesfilter import VotesFilter
 
-# set configuration parameters
-datastore = '/home/ballotbox/datastore'
-shared_secret = '<password>'
-db_user = 'ballot_box'
-db_password = 'ballot_box'
-db_name = 'ballot_box'
-db_port = 5432
-app_host = 'localhost'
-app_port = 9000
-iam_port = 10081
-iam_credentials = dict()
-iam_admin_eid = 1
-iam_db_user = 'iam'
-iam_db_password = 'iam'
-iam_db_name = 'iam'
-iam_db_port = 5432
-node = '/usr/local/bin/node'
+settings = json.loads(
+    open(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'settings.json'
+        )
+    ).read()
+)
 
 class TemporaryDirectory(object):
     """Create and return a temporary directory.  This has the same
@@ -156,9 +156,9 @@ class TemporaryDirectory(object):
 
 
 def get_local_hostport():
-    return app_host, app_port
+    return settings["app_host"], settings["app_port"]
 
-def votes_table():
+def get_votes_table():
     metadata = MetaData()
     votes = Table('vote', metadata,
         Column('id', Integer, primary_key=True),
@@ -170,7 +170,7 @@ def votes_table():
     )
     return votes
 
-def elections_table():
+def get_elections_table():
     metadata = MetaData()
     elections = Table('election', metadata,
         Column('id', Integer, primary_key=True),
@@ -181,11 +181,12 @@ def elections_table():
         Column('pks', String),
         Column('results', String),
         Column('results_updated', String),
-        Column('results_config', String)
+        Column('results_config', String),
+        Column('segmented_mixing', Boolean)
     )
     return elections
 
-def acls_table():
+def get_acls_table():
     metadata = MetaData()
     elections = Table('api_acl', metadata,
         Column('id', Integer, primary_key=True),
@@ -234,13 +235,13 @@ def show_elections(result):
 
 def get_max_electionid():
     conn = get_db_connection()
-    elections = elections_table()
+    elections = get_elections_table()
     s = select([func.max(elections.c.id)])
     result = conn.execute(s)
     return result.first()[0]
 
 def get_db_connection():
-    engine = create_engine('postgresql+psycopg2://%s:%s@localhost:%d/%s' % (db_user, db_password, db_port, db_name))
+    engine = create_engine('postgresql+psycopg2://%s:%s@localhost:%d/%s' % (settings["db_user"], settings["db_password"], settings["db_port"], settings["db_name"]))
     conn = engine.connect()
 
     return conn
@@ -248,10 +249,10 @@ def get_db_connection():
 def get_iam_db_connection():
     engine = create_engine(
         'postgresql+psycopg2://%s:%s@localhost:%d/%s' % (
-            iam_db_user,
-            iam_db_password,
-            iam_db_port,
-            iam_db_name
+            settings["iam_db_user"],
+            settings["iam_db_password"],
+            settings["iam_db_port"],
+            settings["iam_db_name"]
         )
     )
     conn = engine.connect()
@@ -434,42 +435,42 @@ def resume(cfg, args):
     print(r.status_code, r.text)
 
 def auth_suspend(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/suspended/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def auth_resume(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/resumed/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def auth_stop(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def auth_start(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/started/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def archive(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/archive/' % cfg['election_id']
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
 def unarchive(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/unarchive/' % cfg['election_id']
     r = request_post(url, headers=headers)
@@ -588,7 +589,7 @@ def dump_votes_with_iam_ids(cfg, args):
 # remove
 def dump_ids(cfg, args):
     conn = get_db_connection()
-    votes = votes_table()
+    votes = get_votes_table()
 
     if args.elections_file:
         with open(args.elections_file, 'r') as f:
@@ -631,7 +632,7 @@ def dump_ids(cfg, args):
 
     total = 0
     for election in allowed_by_election:
-        dir_path = os.path.join(datastore, 'private', election)
+        dir_path = os.path.join(settings["datastore"], 'private', election)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         file_path = os.path.join(dir_path, 'ids')
@@ -754,11 +755,11 @@ def get_iam_auth_headers():
     '''
     Returns logged in headers
     '''
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
-    event_id = iam_admin_eid
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
+    event_id = settings["iam_admin_eid"]
     req = request_post(
         base_url + 'auth-event/%d/authenticate/' % event_id,
-        data=json.dumps(iam_credentials)
+        data=json.dumps(settings["iam_credentials"])
     )
     if req.status_code != 200:
         raise Exception("iam login failed")
@@ -767,26 +768,26 @@ def get_iam_auth_headers():
     return {'AUTH': auth_token}
 
 def send_auth(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/census/send_auth/' % cfg['election_id']
     r = request_post(url, headers=headers, data=cfg['payload'])
 
 def launch_self_test(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = f'{base_url}tasks/launch-self-test/'
     request_post(url, headers=headers)
 
 def list_tasks(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = f"{base_url}tasks/"
     r = request_get(url, headers=headers)
     print(r.json())
 
 def list_task(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     task_id = cfg['election_id']
     url = f"{base_url}tasks/{task_id}/"
@@ -794,27 +795,27 @@ def list_task(cfg, args):
     print(r.json())
 
 def cancel_task(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     task_id = cfg['election_id']
     url = f"{base_url}tasks/{task_id}/cancel/"
     request_post(url, headers=headers)
 
 def auth_start(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/started/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
 def auth_stop(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
     url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
     r = request_post(url, headers=headers)
 
 def list_votes(cfg, args):
     conn = get_db_connection()
-    votes = votes_table()
+    votes = get_votes_table()
     s = select([votes]).where(votes.c.election_id == cfg['election_id'])
     for filter in cfg['filters']:
         if "~" in filter:
@@ -829,7 +830,7 @@ def list_votes(cfg, args):
 
 def list_elections(cfg, args):
     conn = get_db_connection()
-    elections = elections_table()
+    elections = get_elections_table()
     s = select([elections]).order_by(elections.c.id)
     for filter in cfg['filters']:
         if "~" in filter:
@@ -844,7 +845,7 @@ def list_elections(cfg, args):
 
 def count_votes(cfg, args):
     conn = get_db_connection()
-    votes = votes_table()
+    votes = get_votes_table()
     if 'election_id' in cfg:
         s = select([func.count(distinct(votes.c.voter_id))]).where(votes.c.election_id.in_(cfg['election_id']))
         s2 = select([func.count(votes.c.voter_id)]).where(votes.c.election_id.in_(cfg['election_id']))
@@ -861,7 +862,7 @@ def count_votes(cfg, args):
 
 def show_column(cfg, args):
     conn = get_db_connection()
-    elections = elections_table()
+    elections = get_elections_table()
     s = select([elections]).where(elections.c.id == cfg['election_id'])
     result = conn.execute(s)
     for row in result:
@@ -875,14 +876,14 @@ def encryptNode(cfg, args):
     ctexts = cfg['ciphertexts']
 
     print("> Encrypting votes (" + votesFile + ", pk = " + pkFile + ", " + str(votesCount) + ")..")
-    publicPath = os.path.join(datastore, 'public', str(cfg['election_id']))
+    publicPath = os.path.join(settings["datastore"], 'public', str(cfg['election_id']))
     pkPath = os.path.join(publicPath, pkFile)
     votesPath = votesFile
     ctextsPath = ctexts
 
     if(os.path.isfile(pkPath)) and (os.path.isfile(votesPath)):
-        print("> Encrypting with %s %s %s %s %s" % (node, "js/encrypt.js", pkPath, votesPath, str(votesCount)))
-        output, error = subprocess.Popen([node, "js/encrypt.js", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
+        print("> Encrypting with %s %s %s %s %s" % (settings["node"], "js/encrypt.js", pkPath, votesPath, str(votesCount)))
+        output, error = subprocess.Popen([settings["node"], "js/encrypt.js", pkPath, votesPath, str(votesCount)], stdout = subprocess.PIPE).communicate()
 
         print("> Received Nodejs output (" + str(len(output)) + " chars)")
         parsed = json.loads(output)
@@ -900,7 +901,7 @@ def encrypt(cfg, args):
     votesCount = cfg['encrypt-count']
     ctextsPath = cfg['ciphertexts']
 
-    publicPath = os.path.join(datastore, 'public', str(cfg['election_id']))
+    publicPath = os.path.join(settings["datastore"], 'public', str(cfg['election_id']))
     pkPath = os.path.join(publicPath, 'pks')
     votesPath = votesFile
     print("Encrypting votes (" + votesFile + ", pk = " + pkPath + ", " + str(votesCount) + ")..")
@@ -942,7 +943,7 @@ def change_social(cfg, args):
 def get_hmac(cfg, userId, objType, objId, perm):
     import hmac
 
-    secret = shared_secret
+    secret = settings["shared_secret"]
     now = 1000*int(time.time())
     message = "%s:%s:%d:%s:%d" % (userId, objType, objId, perm, now)
     _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
@@ -958,7 +959,7 @@ class JClient:
         self.auth_token = token
 
     def post(self, url, data):
-        base_url = 'http://%s:%d/iam/api/' % (app_host, iam_port)
+        base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
         jdata = json.dumps(data)
         headers = {'content-type': 'application/json', 'Authorization': self.auth_token}
         r = requests.post(base_url + url, data=jdata, headers=headers)
@@ -988,7 +989,7 @@ def deregister(cfg, args):
     else:
         credentials['email'] = args.email
 
-    event_id = iam_admin_eid
+    event_id = settings["iam_admin_eid"]
     
     c = JClient()
     req = c.authenticate(event_id, credentials)
@@ -1012,7 +1013,7 @@ def is_int(s):
 
 def update_results_config(cfg, args):
     conn = get_db_connection()
-    elections = elections_table()
+    elections = get_elections_table()
     with open(cfg['payload'], 'r') as f:
         results_configs = json.loads(f.read())
         for results_config in results_configs:

@@ -82,8 +82,8 @@ object ElectionsApi
   // we deliberately crash startup if these are not set
   val urlRoot = Play.current.configuration.getString("app.api.root").get
   val urlSslRoot = Play.current.configuration.getString("app.datastore.ssl_root").get
-  val sequentResults = Play.current.configuration.getString("app.results.script").getOrElse("./admin/results.sh")
-  val createEmptyTally = Play.current.configuration.getString("app.results.script").getOrElse("./admin/create_empty_tally.py")
+  val sequentResults = Play.current.configuration.getString("app.scripts.results").getOrElse("./admin/results.sh")
+  val createEmptyTally = Play.current.configuration.getString("app.scripts.createEmptyTally").getOrElse("./admin/create_empty_tally.py")
   val pipesWhitelist = Play.current.configuration.getString("app.sequentResults.pipesWhitelist").getOrElse("")
   val slickExecutionContext = Akka.system.dispatchers.lookup("play.akka.actor.slick-context")
   val allowPartialTallies = Play.current.configuration.getBoolean("app.partial-tallies").getOrElse(false)
@@ -735,7 +735,8 @@ object ElectionsApi
                   calcResults(
                     id, 
                     config, 
-                    validated.virtualSubelections.get
+                    validated.virtualSubelections.get,
+                    election.segmentedMixing
                   )
                   .flatMap( 
                     r => updateResults(
@@ -1342,7 +1343,8 @@ object ElectionsApi
                 virtual =                   validated.virtual,
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url,
-                trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString)
+                trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString),
+                segmentedMixing =           validated.segmentedMixing
               )
               existing match
               {
@@ -1539,7 +1541,8 @@ object ElectionsApi
   private def calcResults(
     id: Long,
     config: String,
-    subelections: Array[Long]
+    subelections: Array[Long],
+    segmentedMixing: Option[Boolean]
   ) = Future
   {
     Logger.info(s"Calling to update results for $id")
@@ -1550,6 +1553,10 @@ object ElectionsApi
     ).toString.r
     val electionPublicPath = new java.io.File(
       Datastore.getDirPath(id, /*isPublic?*/true).toString
+    )
+    val categoryElectionConfigPath = Datastore.getPath(
+      id,
+      Datastore.CATEGORY_ELECTION_CONFIG
     )
 
     if (electionPublicPath.isDirectory())
@@ -1583,10 +1590,20 @@ object ElectionsApi
         ).mkString(" ")
     }
     val dirPath = Datastore.getDirPath(id)
-    val cmd = if (pipesWhitelist.length > 0)
-        s"$sequentResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id -p $pipesWhitelist"
-      else
-        s"$sequentResults -t $tallyPath -c $configPath -s -x $dirPath -eid $id"
+    val cmd = (
+      s"$sequentResults " +
+      s"--tally $tallyPath " +
+      s"--config $configPath " +
+      "--stdout " +
+      s"--tar $dirPath " +
+      s"--election-id $id " +
+      (if (pipesWhitelist.length > 0)  s"-p $pipesWhitelist " else "") +
+      (
+        if (segmentedMixing.isDefined && segmentedMixing.get)
+          s"--segmented-election-config $categoryElectionConfigPath"
+        else ""
+      )
+    )
 
     Logger.info(s"tally for $id: calculating results with command: '$cmd'")
     val output = cmd.!!
