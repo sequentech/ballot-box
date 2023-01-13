@@ -1,0 +1,18 @@
+{
+    "datastore": "/home/ballotbox/datastore",
+    "shared_secret": "<password>",
+    "db_user": "ballot_box",
+    "db_password": "ballot_box",
+    "db_name": "ballot_box",
+    "db_port": 5432,
+    "app_host": "localhost",
+    "app_port": 9000,
+    "iam_port": 10081,
+    "iam_credentials": {},
+    "iam_admin_eid": 1,
+    "iam_db_user": "iam",
+    "iam_db_password": "iam",
+    "iam_db_name": "iam",
+    "iam_db_port": 5432,
+    "node": "/usr/local/bin/node"
+}
