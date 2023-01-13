@@ -139,7 +139,8 @@ case class Election(
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
   logo_url: Option[String],
-  trusteeKeysState: Option[String]
+  trusteeKeysState: Option[String],
+  segmentedMixing: Option[Boolean]
 )
 {
 
@@ -172,6 +173,10 @@ case class Election(
 
     if (!configJson.as[JsObject].keys.contains("publicCandidates")) {
         configJson = configJson.as[JsObject] + ("publicCandidates" -> Json.toJson(publicCandidates))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("segmentedMixing")) {
+        configJson = configJson.as[JsObject] + ("segmentedMixing" -> Json.toJson(segmentedMixing))
     }
 
     var config = configJson.validate[ElectionConfig].get
@@ -209,7 +214,8 @@ case class Election(
       tallyAllowed,
       publicCandidates,
       logo_url,
-      trusteeKeysStateParsed
+      trusteeKeysStateParsed,
+      segmentedMixing
     )
   }
 }
@@ -232,6 +238,7 @@ class Elections(tag: Tag)
   def virtual = column[Boolean]("virtual")
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
+  def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
 
@@ -251,7 +258,8 @@ class Elections(tag: Tag)
     tallyAllowed,
     publicCandidates,
     logo_url.?,
-    trusteeKeysState.?
+    trusteeKeysState.?,
+    segmentedMixing.?
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -497,8 +505,33 @@ case class ElectionDTO(
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
   logo_url: Option[String],
-  trusteeKeysState: Array[TrusteeKeyState]
+  trusteeKeysState: Array[TrusteeKeyState],
+  segmentedMixing: Option[Boolean]
 )
+
+case class MixingCategorySegmentation(
+  categoryName: String,
+  categories: Array[String]
+)
+{
+  def validate() =
+  {
+    assert(
+      categoryName.length <= SHORT_STRING && categoryName.length > 0,
+      s"invalid mixing category name '${categoryName}'"
+    )
+    categories.foreach { category =>
+      assert(
+        category.length <= SHORT_STRING && category.length > 0, 
+        s"Invalid category name '${category}'"
+      )
+    }
+    assert(
+        categories.size == categories.toSet.size,
+        s"repeated categories in: ${categories}"
+      )
+  }
+}
 
 /** an election configuration defines an election */
 case class ElectionConfig(
@@ -517,7 +550,9 @@ case class ElectionConfig(
   virtual: Boolean,
   tally_allowed: Boolean,
   publicCandidates: Boolean,
+  segmentedMixing: Option[Boolean],
   virtualSubelections: Option[Array[Long]],
+  mixingCategorySegmentation: Option[MixingCategorySegmentation],
   logo_url: Option[String])
 {
 
@@ -579,6 +614,14 @@ case class ElectionConfig(
     assert(
       !virtual || virtualElectionsAllowed,
       "virtual elections are not allowed"
+    )
+
+    assert(
+      (
+        !mixingCategorySegmentation.isDefined ||
+        (segmentedMixing.isDefined && segmentedMixing.get)
+      ),
+      "segmentedMixing needs to be enabled if mixingCategorySegmentation is set"
     )
 
     assert(

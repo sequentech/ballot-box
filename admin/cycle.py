@@ -28,26 +28,25 @@ import traceback
 import argparse
 from argparse import RawTextHelpFormatter
 
-public_ds = '../datastore/public'
-private_ds = '../datastore/private'
+settings = json.loads(open('settings.json').read())
 
 class Args:
     pass
 
 def pks_path(id):
-    return os.path.join(public_ds, str(id), 'pks')
+    return os.path.join(settings["datastore"], "public", str(id), 'pks')
 
 def tally_path(id):
-    return os.path.join(private_ds, str(id), 'tally.tar.gz')
+    return os.path.join(settings["datastore"], "private", str(id), 'tally.tar.gz')
 
 def results_public_path(id):
-    return os.path.join(public_ds, str(id), 'results.json')
+    return os.path.join(settings["datastore"], "public", str(id), 'results.json')
 
 def tally_public_path(id):
-    return os.path.join(public_ds, str(id), 'tally.tar.gz')
+    return os.path.join(settings["datastore"], "public", str(id), 'tally.tar.gz')
 
 def ids_path(id):
-    return os.path.join(private_ds, str(id), 'ids')
+    return os.path.join(settings["datastore"], "private", str(id), 'ids')
 
 def capture_stdout(function):
     def wrapper(*args):
