@@ -1316,7 +1316,7 @@ object ElectionsApi
             .validate(authorities, id)
             .copy(start_date=None, end_date=None)
           
-          val trusteeKeysState = authorities.keys.map { key =>
+          val trusteeKeysState = (validated.director +: validated.authorities).map { key =>
             TrusteeKeyState(key, TrusteeKeysStates.INITIAL)
           }
 
