@@ -647,7 +647,7 @@ object ElectionsApi
   ): Future[Result] =
   {
     Logger.info(s"calculating results for election $id")
-    getElection(id).flatMap
+    val future = getElection(id).flatMap
     {
       election =>
         if (!requestConfig.isEmpty) 
@@ -770,6 +770,14 @@ object ElectionsApi
           }
         )
     }
+    future.recover {
+      case t: Throwable => {
+        t.printStackTrace()
+        Logger.warn(s"Exception caught when calculating the results: $t")
+        BadRequest(error(t.getMessage))
+      }
+    }
+    Ok(response("ok"))
   }
 
   private def publishResultsLogic(id: Long) = {
