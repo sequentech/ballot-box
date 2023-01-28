@@ -771,6 +771,13 @@ object ElectionsApi
           }
         )
     }
+    future.recover {
+      case t: Throwable => {
+        t.printStackTrace()
+        Logger.warn(s"Exception caught when calculating the results: $t")
+        BadRequest(error(t.getMessage))
+      }
+    }
     Ok(response("ok"))
   }
 
