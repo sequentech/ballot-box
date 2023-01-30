@@ -822,7 +822,7 @@ case class QuestionExtra(
   cumulative_number_of_checkboxes: Option[Int], // default = 1
   enable_checkable_lists: Option[Boolean], // default = false
   allow_writeins: Option[Boolean], // default = false
-  invalid_vote_policy: Option[String], // allowed, warn, not-allowed
+  invalid_vote_policy: Option[String], // allowed, warn, not-allowed, warn-invalid-implicit-and-explicit
   review_screen__show_question_description: Option[Boolean] // default = false
 )
 {
@@ -862,9 +862,9 @@ case class QuestionExtra(
     assert(
       (
         !invalid_vote_policy.isDefined || 
-        List("allowed", "warn", "not-allowed").contains(invalid_vote_policy.get)
+        List("allowed", "warn", "not-allowed", "warn-invalid-implicit-and-explicit").contains(invalid_vote_policy.get)
       ),
-      "invalid_vote_policy must be 'allowed', 'warn' or 'not-allowed'"
+      "invalid_vote_policy must be 'allowed', 'warn', 'warn-invalid-implicit-and-explicit' or 'not-allowed'"
     )
   }
 }
