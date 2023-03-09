@@ -991,6 +991,7 @@ case class ElectionPresentation(
 /** defines election presentation extra options for an election */
 case class ElectionExtra(
   allow_voting_end_graceful_period: Option[Boolean],
+  anchor_continue_btn_to_bottom: Option[Boolean],
   start_screen__skip: Option[Boolean],
   booth_log_out__disable: Option[Boolean],
   disable__demo_voting_booth: Option[Boolean],
