@@ -957,6 +957,7 @@ case class ElectionPresentation(
   election_board_ceremony: Option[Boolean], // default = false
   conditional_questions: Option[Array[ConditionalQuestion]],
   pdf_url: Option[Url],
+  anchor_continue_btn_to_bottom: Option[Boolean],
 
   // Override translations for languages. Example:
   // {"en": {"avRegistration.forgotPassword": "Whatever"}}
@@ -991,7 +992,6 @@ case class ElectionPresentation(
 /** defines election presentation extra options for an election */
 case class ElectionExtra(
   allow_voting_end_graceful_period: Option[Boolean],
-  anchor_continue_btn_to_bottom: Option[Boolean],
   start_screen__skip: Option[Boolean],
   booth_log_out__disable: Option[Boolean],
   disable__demo_voting_booth: Option[Boolean],
