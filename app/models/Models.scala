@@ -751,7 +751,7 @@ case class Question(
       )
       // only supported in simultaneous-questions layout!
       assert(
-        layout == "simultaneous-questions",
+        layout == "simultaneous-questions" || layout == "simultaneous-questions-v2",
         "cumulative tally type is only supported in simultaneous-questions"
       )
     }
