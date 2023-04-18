@@ -781,7 +781,7 @@ case class Question(
         .filter { answer => 
           answer.category.length > 0 &&
           answer.urls.filter {
-            url => (url.url != "true" || url.title != "isCategoryList")
+            url => (url.url == "true" && url.title == "isCategoryList")
           }.length == 0
         }
         .map { answer => answer.category }
