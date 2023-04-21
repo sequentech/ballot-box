@@ -928,10 +928,10 @@ case class Answer(
     }.length != 0
     assert(isWriteIn || text.length > 0, "text too short")
     assert(isWriteIn || text.length <= LONG_STRING, "text too long")
-    val textOk = sanitizeHtml(text)
+    //val textOk = sanitizeHtml(text)
     val urlsOk = urls.map(_.validate())
 
-    this.copy(details = detailsOk, urls = urlsOk, text = textOk)
+    this.copy(details = detailsOk, urls = urlsOk) // , text = textOk)
   }
 }
 
