@@ -994,6 +994,7 @@ case class ElectionExtra(
   allow_voting_end_graceful_period: Option[Boolean],
   start_screen__skip: Option[Boolean],
   booth_log_out__disable: Option[Boolean],
+  booth_log_out__countdown_seconds: Option[Int],
   disable__demo_voting_booth: Option[Boolean],
   disable__public_home: Option[Boolean],
   disable_voting_booth_audit_ballot: Option[Boolean],
