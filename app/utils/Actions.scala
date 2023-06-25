@@ -33,7 +33,7 @@ case class HMACActionHelper(
   boothSecret: String,
   authorizationHeader: String
 ) {
-  def check(): Either[String, None] =
+  def check(): Either[String, Boolean] =
   {
     try {
       val start = "khmac:///sha-256;";
@@ -81,7 +81,7 @@ case class HMACActionHelper(
       if(compareOk && (diff < expiry) && userOk && (rcvObjType == objType) &&
         (rcvObjId == objId) && permsOk)
       {
-        return Right(None)
+        return Right(true)
       }
 
       Logger.warn(
@@ -97,8 +97,8 @@ case class HMACActionHelper(
     }
   }
 
-  def flatCheck: boolean = check() match {
-      case Right(None) => true
+  def flatCheck: Boolean = check() match {
+      case Right(true) => true
       case _ => false
     }
 }
@@ -120,8 +120,9 @@ case class HMACAuthAction(
     input.headers.get("Authorization") match {
       case Some(_) => 
         validate(input) match {
-          case Right(None) => None
+          case Right(true) => None
           case Left(code) => Some(Forbidden(error(code)))
+          case _ => Some(Forbidden)
         }
       case None => Some(Forbidden(error(Response.AuthErrorCodes.MISSING_USER_CREDENTIALS)))
     }
@@ -143,7 +144,7 @@ case class HMACAuthAction(
       expiry,
       boothSecret,
       value
-    ).flatCheck()
+    ).flatCheck
   }
 }
 
