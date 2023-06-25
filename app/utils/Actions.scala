@@ -23,7 +23,6 @@ import scala.concurrent._
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.{Crypto => PlayCrypto}
-import utils.AuthErrorCodes
 
 case class HMACActionHelper(
   userId: String,
@@ -119,8 +118,9 @@ case class HMACAuthAction(
   def filter[A](input: Request[A]) = Future.successful {
 
     input.headers.get("Authorization") match {
-      case Some(_) => 
-        validate(input) match {
+      case Some(authValue) => 
+        let inputValidated: Either[String, Boolean] = validate(input)(authValue)
+        inputValidated match {
           case Right(true) => None
           case Left(code) => Some(Forbidden(error(code)))
           case _ => Some(Forbidden)
