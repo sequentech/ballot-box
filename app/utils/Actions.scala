@@ -32,7 +32,7 @@ case class HMACActionHelper(
   expiry: Int,
   boothSecret: String,
   authorizationHeader: String
-) {
+) extends Response {
   def check(): Either[String, Boolean] =
   {
     try {
@@ -110,7 +110,7 @@ case class HMACAuthAction(
   objId: Long, 
   perm: String, 
   expiry: Int
-) extends ActionFilter[Request] {
+) extends ActionFilter[Request] with Response {
 
   val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
 
@@ -122,10 +122,10 @@ case class HMACAuthAction(
         val inputValidated: Either[String, Boolean] = check(input)(authValue)
         inputValidated match {
           case Right(true) => None
-          case Left(_) => BadRequest(error(s"Election not found", ErrorCodes.NO_ELECTION)) //Some(Forbidden(error(code)))
+          case Left(_) => Some(Forbidden(error(code)))
           case _ => Some(Forbidden)
         }
-      case None => BadRequest(error(s"Election not found", ErrorCodes.NO_ELECTION)) //Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
+      case None => Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
     }
   }
 

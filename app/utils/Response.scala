@@ -19,12 +19,6 @@ package utils
 import play.api.libs.json._
 import java.util.Date
 
-object AuthErrorCodes {
-  val MISSING_USER_CREDENTIALS = "MISSING_USER_CREDENTIALS"
-  val MALFORMED_USER_CREDENTIALS = "MALFORMED_USER_CREDENTIALS"
-  val INVALID_USER_CREDENTIALS = "INVALID_USER_CREDENTIALS"
-}
-
 /**
   * Utilities for json messaging
   *
@@ -41,6 +35,12 @@ trait Response {
     val GENERAL_ERROR = 5
     val NO_ELECTION = 6
     val NO_PKS = 7
+  }
+
+  object AuthErrorCodes {
+    val MISSING_USER_CREDENTIALS = "MISSING_USER_CREDENTIALS"
+    val MALFORMED_USER_CREDENTIALS = "MALFORMED_USER_CREDENTIALS"
+    val INVALID_USER_CREDENTIALS = "INVALID_USER_CREDENTIALS"
   }
 
   implicit val errorFormatter = Json.format[Error]
