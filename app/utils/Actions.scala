@@ -23,6 +23,7 @@ import scala.concurrent._
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.{Crypto => PlayCrypto}
+import utils.AuthErrorCodes
 
 case class HMACActionHelper(
   userId: String,
@@ -45,7 +46,7 @@ case class HMACActionHelper(
         authorizationHeader.charAt(slashPos) != '/'
       ) {
         Logger.warn(s"Malformed authorization header")
-        return Left(Response.AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
+        return Left(AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
       }
       val hash = authorizationHeader.substring(start.length, slashPos)
       val message = authorizationHeader.substring(slashPos + 1)
@@ -53,7 +54,7 @@ case class HMACActionHelper(
       val split = message.split(':')
       if (split.length < 5) {
         Logger.warn(s"Malformed authorization header")
-        return Left(Response.AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
+        return Left(AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
       }
 
       val rcvUserId = split.slice(0, split.length - 4).mkString(":")
@@ -87,12 +88,12 @@ case class HMACActionHelper(
       Logger.warn(
         s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm"
       )
-      return Left(Response.AuthErrorCodes.INVALID_USER_CREDENTIALS)
+      return Left(AuthErrorCodes.INVALID_USER_CREDENTIALS)
     }
     catch {
       case e:Exception => {
         Logger.warn(s"Exception verifying hmac ($authorizationHeader)", e)
-      return Left(Response.AuthErrorCodes.INVALID_USER_CREDENTIALS)
+      return Left(AuthErrorCodes.INVALID_USER_CREDENTIALS)
       }
     }
   }
@@ -124,7 +125,7 @@ case class HMACAuthAction(
           case Left(code) => Some(Forbidden(error(code)))
           case _ => Some(Forbidden)
         }
-      case None => Some(Forbidden(error(Response.AuthErrorCodes.MISSING_USER_CREDENTIALS)))
+      case None => Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
     }
   }
 

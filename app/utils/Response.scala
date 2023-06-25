@@ -19,6 +19,12 @@ package utils
 import play.api.libs.json._
 import java.util.Date
 
+object AuthErrorCodes {
+  val MISSING_USER_CREDENTIALS = "MISSING_USER_CREDENTIALS"
+  val MALFORMED_USER_CREDENTIALS = "MALFORMED_USER_CREDENTIALS"
+  val INVALID_USER_CREDENTIALS = "INVALID_USER_CREDENTIALS"
+}
+
 /**
   * Utilities for json messaging
   *
@@ -38,32 +44,6 @@ trait Response {
   }
 
   implicit val errorFormatter = Json.format[Error]
-
-  object AuthErrorCodes {
-    val MISSING_USER_CREDENTIALS = "MISSING_USER_CREDENTIALS"
-    val MALFORMED_USER_CREDENTIALS = "MALFORMED_USER_CREDENTIALS"
-    val INVALID_USER_CREDENTIALS = "INVALID_USER_CREDENTIALS"
-
-    val BAD_REQUEST = "BAD_REQUEST"
-    val INVALID_REQUEST = "INVALID_REQUEST"
-    val INVALID_PERMS = "INVALID_PERMS"
-    val GENERAL_ERROR = "GENERAL_ERROR"
-    val MAX_CONNECTION = "MAX_CONNECTION"
-    val BLACKLIST = "BLACKLIST"
-    val AUTH_EVENT_NOT_FOUND = "AUTH_EVENT_NOT_FOUND"
-    val AUTH_EVENT_NOT_STARTED = "AUTH_EVENT_NOT_STARTED"
-    val CANT_VOTE_MORE_TIMES = "CANT_VOTE_MORE_TIMES"
-    val CANT_AUTHENTICATE_TO_PARENT = "CANT_AUTHENTICATE_TO_PARENT"
-    val INVALID_FIELD_VALIDATION = "INVALID_FIELD_VALIDATION"
-    val PIPELINE_INVALID_CREDENTIALS = "PIPELINE_INVALID_CREDENTIALS"
-
-    /** Note that for security reasons the following three error codes are the
-      * same. This is to prevent enumeration attacks. More information:
-      * https://web.archive.org/web/20230203194955/https://www.techtarget.com/searchsecurity/tip/What-enumeration-attacks-are-and-how-to-prevent-them */
-    val INVALID_CODE = "INVALID_USER_CREDENTIALS"
-    val USER_NOT_FOUND = "INVALID_USER_CREDENTIALS"
-    val INVALID_PASSWORD_OR_CODE = "INVALID_USER_CREDENTIALS"
-  }
 
     /** need to manually write reads/writes for generic types */
   implicit def responseReads[T: Format]: Reads[Response[T]] = new Reads[Response[T]] {
