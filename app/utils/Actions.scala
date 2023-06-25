@@ -119,13 +119,13 @@ case class HMACAuthAction(
 
     input.headers.get("Authorization") match {
       case Some(authValue) => 
-        let inputValidated: Either[String, Boolean] = check(input)(authValue)
+        val inputValidated: Either[String, Boolean] = check(input)(authValue)
         inputValidated match {
           case Right(true) => None
-          case Left(code) => Some(Forbidden(error(code)))
+          case Left(_) => BadRequest(error(s"Election not found", ErrorCodes.NO_ELECTION)) //Some(Forbidden(error(code)))
           case _ => Some(Forbidden)
         }
-      case None => Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
+      case None => BadRequest(error(s"Election not found", ErrorCodes.NO_ELECTION)) //Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
     }
   }
 
