@@ -33,7 +33,7 @@ case class HMACActionHelper(
   boothSecret: String,
   authorizationHeader: String
 ) {
-  def check(): Boolean =
+  def check(): Either[String, true] =
   {
     try {
       val start = "khmac:///sha-256;";
@@ -45,7 +45,7 @@ case class HMACActionHelper(
         authorizationHeader.charAt(slashPos) != '/'
       ) {
         Logger.warn(s"Malformed authorization header")
-        return false
+        return Left(Response.AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
       }
       val hash = authorizationHeader.substring(start.length, slashPos)
       val message = authorizationHeader.substring(slashPos + 1)
@@ -53,7 +53,7 @@ case class HMACActionHelper(
       val split = message.split(':')
       if (split.length < 5) {
         Logger.warn(s"Malformed authorization header")
-        return false
+        return Left(Response.AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
       }
 
       val rcvUserId = split.slice(0, split.length - 4).mkString(":")
@@ -81,21 +81,26 @@ case class HMACActionHelper(
       if(compareOk && (diff < expiry) && userOk && (rcvObjType == objType) &&
         (rcvObjId == objId) && permsOk)
       {
-        return true
+        return Right(true)
       }
 
       Logger.warn(
         s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm"
       )
-      return false
+      return Left(Response.AuthErrorCodes.INVALID_USER_CREDENTIALS)
     }
     catch {
       case e:Exception => {
         Logger.warn(s"Exception verifying hmac ($authorizationHeader)", e)
-        return false
+      return Left(Response.AuthErrorCodes.INVALID_USER_CREDENTIALS)
       }
     }
   }
+
+  def flatCheck: boolean = check() match {
+      case Right(true) => true
+      case _ => false
+    }
 }
 
 /** Authorizes requests using hmac in Authorization header */
@@ -112,9 +117,13 @@ case class HMACAuthAction(
   /** deny requests that dont pass hmac validations */
   def filter[A](input: Request[A]) = Future.successful {
 
-    input.headers.get("Authorization").map(validate(input)) match {
-      case Some(true) => None
-      case _ => Some(Forbidden)
+    input.headers.get("Authorization") match {
+      case Some(_) => 
+        validate(input) match {
+          case Right(true) => None
+          case Left(code) => Some(Forbidden(error(code)))
+        }
+      case None => Some(Forbidden(error(Response.AuthErrorCodes.MISSING_USER_CREDENTIALS)))
     }
   }
 
@@ -134,7 +143,7 @@ case class HMACAuthAction(
       expiry,
       boothSecret,
       value
-    ).check()
+    ).flatCheck()
   }
 }
 
