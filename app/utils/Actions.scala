@@ -122,7 +122,7 @@ case class HMACAuthAction(
         val inputValidated: Either[String, Boolean] = check(input)(authValue)
         inputValidated match {
           case Right(true) => None
-          case Left(_) => Some(Forbidden(error(code)))
+          case Left(code) => Some(Forbidden(error(code)))
           case _ => Some(Forbidden)
         }
       case None => Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
