@@ -119,7 +119,7 @@ case class HMACAuthAction(
 
     input.headers.get("Authorization") match {
       case Some(authValue) => 
-        let inputValidated: Either[String, Boolean] = validate(input)(authValue)
+        let inputValidated: Either[String, Boolean] = check(input)(authValue)
         inputValidated match {
           case Right(true) => None
           case Left(code) => Some(Forbidden(error(code)))
@@ -146,6 +146,18 @@ case class HMACAuthAction(
       boothSecret,
       value
     ).flatCheck
+  }
+
+  def check[A](request: Request[A])(value: String): Either[String, Boolean] = {
+    HMACActionHelper(
+      userId,
+      objType,
+      objId,
+      perm,
+      expiry,
+      boothSecret,
+      value
+    ).check
   }
 }
 
