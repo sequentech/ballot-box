@@ -43,6 +43,15 @@ trait Response {
     val INVALID_USER_CREDENTIALS = "INVALID_USER_CREDENTIALS"
   }
 
+  object BallotBoxErrorCodes {
+    val MALFORMED_VOTE = "MALFORMED_VOTE"
+    val MAX_REVOTES_REACHED = "MAX_REVOTES_REACHED" // Maximum number of revotes reached
+    val PK_ERROR = "PK_ERROR" // Failed reading pks for vote
+    val ELECTION_NOT_OPEN = "ELECTION_NOT_OPEN"
+    val VALIDATION_ERROR = "VALIDATION_ERROR"
+    val ELECTION_NOT_FOUND = "ELECTION_NOT_FOUND"
+  }
+
   implicit val errorFormatter = Json.format[Error]
 
     /** need to manually write reads/writes for generic types */

@@ -144,7 +144,7 @@ object BallotboxApi extends Controller with Response {
           }
           case e: Throwable => {
             e.printStackTrace()
-            Logger.error(s"Exception Throwable ${e.getMessage}")
+            Logger.error(s"Unexpected error while casting vote: ${e.getMessage}")
             BadRequest(error(e.getMessage))
           }
         }
