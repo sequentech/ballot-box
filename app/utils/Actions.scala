@@ -123,7 +123,7 @@ case class HMACAuthAction(
         inputValidated match {
           case Right(true) => None
           case Left(code) => Some(Forbidden(error(code)))
-          case _ => Some(Forbidden)
+          case _ => Some(Forbidden(error(AuthErrorCodes.MALFORMED_USER_CREDENTIALS)))
         }
       case None => Some(Forbidden(error(AuthErrorCodes.MISSING_USER_CREDENTIALS)))
     }
