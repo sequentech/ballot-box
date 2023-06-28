@@ -958,6 +958,7 @@ case class ElectionPresentation(
   conditional_questions: Option[Array[ConditionalQuestion]],
   pdf_url: Option[Url],
   anchor_continue_btn_to_bottom: Option[Boolean],
+  booth_log_out__countdown_seconds: Option[Int],
 
   // Override translations for languages. Example:
   // {"en": {"avRegistration.forgotPassword": "Whatever"}}
