@@ -50,6 +50,7 @@ trait Response {
     val ELECTION_NOT_OPEN = "ELECTION_NOT_OPEN"
     val VALIDATION_ERROR = "VALIDATION_ERROR"
     val ELECTION_NOT_FOUND = "ELECTION_NOT_FOUND"
+    val UNEXPECTED_ERROR = "UNEXPECTED_ERROR"
   }
 
   implicit val errorFormatter = Json.format[Error]
