@@ -66,7 +66,10 @@ object BallotboxApi extends Controller with Response {
     val voteValue = request.body.validate[VoteDTO]
     voteValue.fold (
 
-      errors => BadRequest(response(s"Invalid vote json $errors")),
+      errors => {
+        Logger.warn(s"Invalid vote json $errors")
+        BadRequest(error(BallotBoxErrorCodes.MALFORMED_VOTE))
+      },
 
       vote => {
 
@@ -79,7 +82,7 @@ object BallotboxApi extends Controller with Response {
 
             if(votesCast >= maxRevotes) {
               Logger.warn(s"Maximum number of revotes reached for voterId $voterId")
-              BadRequest(response(s"Maximum number of revotes reached"))
+              BadRequest(error(BallotBoxErrorCodes.MAX_REVOTES_REACHED))
             }
             else {
               val configJson = Json.parse(election.configuration)
@@ -103,7 +106,10 @@ object BallotboxApi extends Controller with Response {
 
                 pksValue.fold (
 
-                  errors => InternalServerError(error(s"Failed reading pks for vote", ErrorCodes.PK_ERROR)),
+                  errors => {
+                    Logger.warn(s"Failed reading pks for vote")
+                    InternalServerError(error(BallotBoxErrorCodes.PK_ERROR))
+                  },
 
                   pks => {
 
@@ -126,7 +132,8 @@ object BallotboxApi extends Controller with Response {
                 )
               }
               else {
-                BadRequest(response(s"Election is not open"))
+                Logger.warn(s"Election is not open")
+                BadRequest(error(BallotBoxErrorCodes.ELECTION_NOT_OPEN))
               }
             }
           }
@@ -135,17 +142,17 @@ object BallotboxApi extends Controller with Response {
           case e: ValidationException => {
             e.printStackTrace()
             Logger.error(s"Failed validating vote, ParseException ${e.getMessage}")
-            BadRequest(response(s"Failed validating vote, ${e.getMessage}"))
+            BadRequest(error(BallotBoxErrorCodes.VALIDATION_ERROR))
           }
           case e: NoSuchElementException => {
             e.printStackTrace()
             Logger.error(s"No election found with id $electionId, exception ${e.getMessage}}")
-            BadRequest(response(s"No election found with id $electionId, exception ${e.getMessage}}"))
+            BadRequest(error(BallotBoxErrorCodes.ELECTION_NOT_FOUND))
           }
           case e: Throwable => {
             e.printStackTrace()
-            Logger.error(s"Exception Throwable ${e.getMessage}")
-            BadRequest(error(e.getMessage))
+            Logger.error(s"Unexpected error while casting vote: ${e.getMessage}")
+            InternalServerError(error(BallotBoxErrorCodes.UNEXPECTED_ERROR))
           }
         }
       }

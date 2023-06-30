@@ -186,7 +186,7 @@ object ElectionsApi
           /* expiry = */ expiry,
           /* boothSecret = */ boothSecret,
           /* authorizationHeader = */ someAuthorizationHeader
-        ).check()
+        ).flatCheck
         case _ => false
       }
       val future = getElection(id)
