@@ -542,7 +542,7 @@ case class ElectionConfig(
   title: String,
   title_i18n: Option[Map[String, String]],
   description: String,
-  description: Option[Map[String, String]],
+  description_i18n: Option[Map[String, String]],
   questions: Array[Question],
   start_date: Option[Timestamp],
   end_date: Option[Timestamp],
@@ -658,7 +658,7 @@ case class ElectionConfig(
 /** defines a question asked in an election */
 case class Question(
   description: String,
-  description: Option[Map[String, String]],
+  description_i18n: Option[Map[String, String]],
   layout: String,
   max: Int, 
   min: Int, 
