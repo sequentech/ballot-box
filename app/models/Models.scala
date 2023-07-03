@@ -972,8 +972,7 @@ case class ElectionPresentation(
   i18n_override: Option[Map[String, Map[String, String]]],
 
   public_title: Option[String],
-  public_title_i18n: Option[Map[String, String]],
-
+  public_title_i18n: Option[Map[String, String]]
 )
 {
   def shareTextConfig() : Option[Array[ShareTextItem]]  = {
