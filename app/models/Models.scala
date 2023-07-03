@@ -911,9 +911,11 @@ case class Answer(
   id: Int,
   category: String,
   details: String,
+  details_i18n: Option[Map[String, String]],
   sort_order: Int,
   urls: Array[Url],
-  text: String
+  text: String,
+  text_i18n: Option[Map[String, String]]
 ) {
   def validate() = {
     assert(id >= 0, "invalid id")
