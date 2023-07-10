@@ -539,7 +539,10 @@ case class ElectionConfig(
   layout: String,
   director: String,
   authorities: Array[String],
-  title: String, description: String,
+  title: String,
+  title_i18n: Option[Map[String, String]],
+  description: String,
+  description_i18n: Option[Map[String, String]],
   questions: Array[Question],
   start_date: Option[Timestamp],
   end_date: Option[Timestamp],
@@ -655,11 +658,13 @@ case class ElectionConfig(
 /** defines a question asked in an election */
 case class Question(
   description: String,
+  description_i18n: Option[Map[String, String]],
   layout: String,
   max: Int, 
   min: Int, 
   num_winners: Int, 
   title: String,
+  title_i18n: Option[Map[String, String]],
   tally_type: String, 
   answer_total_votes_percentage: String, 
   answers: Array[Answer], 
@@ -906,9 +911,11 @@ case class Answer(
   id: Int,
   category: String,
   details: String,
+  details_i18n: Option[Map[String, String]],
   sort_order: Int,
   urls: Array[Url],
-  text: String
+  text: String,
+  text_i18n: Option[Map[String, String]]
 ) {
   def validate() = {
     assert(id >= 0, "invalid id")
@@ -962,8 +969,10 @@ case class ElectionPresentation(
 
   // Override translations for languages. Example:
   // {"en": {"avRegistration.forgotPassword": "Whatever"}}
-  i18n_override: Option[Map[String, Map[String, String]]]
+  i18n_override: Option[Map[String, Map[String, String]]],
 
+  public_title: Option[String],
+  public_title_i18n: Option[Map[String, String]]
 )
 {
   def shareTextConfig() : Option[Array[ShareTextItem]]  = {
@@ -1011,7 +1020,6 @@ case class ElectionExtra(
   success_screen__ballot_ticket__logo_subheader: Option[String],
   success_screen__ballot_ticket__h3: Option[String],
   success_screen__ballot_ticket__h4: Option[String],
-  public_title: Option[String],
   review_screen__split_cast_edit: Option[Boolean],
   show_skip_question_button: Option[Boolean]
 ) {
