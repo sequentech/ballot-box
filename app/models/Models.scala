@@ -897,14 +897,14 @@ case class WriteInFields (
     this
   }
 }
+
 /** Defines extra fields for write ins */
 case class WriteInField (
   id: String,  // name of the field
   placeholder: String,
   placeholder_i18n: Option[Map[String, String]],
   min: Int, // minimum 0
-  max: Int, // negative if there's no max
-)
+  max: Int) // negative if there's no max
 {
   def validate = {
     assert(id.length > 1, "id too short")
