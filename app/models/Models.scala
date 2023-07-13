@@ -842,7 +842,7 @@ case class QuestionExtra(
   allow_writeins: Option[Boolean], // default = false
   invalid_vote_policy: Option[String], // allowed, warn, not-allowed, warn-invalid-implicit-and-explicit
   review_screen__show_question_description: Option[Boolean], // default = false
-  write_in_fields: Option[WriteInFields]
+  write_in_config: Option[WriteInConfig]
 )
 {
 
@@ -888,8 +888,8 @@ case class QuestionExtra(
   }
 }
 
-/** Defines extra fields for write ins */
-case class WriteInFields (
+/** Defines the configuration (ie extra fields) for write ins */
+case class WriteInConfig (
   fields: Array[WriteInField],
   template: String)
 {
