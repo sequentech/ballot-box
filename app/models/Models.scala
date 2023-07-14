@@ -905,6 +905,8 @@ case class WriteInField (
   placeholder_i18n: Option[Map[String, String]],
   label: String, // input text label
   label_i18n: Option[Map[String, String]],
+  help: String
+  help_i18n: Option[Map[String, String]],
   min: Int, // minimum 0
   max: Int) // negative if there's no max
 {
