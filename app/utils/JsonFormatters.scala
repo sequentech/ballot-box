@@ -71,6 +71,9 @@ object JsonFormatters {
   implicit val urlF = Json.format[Url]
   implicit val answerF = Json.format[Answer]
 
+  implicit val qWriteInField = Jsonx.formatCaseClass[WriteInField]
+  implicit val qWriteInConfig = Jsonx.formatCaseClass[WriteInConfig]
+
   implicit val qExtraF = Jsonx.formatCaseClass[QuestionExtra]
 
   implicit val questionF = Json.format[Question]
