@@ -891,7 +891,8 @@ case class QuestionExtra(
 /** Defines the configuration (ie extra fields) for write ins */
 case class WriteInConfig (
   fields: Array[WriteInField],
-  template: String)
+  template: String,
+  review_screen_presentation: Option[String])
 {
   def validate = {
     this
