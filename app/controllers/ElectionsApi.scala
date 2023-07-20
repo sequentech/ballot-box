@@ -1244,12 +1244,8 @@ object ElectionsApi
 
           getElection(id).flatMap {
             election =>
-              Logger.error(s"Election status0 " + election.state)
-              Logger.error(s"allowPartialTallies0 " + allowPartialTallies)
               downloadTally(resp.data.tally_url, id).map { _ =>
 
-                Logger.error(s"Election status " + election.state)
-                Logger.error(s"allowPartialTallies " + allowPartialTallies)
                 if (election.state == Elections.STOPPED ||
                   election.state == Elections.DOING_TALLY ||
                   !allowPartialTallies) {
@@ -1728,7 +1724,9 @@ object ElectionsApi
     val isVoteDumpEmpty = DAL.votes.isVoteDumpEmpty(election.id)
     if(isVoteDumpEmpty) {
         Future { BadRequest(response("There's no votes in this election")) }
-    } else if (election.state == Elections.TALLY_OK || election.state == Elections.DOING_TALLY) {
+    } else if (election.state == Elections.DOING_TALLY) {
+        Future { Ok(response("ok")) }
+    } else if (election.state == Elections.TALLY_OK && !allowPartialTallies) {
         Future { Ok(response("ok")) }
     } else {
       // get the tally data, including votes hash, url and callback
@@ -1739,7 +1737,9 @@ object ElectionsApi
       WS.url(url).post(data).map { resp =>
 
         if(resp.status == HTTP.ACCEPTED) {
-          DAL.elections.updateState(election.id, Elections.DOING_TALLY)
+          if (election.state == Elections.STOPPED || !allowPartialTallies) {
+            DAL.elections.updateState(id, Elections.DOING_TALLY)
+          }
           Ok(response("ok"))
         }
         else {
