@@ -1727,7 +1727,7 @@ object ElectionsApi
     } else if (election.state == Elections.DOING_TALLY) {
         Future { Ok(response("ok")) }
     } else if (election.state == Elections.TALLY_OK && !allowPartialTallies) {
-        Future { Ok(response("ok")) }x
+        Future { Ok(response("ok")) }
     } else {
       // get the tally data, including votes hash, url and callback
       val data = getTallyData(election.id)
