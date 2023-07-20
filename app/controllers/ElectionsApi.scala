@@ -1244,14 +1244,10 @@ object ElectionsApi
 
           getElection(id).flatMap {
             election =>
-              Logger.error(s"Election status0 " + election.status)
-              Logger.error(s"allowPartialTallies0 " + allowPartialTallies)
               downloadTally(resp.data.tally_url, id).map { _ =>
 
-                Logger.error(s"Election status " + election.status)
-                Logger.error(s"allowPartialTallies " + allowPartialTallies)
-                if (election.status == Elections.STOPPED ||
-                  election.status == Elections.DOING_TALLY ||
+                if (election.state == Elections.STOPPED ||
+                  election.state == Elections.DOING_TALLY ||
                   !allowPartialTallies) {
                   DAL.elections.updateState(id, Elections.TALLY_OK)
                 }
