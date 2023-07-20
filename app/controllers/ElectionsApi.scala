@@ -1242,10 +1242,21 @@ object ElectionsApi
       resp => {
         if(resp.status == "finished") {
 
-          downloadTally(resp.data.tally_url, id).map { _ =>
+          getElection(id).flatMap {
+            election =>
+              Logger.error(s"Election status0 " + election.status)
+              Logger.error(s"allowPartialTallies0 " + allowPartialTallies)
+              downloadTally(resp.data.tally_url, id).map { _ =>
 
-            DAL.elections.updateState(id, Elections.TALLY_OK)
-            Ok(response(0))
+                Logger.error(s"Election status " + election.status)
+                Logger.error(s"allowPartialTallies " + allowPartialTallies)
+                if (election.status == Elections.STOPPED ||
+                  election.status == Elections.DOING_TALLY ||
+                  !allowPartialTallies) {
+                  DAL.elections.updateState(id, Elections.TALLY_OK)
+                }
+                Ok(response(0))
+              }
           }
         } else {
           Future {
