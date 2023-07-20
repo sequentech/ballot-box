@@ -1244,8 +1244,12 @@ object ElectionsApi
 
           getElection(id).flatMap {
             election =>
+              Logger.error(s"Election status0 " + election.state)
+              Logger.error(s"allowPartialTallies0 " + allowPartialTallies)
               downloadTally(resp.data.tally_url, id).map { _ =>
 
+                Logger.error(s"Election status " + election.state)
+                Logger.error(s"allowPartialTallies " + allowPartialTallies)
                 if (election.state == Elections.STOPPED ||
                   election.state == Elections.DOING_TALLY ||
                   !allowPartialTallies) {
