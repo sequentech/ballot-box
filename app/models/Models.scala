@@ -399,6 +399,14 @@ object Elections {
             state, 
             state
           )
+      case RESULTS_OK =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
       case _ => 
         elections
           .filter(_.id === id)
