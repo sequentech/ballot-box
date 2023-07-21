@@ -141,7 +141,7 @@ case class Election(
   //logo_url: Option[String],
   trusteeKeysState: Option[String],
   segmentedMixing: Option[Boolean],
-  tally_state: String
+  tally_state: Option[String]
 )
 {
 
