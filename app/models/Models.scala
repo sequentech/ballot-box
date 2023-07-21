@@ -217,7 +217,7 @@ case class Election(
       logo_url,
       trusteeKeysStateParsed,
       segmentedMixing,
-      Some(tally_state)
+      tally_state getOrElse Elections.NO_TALLY
     )
   }
 }
