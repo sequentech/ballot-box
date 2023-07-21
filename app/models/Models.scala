@@ -263,7 +263,7 @@ class Elections(tag: Tag)
     logo_url.?,
     trusteeKeysState.?,
     segmentedMixing.?,
-    tallyState.?
+    tally_state.?
   ) <> (Election.tupled, Election.unapply _)
 }
 

@@ -213,7 +213,7 @@ object DAL {
       ret
     }
 
-    def updateTallyState(state: String) = DB.withSession { implicit session =>
+    def updateTallyState(id: Long, state: String) = DB.withSession { implicit session =>
       val ret = Elections.updateTallyState(id, state)
       ret
     }
