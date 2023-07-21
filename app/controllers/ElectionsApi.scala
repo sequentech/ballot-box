@@ -1249,9 +1249,9 @@ object ElectionsApi
                 if (election.state == Elections.STOPPED ||
                   election.state == Elections.DOING_TALLY ||
                   !allowPartialTallies) {
-                  DAL.elections.updateState(id, Elections.TALLY_OK)
+                  DAL.elections.updateState(id, Elections.TALLY_OK) // it also updates tally_state
                 } else if (allowPartialTallies) {
-                  DAL.elections.updateParcialTallyState(election.id, Elections.TALLY_OK)
+                  DAL.elections.updateTallyState(election.id, Elections.TALLY_OK)
                 }
                 Ok(response(0))
               }
@@ -1360,7 +1360,8 @@ object ElectionsApi
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url,
                 trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString),
-                segmentedMixing =           validated.segmentedMixing
+                segmentedMixing =           validated.segmentedMixing,
+                tally_state =               Elections.NO_TALLY
               )
               existing match
               {
@@ -1739,9 +1740,10 @@ object ElectionsApi
       WS.url(url).post(data).map { resp =>
 
         if(resp.status == HTTP.ACCEPTED) {
-          if (election.state == Elections.STOPPED || !allowPartialTallies) {
-            DAL.elections.updateParcialTallyState(election.id, None)
-            flatMap DAL.elections.updateState(election.id, Elections.DOING_TALLY)
+          if (election.state == Elections.STOPPED && !allowPartialTallies) {
+            DAL.elections.updateState(election.id, Elections.DOING_TALLY) // it also updates tally_state
+          } else if (allowPartialTallies) {
+            DAL.elections.updateTallyState(election.id, Elections.DOING_TALLY)
           }
           Ok(response("ok"))
         }

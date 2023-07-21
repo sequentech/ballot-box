@@ -141,7 +141,7 @@ case class Election(
   logo_url: Option[String],
   trusteeKeysState: Option[String],
   segmentedMixing: Option[Boolean],
-  partial_tally_state: Option[String]
+  tally_state: String
 )
 {
 
@@ -217,7 +217,7 @@ case class Election(
       logo_url,
       trusteeKeysStateParsed,
       segmentedMixing,
-      partial_tally_state
+      tally_state
     )
   }
 }
@@ -243,6 +243,7 @@ class Elections(tag: Tag)
   def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
+  def tallyState = column[String]("tally_state", O.NotNull)
 
   def * = (
     id,
@@ -261,7 +262,8 @@ class Elections(tag: Tag)
     publicCandidates,
     logo_url.?,
     trusteeKeysState.?,
-    segmentedMixing.?
+    segmentedMixing.?,
+    tallyState.?
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -274,6 +276,7 @@ object Elections {
   val SUSPENDED = "suspended"
   val RESUMED = "resumed"
   val STOPPED = "stopped"
+  val NO_TALLY = "no_tally"
   val DOING_TALLY = "doing_tally"
   val TALLY_OK = "tally_ok"
   val TALLY_ERROR = "tally_error"
@@ -372,6 +375,30 @@ object Elections {
             state, 
             new Timestamp(new Date().getTime)
           )
+      case TALLY_OK =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
+      case DOING_TALLY =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
+      case TALLY_ERROR =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
       case _ => 
         elections
           .filter(_.id === id)
@@ -436,10 +463,10 @@ object Elections {
     }
   }
 
-  def updatePartialTallyState(id: Long, state: Option[String])(implicit s: Session) = {
+  def updateTallyState(id: Long, state: String)(implicit s: Session) = {
       elections
         .filter(_.id === id)
-        .map(e => (e.partial_tally_state))
+        .map(e => (e.tally_state))
         .update(
           state
         )
@@ -518,7 +545,7 @@ case class ElectionDTO(
   logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
   segmentedMixing: Option[Boolean],
-  partial_tally_state: Option[String]
+  tally_state: String
 )
 
 case class MixingCategorySegmentation(
