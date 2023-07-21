@@ -249,7 +249,7 @@ class Elections(tag: Tag)
     id,
     configuration,
     state,
-    tally_state.?
+    tally_state.?,
     startDate.?,
     endDate.?,
     pks.?,
