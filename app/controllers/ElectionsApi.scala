@@ -1250,6 +1250,8 @@ object ElectionsApi
                   election.state == Elections.DOING_TALLY ||
                   !allowPartialTallies) {
                   DAL.elections.updateState(id, Elections.TALLY_OK)
+                } else if (allowPartialTallies) {
+                  DAL.elections.updateParcialTallyState(election.id, Elections.TALLY_OK)
                 }
                 Ok(response(0))
               }
@@ -1738,7 +1740,8 @@ object ElectionsApi
 
         if(resp.status == HTTP.ACCEPTED) {
           if (election.state == Elections.STOPPED || !allowPartialTallies) {
-            DAL.elections.updateState(election.id, Elections.DOING_TALLY)
+            DAL.elections.updateParcialTallyState(election.id, None)
+            flatMap DAL.elections.updateState(election.id, Elections.DOING_TALLY)
           }
           Ok(response("ok"))
         }

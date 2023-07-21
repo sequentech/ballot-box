@@ -140,7 +140,8 @@ case class Election(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Option[String],
-  segmentedMixing: Option[Boolean]
+  segmentedMixing: Option[Boolean],
+  parcial_tally_state: Option[String]
 )
 {
 
@@ -215,7 +216,8 @@ case class Election(
       publicCandidates,
       logo_url,
       trusteeKeysStateParsed,
-      segmentedMixing
+      segmentedMixing,
+      parcial_tally_state
     )
   }
 }
@@ -434,6 +436,15 @@ object Elections {
     }
   }
 
+  def updateParcialTallyState(id: Long, state: Option[String])(implicit s: Session) = {
+      elections
+        .filter(_.id === id)
+        .map(e => (e.parcial_tally_state))
+        .update(
+          state
+        )
+  }
+
   def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp])(implicit s: Session) = {
     if (start.isEmpty && end.isEmpty) {
       elections.filter(_.id === id).map(e => (e.configuration)).update(config)
@@ -506,7 +517,8 @@ case class ElectionDTO(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
-  segmentedMixing: Option[Boolean]
+  segmentedMixing: Option[Boolean],
+  parcial_tally_state: Option[String]
 )
 
 case class MixingCategorySegmentation(
