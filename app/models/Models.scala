@@ -243,7 +243,7 @@ class Elections(tag: Tag)
   def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
-  def tally_state = column[String]("tally_state", O.NotNull, O.DBType("text"))
+  def tally_state = column[String]("tally_state", O.NotNull)
 
   def * = (
     id,
