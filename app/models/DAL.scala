@@ -213,8 +213,8 @@ object DAL {
       ret
     }
 
-    def updateParcialTallyState(state: Option[String]) = DB.withSession { implicit session =>
-      val ret = Elections.updateParcialTallyState(id, state)
+    def updatePartialTallyState(state: Option[String]) = DB.withSession { implicit session =>
+      val ret = Elections.updatePartialTallyState(id, state)
       ret
     }
 
