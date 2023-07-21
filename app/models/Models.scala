@@ -138,7 +138,7 @@ case class Election(
   virtual: Boolean,
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
-  //logo_url: Option[String],
+  logo_url: Option[String],
   trusteeKeysState: Option[String],
   segmentedMixing: Option[Boolean],
   tally_state: Option[String]
@@ -164,9 +164,9 @@ case class Election(
         configJson = configJson.as[JsObject] + ("ballotBoxesResultsConfig" -> Json.toJson(ballotBoxesResultsConfig))
     }
 
-    /*if (!configJson.as[JsObject].keys.contains("logo_url")) {
+    if (!configJson.as[JsObject].keys.contains("logo_url")) {
         configJson = configJson.as[JsObject] + ("logo_url" -> Json.toJson(logo_url))
-    }*/
+    }
 
     if (!configJson.as[JsObject].keys.contains("tally_allowed")) {
         configJson = configJson.as[JsObject] + ("tally_allowed" -> Json.toJson(tallyAllowed))
@@ -214,10 +214,10 @@ case class Election(
       virtual,
       tallyAllowed,
       publicCandidates,
-      //logo_url,
+      logo_url,
       trusteeKeysStateParsed,
       segmentedMixing,
-      tally_state
+      Some(tally_state)
     )
   }
 }
@@ -241,7 +241,7 @@ class Elections(tag: Tag)
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
   def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
-  //def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
+  def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
   def tally_state = column[String]("tally_state", O.NotNull)
 
@@ -260,7 +260,7 @@ class Elections(tag: Tag)
     virtual,
     tallyAllowed,
     publicCandidates,
-    //logo_url.?,
+    logo_url.?,
     trusteeKeysState.?,
     segmentedMixing.?,
     tally_state.?
@@ -542,7 +542,7 @@ case class ElectionDTO(
   virtual: Boolean,
   tallyAllowed: Boolean,
   publicCandidates: Boolean,
-  //logo_url: Option[String],
+  logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
   segmentedMixing: Option[Boolean],
   tally_state: String
