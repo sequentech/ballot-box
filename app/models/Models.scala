@@ -127,6 +127,7 @@ case class Election(
   id: Long,
   configuration: String,
   state: String,
+  tally_state: String,
   startDate: Option[Timestamp],
   endDate: Option[Timestamp],
   pks: Option[String],
@@ -141,7 +142,6 @@ case class Election(
   logo_url: Option[String],
   trusteeKeysState: Option[String],
   segmentedMixing: Option[Boolean],
-  tally_state: Option[String]
 )
 {
 
@@ -204,6 +204,7 @@ case class Election(
       id,
       privacyConfig,
       state,
+      tally_state,
       startDate,
       endDate,
       pks,
@@ -216,8 +217,7 @@ case class Election(
       publicCandidates,
       logo_url,
       trusteeKeysStateParsed,
-      segmentedMixing,
-      tally_state getOrElse Elections.NO_TALLY
+      segmentedMixing
     )
   }
 }
@@ -249,6 +249,7 @@ class Elections(tag: Tag)
     id,
     configuration,
     state,
+    tally_state.?
     startDate.?,
     endDate.?,
     pks.?,
@@ -262,8 +263,7 @@ class Elections(tag: Tag)
     publicCandidates,
     logo_url.?,
     trusteeKeysState.?,
-    segmentedMixing.?,
-    tally_state.?
+    segmentedMixing.?
   ) <> (Election.tupled, Election.unapply _)
 }
 

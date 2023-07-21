@@ -1347,6 +1347,7 @@ object ElectionsApi
                 id =                        validated.id,
                 configuration =             validated.asString,
                 state =                     Elections.REGISTERED,
+                tally_state =               Elections.NO_TALLY,
                 startDate =                 validated.start_date,
                 endDate =                   validated.end_date,
                 pks =                       None,
@@ -1360,8 +1361,7 @@ object ElectionsApi
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url,
                 trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString),
-                segmentedMixing =           validated.segmentedMixing,
-                tally_state =               Some(Elections.NO_TALLY)
+                segmentedMixing =           validated.segmentedMixing
               )
               existing match
               {
