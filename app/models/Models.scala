@@ -532,6 +532,7 @@ case class ElectionDTO(
   id: Long,
   configuration: ElectionConfig,
   state: String,
+  tally_state: String,
   startDate: Option[Timestamp],
   endDate: Option[Timestamp],
   pks: Option[String],
@@ -544,8 +545,7 @@ case class ElectionDTO(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
-  segmentedMixing: Option[Boolean],
-  tally_state: String
+  segmentedMixing: Option[Boolean]
 )
 
 case class MixingCategorySegmentation(
