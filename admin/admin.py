@@ -697,10 +697,10 @@ def tally_no_dump(cfg, args):
 
 def trigger_tally(cfg, args):
 
-    auth = get_hmac(cfg, "", "AuthEvent", cfg['election_id'], "edit")
-    host,port = get_local_hostport()
-    headers = {'Authorization': auth}
-    url = 'http://%s:%d/admin-api/iam/api/auth-event/%d/tally-status/' % (host, port, cfg['election_id'])
+    base_url = 'http://%s:%d/iam/api' % (settings["app_host"], settings["iam_port"])
+    headers = get_iam_auth_headers()
+
+    url = f"{base_url}/auth-event/{cfg['election_id']}/tally-status/"
     children_election_ids = \
         [ int(i) for i in cfg['children-election-ids'].split(",") ] \
         if cfg['children-election-ids'] \
