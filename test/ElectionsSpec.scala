@@ -82,6 +82,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
             /* id = */                        cfg.id,
             /* configuration = */             TestData.config.toString,
             /* state = */                     Elections.REGISTERED,
+            /* tally_state = */                     Elections.NO_TALLY,
             /* startDate = */                 cfg.start_date,
             /* endDate = */                   cfg.end_date,
             /* pks = */                       None,
