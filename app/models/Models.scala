@@ -127,6 +127,7 @@ case class Election(
   id: Long,
   configuration: String,
   state: String,
+  tally_state: String,
   startDate: Option[Timestamp],
   endDate: Option[Timestamp],
   pks: Option[String],
@@ -203,6 +204,7 @@ case class Election(
       id,
       privacyConfig,
       state,
+      tally_state,
       startDate,
       endDate,
       pks,
@@ -227,6 +229,7 @@ class Elections(tag: Tag)
   def id = column[Long]("id", O.PrimaryKey)
   def configuration = column[String]("configuration", O.NotNull, O.DBType("text"))
   def state = column[String]("state", O.NotNull)
+  def tally_state = column[String]("tally_state", O.NotNull)
   def startDate = column[Timestamp]("start_date", O.Nullable)
   def endDate = column[Timestamp]("end_date", O.Nullable)
   def pks = column[String]("pks", O.Nullable, O.DBType("text"))
@@ -246,6 +249,7 @@ class Elections(tag: Tag)
     id,
     configuration,
     state,
+    tally_state,
     startDate.?,
     endDate.?,
     pks.?,
@@ -272,6 +276,7 @@ object Elections {
   val SUSPENDED = "suspended"
   val RESUMED = "resumed"
   val STOPPED = "stopped"
+  val NO_TALLY = "no_tally"
   val DOING_TALLY = "doing_tally"
   val TALLY_OK = "tally_ok"
   val TALLY_ERROR = "tally_error"
@@ -370,6 +375,38 @@ object Elections {
             state, 
             new Timestamp(new Date().getTime)
           )
+      case TALLY_OK =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
+      case DOING_TALLY =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
+      case TALLY_ERROR =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
+      case RESULTS_OK =>
+        elections
+          .filter(_.id === id)
+          .map(e => (e.state, e.tally_state))
+          .update(
+            state, 
+            state
+          )
       case _ => 
         elections
           .filter(_.id === id)
@@ -434,6 +471,15 @@ object Elections {
     }
   }
 
+  def updateTallyState(id: Long, state: String)(implicit s: Session) = {
+      elections
+        .filter(_.id === id)
+        .map(e => (e.tally_state))
+        .update(
+          state
+        )
+  }
+
   def updateConfig(id: Long, config: String, start: Option[Timestamp], end: Option[Timestamp])(implicit s: Session) = {
     if (start.isEmpty && end.isEmpty) {
       elections.filter(_.id === id).map(e => (e.configuration)).update(config)
@@ -494,6 +540,7 @@ case class ElectionDTO(
   id: Long,
   configuration: ElectionConfig,
   state: String,
+  tally_state: String,
   startDate: Option[Timestamp],
   endDate: Option[Timestamp],
   pks: Option[String],

@@ -695,6 +695,24 @@ def tally_no_dump(cfg, args):
     r = requests.post(url, headers=headers)
     print(r.status_code, r.text)
 
+def trigger_tally(cfg, args):
+
+    base_url = 'http://%s:%d/iam/api' % (settings["app_host"], settings["iam_port"])
+    headers = get_iam_auth_headers()
+
+    url = f"{base_url}/auth-event/{cfg['election_id']}/tally-status/"
+    children_election_ids = \
+        [ int(i) for i in cfg['children-election-ids'].split(",") ] \
+        if cfg['children-election-ids'] \
+        else []
+    data = {
+        'children_election_ids': children_election_ids,
+        'force_tally': cfg['force-tally'] if 'force-tally' in cfg else 'do-not-force',
+        'mode': cfg['mode'] if 'mode' in cfg else 'mode'
+    }
+    r = requests.post(url, headers=headers, data=json.dumps(data))
+    print(r.status_code, r.text)
+
 def calculate_results(cfg, args):
     path = args.results_config
     jconfig = None
@@ -1056,6 +1074,7 @@ show_column <election_id>: shows a column for an election
 tally <election_dir>: launches tally
 tally_voter_ids <election_id>: launches tally, only with votes matching passed voter ids file
 tally_no_dump <election_id>: launches tally (does not dump votes)
+trigger_tally <election_id>: trigger tally in the same mode as from the admin console
 update_ballot_boxes_config <election_id>: uses tally-pipes to calculate the election's results (stored in db)
 update_results_config --payload <config>: update results config from a file
 launch_self_test - Launches an E2E self-test
@@ -1082,6 +1101,10 @@ list_task <task_id> - List task
     parser.add_argument('--elections-file', help='file with grouped elections')
     parser.add_argument('-c', '--column', help='column to display when using show_column', default = 'state')
     parser.add_argument('-f', '--filters', nargs='+', default=[], help="key==value(s) filters for queries (use ~ for like)")
+    parser.add_argument('--children-election-ids', help='List of children election ids separated by commas')
+    parser.add_argument('--force-tally', help='Stablishes the tally force type. It can be: do-not-force|force-untallied|force-all')
+    parser.add_argument('--mode', help='Stablishes the tally mode. It can be either:active|all')
+    # mode
     args = parser.parse_args()
     command = args.command[0]
     if hasattr(__main__, command):
@@ -1119,6 +1142,9 @@ list_task <task_id> - List task
         config['encrypt-count'] = args.encrypt_count
         config['filters'] = args.filters
         config['payload'] = args.payload
+        config['children-election-ids'] = args.children_election_ids
+        config['force-tally'] = args.force_tally
+        config['mode'] = args.mode
 
         eval(command + "(config, args)")
 

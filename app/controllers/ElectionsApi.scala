@@ -1242,10 +1242,19 @@ object ElectionsApi
       resp => {
         if(resp.status == "finished") {
 
-          downloadTally(resp.data.tally_url, id).map { _ =>
+          getElection(id).flatMap {
+            election =>
+              downloadTally(resp.data.tally_url, id).map { _ =>
 
-            DAL.elections.updateState(id, Elections.TALLY_OK)
-            Ok(response(0))
+                if (election.state == Elections.STOPPED ||
+                  election.state == Elections.DOING_TALLY ||
+                  !allowPartialTallies) {
+                  DAL.elections.updateState(id, Elections.TALLY_OK) // it also updates tally_state
+                } else if (allowPartialTallies) {
+                  DAL.elections.updateTallyState(election.id, Elections.TALLY_OK)
+                }
+                Ok(response(0))
+              }
           }
         } else {
           Future {
@@ -1338,6 +1347,7 @@ object ElectionsApi
                 id =                        validated.id,
                 configuration =             validated.asString,
                 state =                     Elections.REGISTERED,
+                tally_state =               Elections.NO_TALLY,
                 startDate =                 validated.start_date,
                 endDate =                   validated.end_date,
                 pks =                       None,
@@ -1717,7 +1727,9 @@ object ElectionsApi
     val isVoteDumpEmpty = DAL.votes.isVoteDumpEmpty(election.id)
     if(isVoteDumpEmpty) {
         Future { BadRequest(response("There's no votes in this election")) }
-    } else if (election.state == Elections.TALLY_OK || election.state == Elections.DOING_TALLY) {
+    } else if (election.state == Elections.DOING_TALLY) {
+        Future { Ok(response("ok")) }
+    } else if (election.state == Elections.TALLY_OK && !allowPartialTallies) {
         Future { Ok(response("ok")) }
     } else {
       // get the tally data, including votes hash, url and callback
@@ -1728,7 +1740,11 @@ object ElectionsApi
       WS.url(url).post(data).map { resp =>
 
         if(resp.status == HTTP.ACCEPTED) {
-          DAL.elections.updateState(election.id, Elections.DOING_TALLY)
+          if (election.state == Elections.STOPPED && !allowPartialTallies) {
+            DAL.elections.updateState(election.id, Elections.DOING_TALLY) // it also updates tally_state
+          } else if (allowPartialTallies) {
+            DAL.elections.updateTallyState(election.id, Elections.DOING_TALLY)
+          }
           Ok(response("ok"))
         }
         else {
