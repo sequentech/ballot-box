@@ -836,7 +836,8 @@ case class QuestionExtra(
   enable_checkable_lists: Option[String], // default = "disabled"
   allow_writeins: Option[Boolean], // default = false
   invalid_vote_policy: Option[String], // allowed, warn, not-allowed, warn-invalid-implicit-and-explicit
-  review_screen__show_question_description: Option[Boolean] // default = false
+  review_screen__show_question_description: Option[Boolean], // default = false
+  write_in_config: Option[WriteInConfig]
 )
 {
 
@@ -879,6 +880,35 @@ case class QuestionExtra(
       ),
       "invalid_vote_policy must be 'allowed', 'warn', 'warn-invalid-implicit-and-explicit' or 'not-allowed'"
     )
+  }
+}
+
+/** Defines the configuration (ie extra fields) for write ins */
+case class WriteInConfig (
+  fields: Array[WriteInField],
+  template: String)
+{
+  def validate = {
+    this
+  }
+}
+
+/** Defines extra fields for write ins */
+case class WriteInField (
+  id: String,  // name of the field
+  placeholder: String, // input text placeholder
+  placeholder_i18n: Option[Map[String, String]],
+  label: Option[String], // input text label
+  label_i18n: Option[Map[String, String]],
+  help: Option[String],
+  help_i18n: Option[Map[String, String]],
+  min: Int, // minimum 0
+  max: Int) // negative if there's no max
+{
+  def validate = {
+    assert(id.length > 1, "id too short")
+    assert(id.length <= LONG_STRING, "id too long")
+    assert(min >= 1, "min too small")
   }
 }
 
