@@ -462,6 +462,14 @@ def auth_start(cfg, args):
     r = request_post(url, headers=headers)
     print(r.status_code, r.text)
 
+
+def scheduled_events(cfg, args):
+    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
+    headers = get_iam_auth_headers()
+    url = base_url + 'auth-event/%d/scheduled-events/' % cfg['election_id']
+    r = request_post(url, headers=headers, data=cfg['payload'])
+    print(r.status_code, r.text)
+
 def archive(cfg, args):
     base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
     headers = get_iam_auth_headers()
@@ -801,18 +809,6 @@ def cancel_task(cfg, args):
     url = f"{base_url}tasks/{task_id}/cancel/"
     request_post(url, headers=headers)
 
-def auth_start(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
-    headers = get_iam_auth_headers()
-    url = base_url + 'auth-event/%d/started/' % cfg['election_id']
-    r = request_post(url, headers=headers)
-
-def auth_stop(cfg, args):
-    base_url = 'http://%s:%d/iam/api/' % (settings["app_host"], settings["iam_port"])
-    headers = get_iam_auth_headers()
-    url = base_url + 'auth-event/%d/stopped/' % cfg['election_id']
-    r = request_post(url, headers=headers)
-
 def list_votes(cfg, args):
     conn = get_db_connection()
     votes = get_votes_table()
@@ -1044,6 +1040,11 @@ list_elections: list elections
 publish_results <election_id>: publishes an election's results (puts results.json and tally.tar.gz in public datastore)
 register <election_json>: registers an election (uses local <id>.json file)
 update <election_id>: updates an election (uses local <id>.json file)
+auth_start <election_id>: starts an auth-event (votes can be cast)
+auth_stop <election_id>: stops an auth-event (votes cannot be cast)
+auth_suspend <election_id>: starts an auth-event (votes cannot be cast temporarely)
+auth_resume <election_id>: starts an auth-event (votes can be cast again)
+scheduled_events <election_id> --payload <config>: schedule start/stop events
 start <election_id>: starts an election (votes can be cast)
 stop <election_id>: stops an election (votes cannot be cast)
 archive <election_id>: archive an election
