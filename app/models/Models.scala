@@ -1098,6 +1098,7 @@ case class ElectionExtra(
   success_screen__ballot_ticket__logo_subheader: Option[String],
   success_screen__ballot_ticket__h3: Option[String],
   success_screen__ballot_ticket__h4: Option[String],
+  success_screen__ballot_ticket__show_election_id: Option[Boolean],
   review_screen__split_cast_edit: Option[Boolean],
   show_skip_question_button: Option[Boolean]
 ) {
