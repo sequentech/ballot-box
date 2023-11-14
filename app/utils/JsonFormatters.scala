@@ -111,6 +111,8 @@ object JsonFormatters {
 
   implicit val PlaintextBallotF = Json.format[PlaintextBallot]
 
+  implicit val LanguagesConfF = Json.format[LanguagesConf]
+
   implicit val callbackF = Json.format[Callback]
 
   implicit val writeOptionString = new Writes[Option[String]] {
