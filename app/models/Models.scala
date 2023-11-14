@@ -1044,7 +1044,8 @@ case class ElectionPresentation(
   pdf_url: Option[Url],
   anchor_continue_btn_to_bottom: Option[Boolean],
   booth_log_out__countdown_seconds: Option[Int],
-  mandatory_acceptance_tos_html: Option[Boolean],
+  mandatory_acceptance_tos_html: Option[String],
+  mandatory_acceptance_tos_html_i18n: Map[String, String],
 
   // Override translations for languages. Example:
   // {"en": {"avRegistration.forgotPassword": "Whatever"}}
