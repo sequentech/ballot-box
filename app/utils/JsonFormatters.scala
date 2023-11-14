@@ -79,6 +79,8 @@ object JsonFormatters {
   implicit val questionF = Json.format[Question]
   implicit val ShareTextItemF = Json.format[ShareTextItem]
 
+  implicit val LanguagesConfF = Json.format[LanguagesConf]
+
   implicit val presentationF = Json.format[ElectionPresentation]
   implicit val mixingCategorySegmentationF = Json.format[MixingCategorySegmentation]
   implicit val configF = Json.format[ElectionConfig]
@@ -110,8 +112,6 @@ object JsonFormatters {
     (JsPath \ "options").read[Array[Long]] map (PlaintextAnswer.apply )
 
   implicit val PlaintextBallotF = Json.format[PlaintextBallot]
-
-  implicit val LanguagesConfF = Json.format[LanguagesConf]
 
   implicit val callbackF = Json.format[Callback]
 
