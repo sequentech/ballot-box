@@ -1042,6 +1042,7 @@ case class ElectionPresentation(
   election_board_ceremony: Option[Boolean], // default = false
   conditional_questions: Option[Array[ConditionalQuestion]],
   pdf_url: Option[Url],
+  i18n_languages_conf: Option[LanguagesConf],
   anchor_continue_btn_to_bottom: Option[Boolean],
   booth_log_out__countdown_seconds: Option[Int],
 
@@ -1076,6 +1077,13 @@ case class ElectionPresentation(
     this.copy(urls = urlsOk, share_text = shareText)
   }
 }
+
+/** Language behavior configuration */
+case class LanguagesConf(
+  default_language: String,
+  force_default_language: Boolean,
+  available_languages: List[String]
+)
 
 /** defines election presentation extra options for an election */
 case class ElectionExtra(
