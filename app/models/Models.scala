@@ -949,7 +949,7 @@ case class WriteInConfig (
 /** Defines extra fields for write ins */
 case class WriteInField (
   id: String,  // name of the field
-  placeholder: String, // input text placeholder
+  placeholder: Option[String], // input text placeholder
   placeholder_i18n: Option[Map[String, String]],
   label: Option[String], // input text label
   label_i18n: Option[Map[String, String]],
