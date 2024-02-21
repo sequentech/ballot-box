@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "com.typesafe.play" %% "play-slick" % "0.8.0",
-  "org.postgresql" % "postgresql" % "42.4.3",
+  "org.postgresql" % "postgresql" % "42.7.2",
   "org.bouncycastle" % "bcprov-jdk15to18" % "1.76",
   "com.googlecode.owasp-java-html-sanitizer" % "owasp-java-html-sanitizer" % "20211018.2",
   "commons-validator" % "commons-validator" % "1.4.1",
