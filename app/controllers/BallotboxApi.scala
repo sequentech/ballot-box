@@ -220,6 +220,9 @@ object BallotboxApi extends Controller with Response {
   {
       DB.withSession { implicit session =>
         val election = DAL.elections.findByIdWithSession(electionId).get
+        val hasWeightedVoting = (
+          election.hasWeightedVoting.isDefined && election.hasWeightedVoting.get
+        )
       // Do not filter active voters
       if (election.segmentedMixing.isDefined && election.segmentedMixing.get)
       {

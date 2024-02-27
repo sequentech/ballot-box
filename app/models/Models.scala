@@ -141,7 +141,8 @@ case class Election(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Option[String],
-  segmentedMixing: Option[Boolean]
+  segmentedMixing: Option[Boolean],
+  weightedVotingField: Option[String],
 )
 {
 
@@ -178,6 +179,10 @@ case class Election(
 
     if (!configJson.as[JsObject].keys.contains("segmentedMixing")) {
         configJson = configJson.as[JsObject] + ("segmentedMixing" -> Json.toJson(segmentedMixing))
+    }
+
+    if (!configJson.as[JsObject].keys.contains("weightedVotingField")) {
+        configJson = configJson.as[JsObject] + ("weightedVotingField" -> Json.toJson(weightedVotingField))
     }
 
     var config = configJson.validate[ElectionConfig].get
@@ -217,7 +222,8 @@ case class Election(
       publicCandidates,
       logo_url,
       trusteeKeysStateParsed,
-      segmentedMixing
+      segmentedMixing,
+      weightedVotingField
     )
   }
 }
@@ -553,7 +559,8 @@ case class ElectionDTO(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
-  segmentedMixing: Option[Boolean]
+  segmentedMixing: Option[Boolean],
+  weightedVotingField: Option[String]
 )
 
 case class MixingCategorySegmentation(
@@ -601,6 +608,7 @@ case class ElectionConfig(
   tally_allowed: Boolean,
   publicCandidates: Boolean,
   segmentedMixing: Option[Boolean],
+  weightedVotingField: Option[String],
   virtualSubelections: Option[Array[Long]],
   mixingCategorySegmentation: Option[MixingCategorySegmentation],
   logo_url: Option[String])
