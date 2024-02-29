@@ -302,7 +302,7 @@ object BallotboxApi extends Controller with Response {
         val filterVotersSeq = 
           if (filterVoterIds)
             Seq(
-              "--voter-info-path",
+              "--voters-info-path",
               s"$voteIdsPath",
               "--active-voters-only"
             )
