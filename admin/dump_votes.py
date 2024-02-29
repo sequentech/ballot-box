@@ -172,22 +172,22 @@ def dump_votes(
     '''
     voters_file = None
     # if voters_info_path is not provided, just dump all ballots
-    if voters_info_path is not None:
+    if voters_info_path is None:
         with open(ballots_with_voters_path, 'r') as ballots_file, \
             open(output_ballots_path, 'w', newline='') as output_file:
 
             ballots_reader = csv.reader(ballots_file, delimiter="|")
             output_writer = csv.writer(output_file, delimiter="|")
-        
-        try:
-            ballot_row = next(ballots_reader)
-            ballot_voter_id, ballot = ballot_row[0], ballot_row[1]
 
-            modified_voter_id = f'{ballot_voter_id}.{i+1}'
-            output_writer.writerow([ballot, modified_voter_id])
-        except StopIteration:
-            # Reached the end of one of the files
-            pass
+            try:
+                ballot_row = next(ballots_reader)
+                ballot_voter_id, ballot = ballot_row[0], ballot_row[1]
+
+                modified_voter_id = f'{ballot_voter_id}.1'
+                output_writer.writerow([ballot, modified_voter_id])
+            except StopIteration:
+                # Reached the end of one of the files
+                pass
 
     # if voters_info_path is provided, apply filtering and duplication
     with open(voters_info_path, 'r') as voters_file, \
