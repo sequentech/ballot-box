@@ -1361,7 +1361,8 @@ object ElectionsApi
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url,
                 trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString),
-                segmentedMixing =           validated.segmentedMixing
+                weightedVotingField =       validated.weightedVotingField
+                //segmentedMixing =           validated.segmentedMixing
               )
               existing match
               {
