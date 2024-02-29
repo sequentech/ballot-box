@@ -220,13 +220,11 @@ object BallotboxApi extends Controller with Response {
   {
       DB.withSession { implicit session =>
         val election = DAL.elections.findByIdWithSession(electionId).get
-        val hasWeightedVoting = (
-          election.weightedVotingField.isDefined && election.weightedVotingField.get
-        )
-        val hasSegmentedMixing = (
+        val hasWeightedVoting = election.weightedVotingField.isDefined
+        /*val hasSegmentedMixing = (
           election.segmentedMixing.isDefined && election.segmentedMixing.get
-        )
-      if (hasSegmentedMixing)
+        )*/
+      /*if (hasSegmentedMixing)
       {
         // Apply segmented mixing for this election
         // 1. Dump categorized ballots
@@ -288,48 +286,45 @@ object BallotboxApi extends Controller with Response {
         val segmentVotesCommandOutput = segmentVotesCommand.!!
         Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): segmenting encrypted votes: command returns\n$segmentVotesCommandOutput")
 
-      } else {
+      } else {*/
         val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
         val outputBallotsPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
 
-        val dumpCommand = Seq(
-            s"$adminEnvBin",
-            "python3",
-            "./admin/dump_votes.py",
-            "--election-id",
-            s"$electionId",
-            "--output-ballots-path",
-            s"$outputBallotsPath",
-          ) ++
-          (
-            if filterVoterIds
-              Seq(
-                "--voter-info-path",
-                s"$voteIdsPath",
-                "--active-voters-only",
-              )
-            else
-              Seq()
-          ) ++
-          (
-            if hasWeightedVoting
-              Seq(
-                "--vote-weight-column-name",
-                s"${election.weightedVotingField.get}",
-              )
-            else
-              Seq()
-          )
-
-          Logger.info(
-            s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): calling:\n '$dumpCommand'"
-          )
-          val dumpCommandOutput = dumpCommand.!!
-          Logger.info(
-            s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): calling:\n '$dumpCommand'\ncalling command returns\n$dumpCommandOutput"
-          )
-        }
-      }
+        val baseDumpCommand = Seq(
+          s"$adminEnvBin",
+          "python3",
+          "./admin/dump_votes.py",
+          "--election-id",
+          s"$electionId",
+          "--output-ballots-path",
+          s"$outputBallotsPath"
+        )
+        val filterVotersSeq = 
+          if (filterVoterIds)
+            Seq(
+              "--voter-info-path",
+              s"$voteIdsPath",
+              "--active-voters-only"
+            )
+          else
+            Seq()
+        val weightedVotingSeq =
+          if (hasWeightedVoting)
+            Seq(
+              "--vote-weight-column-name",
+              s"${election.weightedVotingField.get}"
+            )
+          else
+            Seq()
+        val dumpCommand = baseDumpCommand ++ filterVotersSeq ++ weightedVotingSeq
+        Logger.info(
+          s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): calling:\n '$dumpCommand'"
+        )
+        val dumpCommandOutput = dumpCommand.!!
+        Logger.info(
+          s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): calling:\n '$dumpCommand'\ncalling command returns\n$dumpCommandOutput"
+        )
+      //}
     }
   }
 
