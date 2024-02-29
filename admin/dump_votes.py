@@ -253,7 +253,7 @@ def main():
         )
     )
     parser.add_argument(
-        '--voter-info-path',
+        '--voters-info-path',
         required=False,
         help=(
             """
@@ -301,7 +301,7 @@ def main():
     if args.active_voters_only and not args.voters_info_path:
         parser.error(
             """
-            `--active-voters-only` requires `--voter-info-path` to be set.
+            `--active-voters-only` requires `--voters-info-path` to be set.
             """
         )
     election_id = args.election_id
