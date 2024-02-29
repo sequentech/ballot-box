@@ -96,7 +96,8 @@ def get_ballots_with_voters_path(election_id):
 def get_voters_info_path(
     election_id,
     vote_weight_column_name,
-    active_voters_only
+    active_voters_only,
+    voters_info_path
 ):
     '''
     Returns a temporal file containing in CSV format the eligible voter
@@ -106,10 +107,6 @@ def get_voters_info_path(
 
     Sorted by voter id descending.
     '''
-    temp_dir_path = tempfile.mkdtemp()
-    voters_info_path = os.path.join(
-        temp_dir_path, "categorized_voters_file"
-    )
     active_voters_only_filter = (
         "auth_user.is_active = true AND " if active_voters_only else ""
     )
