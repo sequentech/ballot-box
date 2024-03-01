@@ -111,7 +111,7 @@ def get_voters_info_path(
         "auth_user.is_active = true AND " if active_voters_only else ""
     )
     vote_weight_column = (
-        f"api_userdata.metadata->>'{vote_weight_column_name}'::SMALLINT AS vote_weight"
+        f"api_userdata.metadata->>'{vote_weight_column_name}' AS vote_weight"
             if vote_weight_column_name
             else "1 AS vote_weight"
     )
