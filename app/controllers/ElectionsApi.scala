@@ -735,8 +735,8 @@ object ElectionsApi
                   calcResults(
                     id, 
                     config, 
-                    validated.virtualSubelections.get,
-                    election.segmentedMixing
+                    validated.virtualSubelections.get/*,
+                    election.segmentedMixing*/
                   )
                   .flatMap( 
                     r => updateResults(
@@ -1361,7 +1361,8 @@ object ElectionsApi
                 tallyAllowed =              validated.tally_allowed,
                 logo_url =                  validated.logo_url,
                 trusteeKeysState =          Some(Json.toJson(trusteeKeysState).toString),
-                segmentedMixing =           validated.segmentedMixing
+                weightedVotingField =       validated.weightedVotingField
+                //segmentedMixing =           validated.segmentedMixing
               )
               existing match
               {
@@ -1558,8 +1559,8 @@ object ElectionsApi
   private def calcResults(
     id: Long,
     config: String,
-    subelections: Array[Long],
-    segmentedMixing: Option[Boolean]
+    subelections: Array[Long]/*,
+    segmentedMixing: Option[Boolean]*/
   ) = Future
   {
     Logger.info(s"Calling to update results for $id")
@@ -1614,12 +1615,12 @@ object ElectionsApi
       "--stdout " +
       s"--tar $dirPath " +
       s"--election-id $id " +
-      (if (pipesWhitelist.length > 0)  s"-p $pipesWhitelist " else "") +
-      (
-        if (segmentedMixing.isDefined && segmentedMixing.get)
-          s"--segmented-election-config $categoryElectionConfigPath"
-        else ""
-      )
+      (if (pipesWhitelist.length > 0)  s"-p $pipesWhitelist " else "") //+
+      //(
+      //  if (segmentedMixing.isDefined && segmentedMixing.get)
+      //    s"--segmented-election-config $categoryElectionConfigPath"
+      //  else ""
+      //)
     )
 
     Logger.info(s"tally for $id: calculating results with command: '$cmd'")

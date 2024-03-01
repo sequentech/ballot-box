@@ -82,7 +82,7 @@ object JsonFormatters {
   implicit val LanguagesConfF = Json.format[LanguagesConf]
 
   implicit val presentationF = Json.format[ElectionPresentation]
-  implicit val mixingCategorySegmentationF = Json.format[MixingCategorySegmentation]
+  //implicit val mixingCategorySegmentationF = Json.format[MixingCategorySegmentation]
   implicit val configF = Json.format[ElectionConfig]
   implicit val statDayF = Json.format[StatDay]
   implicit val statsF = Json.format[Stats]

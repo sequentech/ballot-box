@@ -71,7 +71,6 @@ trait TestContexts {
   },
   "end_date": "2013-12-09T18:17:14.457000",
   "start_date": "2013-12-06T18:17:14.457000",
-  "segmentedMixing": false,
   "questions": [
       {
           "description": "",
