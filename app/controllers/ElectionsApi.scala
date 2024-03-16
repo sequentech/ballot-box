@@ -945,6 +945,11 @@ object ElectionsApi
               "message" -> s"Error: EO returned status ${resp.status} with body ${resp.body}"
             )
           }
+        }.recover {
+          case e: Exception => authorityId -> Json.obj(
+            "state" -> "error",
+            "message" -> s"Exception: ${e.getMessage}"
+          )
         }
       }.toSeq
     ).map { results => 
