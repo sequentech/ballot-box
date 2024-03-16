@@ -931,7 +931,7 @@ object ElectionsApi
   def getAuthoritiesState = Action.async { request =>
     Future.sequence(
       authorities.keys.map { authorityId => 
-        val url = eoUrl(authorityId, "public_api/check-state")
+        val url = eoUrl(authorityId, "public_api/check_state")
         
         WS.url(url).get().map { resp =>
           if(resp.status == HTTP.OK) {
