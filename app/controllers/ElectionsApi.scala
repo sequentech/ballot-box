@@ -934,7 +934,7 @@ object ElectionsApi
         val url = eoUrl(authorityId, "public_api/check_state")
         
         WS.url(url).get().map { resp =>
-          if(resp.status == HTTP.OK) {
+          if(resp.status == HTTP.ACCEPTED) {
             authorityId -> Json.obj(
               "state" -> "ok",
               "message" -> ""
