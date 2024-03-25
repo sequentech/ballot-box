@@ -398,9 +398,8 @@ object Elections {
       case TALLY_ERROR =>
         elections
           .filter(_.id === id)
-          .map(e => (e.state, e.tally_state))
+          .map(e => (e.tally_state))
           .update(
-            state, 
             state
           )
       case RESULTS_OK =>
