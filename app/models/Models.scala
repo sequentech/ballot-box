@@ -141,7 +141,8 @@ case class Election(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Option[String],
-  segmentedMixing: Option[Boolean]
+  //segmentedMixing: Option[Boolean],
+  weightedVotingField: Option[String]
 )
 {
 
@@ -176,8 +177,12 @@ case class Election(
         configJson = configJson.as[JsObject] + ("publicCandidates" -> Json.toJson(publicCandidates))
     }
 
-    if (!configJson.as[JsObject].keys.contains("segmentedMixing")) {
-        configJson = configJson.as[JsObject] + ("segmentedMixing" -> Json.toJson(segmentedMixing))
+    //if (!configJson.as[JsObject].keys.contains("segmentedMixing")) {
+    //    configJson = configJson.as[JsObject] + ("segmentedMixing" -> Json.toJson(segmentedMixing))
+    //}
+
+    if (!configJson.as[JsObject].keys.contains("weightedVotingField")) {
+        configJson = configJson.as[JsObject] + ("weightedVotingField" -> Json.toJson(weightedVotingField))
     }
 
     var config = configJson.validate[ElectionConfig].get
@@ -217,7 +222,8 @@ case class Election(
       publicCandidates,
       logo_url,
       trusteeKeysStateParsed,
-      segmentedMixing
+      //segmentedMixing,
+      weightedVotingField
     )
   }
 }
@@ -241,7 +247,8 @@ class Elections(tag: Tag)
   def virtual = column[Boolean]("virtual")
   def tallyAllowed = column[Boolean]("tally_allowed")
   def publicCandidates = column[Boolean]("public_candidates")
-  def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
+  //def segmentedMixing = column[Boolean]("segmented_mixing", O.Nullable)
+  def weightedVotingField = column[String]("weighted_voting_field", O.Nullable, O.DBType("text"))
   def logo_url = column[String]("logo_url", O.Nullable, O.DBType("text"))
   def trusteeKeysState = column[String]("trustee_keys_state", O.Nullable, O.DBType("text"))
 
@@ -263,7 +270,9 @@ class Elections(tag: Tag)
     publicCandidates,
     logo_url.?,
     trusteeKeysState.?,
-    segmentedMixing.?
+    //segmentedMixing.?,
+    weightedVotingField.?
+
   ) <> (Election.tupled, Election.unapply _)
 }
 
@@ -556,10 +565,11 @@ case class ElectionDTO(
   publicCandidates: Boolean,
   logo_url: Option[String],
   trusteeKeysState: Array[TrusteeKeyState],
-  segmentedMixing: Option[Boolean]
+  //segmentedMixing: Option[Boolean],
+  weightedVotingField: Option[String]
 )
 
-case class MixingCategorySegmentation(
+/*case class MixingCategorySegmentation(
   categoryName: String,
   categories: Array[String]
 )
@@ -581,7 +591,7 @@ case class MixingCategorySegmentation(
         s"repeated categories in: ${categories}"
       )
   }
-}
+}*/
 
 /** an election configuration defines an election */
 case class ElectionConfig(
@@ -603,9 +613,10 @@ case class ElectionConfig(
   virtual: Boolean,
   tally_allowed: Boolean,
   publicCandidates: Boolean,
-  segmentedMixing: Option[Boolean],
+  //segmentedMixing: Option[Boolean],
+  weightedVotingField: Option[String],
   virtualSubelections: Option[Array[Long]],
-  mixingCategorySegmentation: Option[MixingCategorySegmentation],
+  //mixingCategorySegmentation: Option[MixingCategorySegmentation],
   logo_url: Option[String])
 {
 
@@ -669,13 +680,13 @@ case class ElectionConfig(
       "virtual elections are not allowed"
     )
 
-    assert(
+    /*assert(
       (
         !mixingCategorySegmentation.isDefined ||
         (segmentedMixing.isDefined && segmentedMixing.get)
       ),
       "segmentedMixing needs to be enabled if mixingCategorySegmentation is set"
-    )
+    )*/
 
     assert(
       (
