@@ -220,8 +220,11 @@ object BallotboxApi extends Controller with Response {
   {
       DB.withSession { implicit session =>
         val election = DAL.elections.findByIdWithSession(electionId).get
-      // Do not filter active voters
-      if (election.segmentedMixing.isDefined && election.segmentedMixing.get)
+        val hasWeightedVoting = election.weightedVotingField.isDefined
+        /*val hasSegmentedMixing = (
+          election.segmentedMixing.isDefined && election.segmentedMixing.get
+        )*/
+      /*if (hasSegmentedMixing)
       {
         // Apply segmented mixing for this election
         // 1. Dump categorized ballots
@@ -283,93 +286,45 @@ object BallotboxApi extends Controller with Response {
         val segmentVotesCommandOutput = segmentVotesCommand.!!
         Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): segmenting encrypted votes: command returns\n$segmentVotesCommandOutput")
 
-      } else {
-        if (filterVoterIds) 
-        {
-          // Filters active voters from iam
-          val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
+      } else {*/
+        val voteIdsPath = Datastore.getPath(electionId, Datastore.VOTERIDS)
+        val outputBallotsPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
 
-          // 1. dump valid voter ids, if enabled
-          if (dumpValidVoterIds)
-          {
-            val dumpIdsCommand = Seq(
-              "psql",
-              "service = iam",
-              "-tAc",
-              s"""
-                SELECT auth_user.username
-                FROM api_acl
-                INNER JOIN api_userdata ON api_acl.user_id = api_userdata.id
-                INNER JOIN auth_user ON auth_user.id = api_userdata.user_id
-                INNER JOIN api_authevent ON api_authevent.id = '$electionId'
-                WHERE 
-                  auth_user.is_active = true
-                  AND api_acl.object_id IS NOT NULL
-                  AND api_acl.object_type = 'AuthEvent'
-                  AND api_acl.perm = 'vote'
-                  AND (
-                    (
-                      api_acl.object_id = '$electionId' AND api_authevent.parent_id IS NULL
-                    ) OR (
-                      api_acl.object_id = api_authevent.parent_id::text
-                      AND api_authevent.parent_id IS NOT NULL
-                      AND api_userdata.children_event_id_list::text LIKE '%$electionId%'
-                    )
-                  )
-                ORDER BY auth_user.username ASC;
-              """,
-              "-o",
-              s"$voteIdsPath"
+        val baseDumpCommand = Seq(
+          s"$adminEnvBin",
+          "python3",
+          "./admin/dump_votes.py",
+          "--election-id",
+          s"$electionId",
+          "--output-ballots-path",
+          s"$outputBallotsPath"
+        )
+        val filterVotersSeq = 
+          if (filterVoterIds)
+            Seq(
+              "--voters-info-path",
+              s"$voteIdsPath",
+              "--active-voters-only"
             )
-      
-            Logger.info(s"dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting   voterIds:\n '$dumpIdsCommand'")
-            val dumpIdsCommandOutput = dumpIdsCommand.!!
-            Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting   voterIds: command returns\n$dumpIdsCommandOutput")
-          }
-
-          // 2. Dump all votes.
-          // Each line contains first the voter_id, then the vote
-          val allCiphertextsPath = Datastore.getPath(electionId, Datastore.ALL_CIPHERTEXTS)
-          val dumpAllVotesCommand = Seq(
-            "psql",
-            "service = ballot_box",
-            "-tAc",
-            s"SELECT DISTINCT ON (voter_id) voter_id,vote FROM vote WHERE election_id=$electionId ORDER BY voter_id ASC, CREATED DESC;",
-            "-o",
-            s"$allCiphertextsPath"
-          )
-
-          Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting all cipherTexts:\n '$dumpAllVotesCommand'")
-          val dumpAllVotesCommandOutput = dumpAllVotesCommand.!!
-          Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting all cipherTexts:command returns\n$dumpAllVotesCommandOutput")
-
-          // 3. Filter the votes by voter_id, using the join command
-          val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
-          val joiSequentCommand = Seq(
-            "bash",
-            "-lc",
-            s"join --nocheck-order $allCiphertextsPath $voteIdsPath -t '|' -o 1.2 > $votesPath"
-          )
-          Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:\n '$joiSequentCommand'")
-          val joiSequentCommandOutput = joiSequentCommand.!!
-          Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): filtering cipherTexts:command returns\n$joiSequentCommandOutput")
-        } else {
-          // Just dump the encrypted votes
-          val votesPath = Datastore.getPath(electionId, Datastore.CIPHERTEXTS)
-          val dumpCommand = Seq(
-            "psql",
-            "service = ballot_box",
-            "-tAc",
-            s"SELECT DISTINCT ON (voter_id) vote FROM vote WHERE election_id=$electionId ORDER BY voter_id ASC, CREATED DESC;",
-            "-o",
-            s"$votesPath"
-          )
-
-          Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting encrypted votes:\n '$dumpCommand'")
-          val dumpCommandOutput = dumpCommand.!!
-          Logger.info(s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): getting encrypted votes: command returns\n$dumpCommandOutput")
-        }
-      }
+          else
+            Seq()
+        val weightedVotingSeq =
+          if (hasWeightedVoting)
+            Seq(
+              "--vote-weight-column-name",
+              s"${election.weightedVotingField.get}"
+            )
+          else
+            Seq()
+        val dumpCommand = baseDumpCommand ++ filterVotersSeq ++ weightedVotingSeq
+        Logger.info(
+          s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): calling:\n '$dumpCommand'"
+        )
+        val dumpCommandOutput = dumpCommand.!!
+        Logger.info(
+          s"executing dumpTheVotes(electionId=$electionId, filterVoterIds=$filterVoterIds): calling:\n '$dumpCommand'\ncalling command returns\n$dumpCommandOutput"
+        )
+      //}
     }
   }
 
