@@ -44,6 +44,7 @@ GET     /api/election/:id/results                             controllers.Electi
 GET     /api/election/:id/voters                              controllers.ElectionsApi.getElectionVoters(id: Long)
 GET     /api/election/:id/stats                               controllers.ElectionsApi.getElectionStats(id: Long)
 GET     /api/authorities                                      controllers.ElectionsApi.getAuthorities
+GET     /api/authorities-state                                controllers.ElectionsApi.getAuthoritiesState
 
 # ballotbox
 POST    /api/election/:id/voter/:voterId                      controllers.BallotboxApi.vote(id: Long, voterId: String)
