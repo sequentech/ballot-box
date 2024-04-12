@@ -928,6 +928,36 @@ object ElectionsApi
       ))
   }}
 
+  def getAuthoritiesState = Action.async { request =>
+    Future.sequence(
+      authorities.keys.map { authorityId => 
+        val url = eoUrl(authorityId, "public_api/check_state")
+        
+        WS.url(url).get().map { resp =>
+          if(resp.status == HTTP.ACCEPTED) {
+            authorityId -> Json.obj(
+              "state" -> "ok",
+              "message" -> ""
+            )
+          } else {
+            authorityId -> Json.obj(
+              "state" -> "error",
+              "message" -> s"Error: EO returned status ${resp.status} with body ${resp.body}"
+            )
+          }
+        }.recover {
+          case e: Exception => authorityId -> Json.obj(
+            "state" -> "error",
+            "message" -> s"Exception: ${e.getMessage}"
+          )
+        }
+      }.toSeq
+    ).map { results => 
+      val res = results.toMap
+      Ok(response(res))
+    }
+  }
+
   def checkAuthorityUser(authority_id: String, username: String, password: String): Boolean = {
     if(!authorities.contains(authority_id)) {
       Logger.info(s"Authority id not found")
