@@ -188,6 +188,7 @@ def dump_votes(
             except StopIteration:
                 # Reached the end of one of the files
                 pass
+        return
 
     # if voters_info_path is provided, apply filtering and duplication
     with open(voters_info_path, 'r') as voters_file, \
