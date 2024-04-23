@@ -349,7 +349,11 @@ object Elections {
           current_state != DOING_TALLY &&
           current_state != STOPPED // This is allowed for virtual elections
         ) ||
-        (state == TALLY_ERROR && current_state != DOING_TALLY) ||
+        (
+          state == TALLY_ERROR &&
+          current_state != DOING_TALLY &&
+          current_state != STOPPED
+        ) ||
         (
           state == RESULTS_OK &&
           current_state != TALLY_OK &&
@@ -403,9 +407,8 @@ object Elections {
       case TALLY_ERROR =>
         elections
           .filter(_.id === id)
-          .map(e => (e.state, e.tally_state))
+          .map(e => (e.tally_state))
           .update(
-            state, 
             state
           )
       case RESULTS_OK =>
