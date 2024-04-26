@@ -51,7 +51,7 @@ jobs:
       shell: bash
       run: |
         pip install -r admin/requirements.txt
-        sed -i '/^source /d'  admin/admin_env2.sh
+        sed -i '/^source /d'  admin/admin_env.sh
 
     # source: https://www.scala-sbt.org/1.x/docs/GitHub-Actions-with-sbt.html
     - name: Setup Scala, Sbt and Java 8
