@@ -95,7 +95,7 @@ class ElectionsSpec extends Specification with TestContexts with Response {
             /* tallyAllowed = */              false,
             /* publicCandidates = */          true,
             /* logo_url = */                  None,
-            /* trusteeKeysState = */          None,
+            /* trusteeKeysState = */          None
             ///* segmentedMixing = */           None
           )
         )
