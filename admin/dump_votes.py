@@ -181,10 +181,13 @@ def dump_votes(
 
             try:
                 ballot_row = next(ballots_reader)
-                ballot_voter_id, ballot = ballot_row[0], ballot_row[1]
 
-                modified_voter_id = f'{ballot_voter_id}.1'
-                output_writer.writerow([ballot, modified_voter_id])
+                while True:
+                    ballot_voter_id, ballot = ballot_row[0], ballot_row[1]
+
+                    modified_voter_id = f'{ballot_voter_id}.1'
+                    output_writer.writerow([ballot, modified_voter_id])
+                    ballot_row = next(ballots_reader)
             except StopIteration:
                 # Reached the end of one of the files
                 pass
