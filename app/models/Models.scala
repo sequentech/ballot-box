@@ -859,7 +859,7 @@ case class Question(
             url => (url.url == "true" && url.title == "isCategoryList")
           }.length > 0
         }
-        .map { answer => answer.text.replace("&amp;", "&") }
+        .map { answer => answer.text.replace("&amp;", "&").replace("&#43;", "+") }
         .toSet
       assert(
         categoryNames == answerCategoryNames,
