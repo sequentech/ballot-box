@@ -90,7 +90,7 @@ case class HMACActionHelper(
       }
 
       Logger.warn(
-        s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm"
+        s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm\n\tnow=$now\n\twithinExpiry=$withinExpiry\n\t"
       )
       return Left(AuthErrorCodes.INVALID_USER_CREDENTIALS)
     }
