@@ -60,9 +60,9 @@ case class HMACActionHelper(
       val rcvObjType = split(split.length - 6)
       val rcvObjId = split(split.length - 5).toLong
       val rcvPerm = split(split.length - 4)
-      val rcvTime = split(split.length - 3).toLong
+      val rcvExpiryTime = split(split.length - 3).toLong
       val rcvToken = split(split.length - 2)
-      val rcvExpiryTime = split(split.length - 1).toLong
+      val rcvTime = split(split.length - 1).toLong
       val now = new java.util.Date().getTime / 1000
       val diff = now - rcvTime
 
