@@ -210,7 +210,7 @@ class ConsoleSpec extends Specification with TestContexts
       val console = new ConsoleImpl()
       console.shared_secret = "<PASSWORD>"
       val khmac = console.get_khmac("user_id", "obj_type", 11, "perms", Some(22))
-      khmac must be equalTo(s"khmac:///sha-256;1ba07fd2e1becf9adfe74b4f6e0814fb4c9af3e0a920e718cec287857b480856/user_id:obj_type:11:perms:22")
+      khmac must be equalTo(s"khmac:///sha-256;1ba07fd2e1becf9adfe74b4f6e0814fb4c9af3e0a920e718cec287857b480856/user_id:obj_type:11:perms:322:timeout-token:22")
     }
   } // get_khmac
 
