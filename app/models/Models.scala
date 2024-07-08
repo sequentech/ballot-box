@@ -1051,7 +1051,7 @@ case class VoterEligibilityScreen(
   description: Option[String],
   description_i18n: Option[Map[String, String]],
   footer: Option[String],
-  footer_i18n: Option[Map[String, String]],
+  footer_i18n: Option[Map[String, String]]
 )
 {
   def validate() =
