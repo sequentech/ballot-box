@@ -1045,6 +1045,20 @@ case class ShareTextItem(
   }
 }
 
+case class VoterEligibilityScreen(
+  title: Option[String],
+  title_i18n: Option[Map[String, String]],
+  description: Option[String],
+  description_i18n: Option[Map[String, String]],
+  footer: Option[String],
+  footer_i18n: Option[Map[String, String]],
+)
+{
+  def validate() =
+  {
+  }
+}
+
 /** defines presentation options for an election */
 case class ElectionPresentation(
   share_text: Option[Array[ShareTextItem]],
@@ -1067,7 +1081,8 @@ case class ElectionPresentation(
   i18n_override: Option[Map[String, Map[String, String]]],
 
   public_title: Option[String],
-  public_title_i18n: Option[Map[String, String]]
+  public_title_i18n: Option[Map[String, String]],
+  voter_eligibility_screen: Option[VoterEligibilityScreen]
 )
 {
   def shareTextConfig() : Option[Array[ShareTextItem]]  = {
