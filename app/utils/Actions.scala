@@ -51,15 +51,17 @@ case class HMACActionHelper(
       val message = authorizationHeader.substring(slashPos + 1)
 
       val split = message.split(':')
-      if (split.length < 5) {
+      if (split.length < 7) {
         Logger.warn(s"Malformed authorization header")
         return Left(AuthErrorCodes.MALFORMED_USER_CREDENTIALS)
       }
 
-      val rcvUserId = split.slice(0, split.length - 4).mkString(":")
-      val rcvObjType = split(split.length - 4)
-      val rcvObjId = split(split.length - 3).toLong
-      val rcvPerm = split(split.length - 2)
+      val rcvUserId = split.slice(0, split.length - 6).mkString(":")
+      val rcvObjType = split(split.length - 6)
+      val rcvObjId = split(split.length - 5).toLong
+      val rcvPerm = split(split.length - 4)
+      val rcvExpiryTime = split(split.length - 3).toLong
+      val rcvToken = split(split.length - 2)
       val rcvTime = split(split.length - 1).toLong
       val now = new java.util.Date().getTime / 1000
       val diff = now - rcvTime
@@ -76,16 +78,19 @@ case class HMACActionHelper(
       // if the userId is the empty string we don't mind the user
       val userOk = (rcvUserId == userId || userId == "")
 
+      // Check if the current time is within the expiry timestamp
+      val withinExpiry = now <= rcvExpiryTime
+
       // note that we can compare without doing contant time comparison received
       // strings because that's not critical for security, only hmac is
-      if(compareOk && (diff < expiry) && userOk && (rcvObjType == objType) &&
+      if(compareOk && withinExpiry && userOk && (rcvObjType == objType) &&
         (rcvObjId == objId) && permsOk)
       {
         return Right(true)
       }
 
       Logger.warn(
-        s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm"
+        s"Failed to authorize hmac:\n\tauthorizationHeader=$authorizationHeader\tcompareOk=$compareOk\n\tdiff=$diff\n\texpiry=$expiry\n\tuserOk=$userOk\n\trcvObjType=$rcvObjType\n\tobjType=$objType\n\trcvObjId=$rcvObjId\n\tobjId=$objId\n\trcvPerm=$rcvPerm\n\tperm=$perm\n\tnow=$now\n\trcvExpiryTime=$rcvExpiryTime\n\t"
       )
       return Left(AuthErrorCodes.INVALID_USER_CREDENTIALS)
     }
