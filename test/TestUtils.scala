@@ -110,7 +110,8 @@ trait TestContexts {
   def getAuth(userId: String, objType: String, objId: Long, perm: String) = {
     val authSecret = Play.current.configuration.getString("elections.auth.secret").get
     val time = (new java.util.Date().getTime / 1000)
-    val head = s"$userId:$objType:$objId:$perm:$time"
+    val expiry = time + 300
+    val head = s"$userId:$objType:$objId:$perm:$expiry:timeout-token:$time"
 
     "khmac:///sha-256;" + Crypto.hmac(authSecret, head) + "/" + head
   }

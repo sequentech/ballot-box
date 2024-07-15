@@ -959,7 +959,8 @@ def get_hmac(cfg, userId, objType, objId, perm):
 
     secret = settings["shared_secret"]
     now = 1000*int(time.time())
-    message = "%s:%s:%d:%s:%d" % (userId, objType, objId, perm, now)
+    expiry = now+300
+    message = "%s:%s:%d:%s:%d:timeout-token:%d" % (userId, objType, objId, perm, expiry, now)
     _hmac = hmac.new(str.encode(secret), str.encode(message), hashlib.sha256).hexdigest()
     ret  = 'khmac:///sha-256;%s/%s' % (_hmac, message)
 

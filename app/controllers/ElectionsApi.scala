@@ -1540,7 +1540,8 @@ object ElectionsApi
       println(s"posting to $url")
       val userId: String = "admin"
       val now: Long = System.currentTimeMillis / 1000
-      val timedAuth = s"$userId:AuthEvent:$electionId:Callback:$now"
+      val expiry: Long = now + 300
+      val timedAuth = s"$userId:AuthEvent:$electionId:Callback:$expiry:timeout-token:$now"
       val hmac = Crypto.hmac(boothSecret, timedAuth)
       val khmac = s"khmac:///sha-256;$hmac/$timedAuth"
       val f = WS.url(url)

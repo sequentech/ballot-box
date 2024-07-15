@@ -658,7 +658,8 @@ class ConsoleImpl extends ConsoleInterface {
       case Some(time) => time
       case None => System.currentTimeMillis / 1000
     }
-    val message = s"$userId:$objType:$objId:$perm:$now"
+    val expiry: Long = now + 300
+    val message = s"$userId:$objType:$objId:$perm:$expiry:timeout-token:$now"
     val hmac = Crypto.hmac(shared_secret, message)
     val khmac = s"khmac:///sha-256;$hmac/$message"
     khmac

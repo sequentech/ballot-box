@@ -116,7 +116,8 @@ object BallotboxApi extends Controller with Response {
                     val validated = vote.validate(pks, true, electionId, voterId)
                     val result = DAL.votes.insertWithSession(validated)
                     val now: Long = System.currentTimeMillis / 1000
-                    val message = s"$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$now"
+                    val expiry: Long = now + 300
+                    val message = s"$voterId:AuthEvent:$electionId:RegisterSuccessfulLogin:$expiry:timeout-token:$now"
                     voteCallbackUrl.map {
                       url => postVoteCallback(
                         url
