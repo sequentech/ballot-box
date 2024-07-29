@@ -867,7 +867,7 @@ case class Question(
       )
     }
 
-    this.copy(description = descriptionOk, answers = answersOk)
+    this.copy(answers = answersOk)
   }
 }
 
