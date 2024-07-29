@@ -707,7 +707,7 @@ case class ElectionConfig(
       "subelections must be sorted"
     )
 
-    this.copy(description = descriptionOk, questions = questionsOk, presentation = presentationOk)
+    this.copy(questions = questionsOk, presentation = presentationOk)
   }
 
   /** returns a json string representation */
