@@ -904,7 +904,8 @@ case class QuestionExtra(
   invalid_vote_policy: Option[String], // allowed, warn, not-allowed, warn-invalid-implicit-and-explicit
   review_screen__show_question_description: Option[Boolean], // default = false
   write_in_config: Option[WriteInConfig],
-  show_filter_field: Option[Boolean] // default = false
+  show_filter_field: Option[Boolean], // default = false
+  footer_html: Option[String]
  )
 {
 
