@@ -43,6 +43,7 @@ POST    /api/election/:id/unpublish-results                   controllers.Electi
 GET     /api/election/:id/results                             controllers.ElectionsApi.getResults(id: Long)
 GET     /api/election/:id/voters                              controllers.ElectionsApi.getElectionVoters(id: Long)
 GET     /api/election/:id/stats                               controllers.ElectionsApi.getElectionStats(id: Long)
+POST    /api/election/:id/delete                              controllers.ElectionsApi.delete(id: Long)
 GET     /api/authorities                                      controllers.ElectionsApi.getAuthorities
 GET     /api/authorities-state                                controllers.ElectionsApi.getAuthoritiesState
 

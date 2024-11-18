@@ -256,6 +256,8 @@ object DAL {
     }
 
     def delete(id: Long) = DB.withSession { implicit session =>
+      // remove votes, then election
+      Votes.deleteByElectionId(id)
       val ret = Elections.delete(id)
       Cache.remove(key(id))
       ret
