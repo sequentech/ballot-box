@@ -1509,7 +1509,7 @@ object ElectionsApi
 
   /** Future: deletes an election and its votes */
   private def deleteElection(id: Long) = Future {
-    val result = DAL.elections.deleteElection(id)
+    val result = DAL.elections.delete(id)
     Ok(response("ok"))
   }(slickExecutionContext)
 
