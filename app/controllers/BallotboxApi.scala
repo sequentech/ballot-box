@@ -88,11 +88,12 @@ object BallotboxApi extends Controller with Response {
             else {
               val configJson = Json.parse(election.configuration)
               val presentation = configJson.validate[ElectionConfig].get.presentation
-              val authorizationHeader = request.headers.get("Authorization")
-              val tokenTimestamp = ActionHelper(authorizationHeader).getTokenTime()
+              val authorizationHeader = request.headers.get("Authorization").get
+              val tokenTimestamp = ActionHelper(authorizationHeader).getTokenTime
               val insideGracePeriod = (
                 election.endDate.isDefined &&
-                election.endDate.get + voterTokenExpiry > tokenTimestamp
+                tokenTimestamp.isDefined &&
+                election.endDate.get.getTime / 1000 + voterTokenExpiry > tokenTimestamp.get
               )
 
               val gracefulEnd = (
