@@ -58,6 +58,7 @@ object BallotboxApi extends Controller with Response {
       }
     }
   val boothSecret = Play.current.configuration.getString("elections.auth.secret").get
+  val voterTokenExpiry = Play.current.configuration.getString("elections.auth.expiry").get.toLong
 
   /** cast a vote, performs several validations, see vote.validate */
   def vote(electionId: Long, voterId: String) =
@@ -87,10 +88,18 @@ object BallotboxApi extends Controller with Response {
             else {
               val configJson = Json.parse(election.configuration)
               val presentation = configJson.validate[ElectionConfig].get.presentation
+              val authorizationHeader = request.headers.get("Authorization")
+              val tokenTimestamp = getTokenTime(authorizationHeader)
+              val insideGracePeriod = (
+                election.endDate.isDefined &&
+                election.endDate.get + voterTokenExpiry > tokenTimestamp
+              )
+
               val gracefulEnd = (
                 presentation.extra_options.isDefined &&
                 presentation.extra_options.get.allow_voting_end_graceful_period.isDefined &&
-                presentation.extra_options.get.allow_voting_end_graceful_period.get == true
+                presentation.extra_options.get.allow_voting_end_graceful_period.get == true &&
+                insideGracePeriod
               )
               if(
                 election.state == Elections.STARTED ||
