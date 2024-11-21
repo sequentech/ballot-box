@@ -65,6 +65,8 @@ object Votes {
 
   def findByElectionId(electionId: Long)(implicit s: Session): List[Vote] = votes.filter(_.electionId === electionId).list
 
+  def deleteByElectionId(electionId: Long)(implicit s: Session) = votes.filter(_.electionId === electionId).delete
+
   def findByElectionIdRange(electionId: Long, drop: Long, take: Long)(implicit s: Session): List[Vote] = {
     votes.filter(_.electionId === electionId).sortBy(_.created.desc).drop(drop).take(take).list
   }

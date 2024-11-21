@@ -118,6 +118,11 @@ object ElectionsApi
     registerElection(request, id)
   }
 
+  /** deletes an election and its votes */
+  def delete(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|delete").async { request =>
+    deleteElection(id)
+  } 
+
   /** updates an election's config */
   def update(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|update").async(BodyParsers.parse.json) { request =>
     updateElection(id, request)
@@ -1501,6 +1506,12 @@ object ElectionsApi
     }
     promise.future
   }
+
+  /** Future: deletes an election and its votes */
+  private def deleteElection(id: Long) = Future {
+    val result = DAL.elections.delete(id)
+    Ok(response("ok"))
+  }(slickExecutionContext)
 
   /** Future: updates an election's config */
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
