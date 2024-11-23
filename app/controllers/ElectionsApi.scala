@@ -1508,7 +1508,7 @@ object ElectionsApi
   }
 
   /** Future: deletes an election and its votes */
-  private def deleteElection(id: Long) = Future {
+  private def deleteElection(id: Long): Future[Result] =  {
     getElection(id)
       .flatMap { election =>
         val configJson = Json.parse(election.configuration)
@@ -1525,9 +1525,8 @@ object ElectionsApi
             BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
           }
         }
-      }.flatMap { _ =>
-        Future.successful(DAL.elections.delete(id))
       }.map { _ =>
+        DAL.elections.delete(id)
         Ok(response("ok"))
       }.recover {
         case e: NoSuchElementException =>
@@ -1537,7 +1536,7 @@ object ElectionsApi
           Logger.warn(s"Exception caught when deleting election: $t")
           BadRequest(error(t.getMessage))
       }
-  }(slickExecutionContext)
+  }
 
 
   /** Future: updates an election's config */
