@@ -1510,40 +1510,36 @@ object ElectionsApi
   /** Future: deletes an election and its votes */
   private def deleteElection(id: Long) = Future {
     getElection(id)
-      .flatMap {
-        election => {
-          val configJson = Json.parse(election.configuration)
-          val config = configJson.validate[ElectionConfig].get
-          val url = eoUrl(config.director, "public_api/delete")
-          WS.url(url).post(
-            Json.obj(
-              "election_id" -> id,
-            )
-          ).map { resp =>
-            if(resp.status == HTTP.OK) {
-              setTrusteeKeysState(election, deleteRequest.authority_id, TrusteeKeysStates.DELETED)
-              Ok(response(resp.body)) 
-            }
-            else {
-              BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
-            }
+      .flatMap { election =>
+        val configJson = Json.parse(election.configuration)
+        val config = configJson.validate[ElectionConfig].get
+        val url = eoUrl(config.director, "public_api/delete")
+        WS.url(url).post(
+          Json.obj(
+            "election_id" -> id
+          )
+        ).map { resp =>
+          if (resp.status == HTTP.OK) {
+            setTrusteeKeysState(election, deleteRequest.authority_id, TrusteeKeysStates.DELETED)
+            Ok(response(resp.body))
+          } else {
+            BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
           }
         }
-      }.flatMap {
-        _ =>
-          DAL.elections.delete(id)
-      }.flatMap {
-        _ =>
-          Ok(response("ok"))
+      }.flatMap { _ =>
+        DAL.elections.delete(id)
+      }.map { _ =>
+        Ok(response("ok"))
       }.recover {
-        case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
-        case t: Throwable => {
+        case e: NoSuchElementException =>
+          BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+        case t: Throwable =>
           t.printStackTrace()
           Logger.warn(s"Exception caught when checking share: $t")
           BadRequest(error(t.getMessage))
-        }
       }
   }(slickExecutionContext)
+
 
   /** Future: updates an election's config */
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
