@@ -1530,12 +1530,11 @@ object ElectionsApi
           }
         }
       }.flatMap {
-        _ => {
+        _ =>
           DAL.elections.delete(id)
       }.flatMap {
-      _ => {
-        Ok(response("ok"))
-      }
+        _ =>
+          Ok(response("ok"))
       }.recover {
         case e: NoSuchElementException => BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
         case t: Throwable => {
