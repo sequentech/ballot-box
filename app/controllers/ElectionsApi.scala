@@ -1508,10 +1508,36 @@ object ElectionsApi
   }
 
   /** Future: deletes an election and its votes */
-  private def deleteElection(id: Long) = Future {
-    val result = DAL.elections.delete(id)
-    Ok(response("ok"))
-  }(slickExecutionContext)
+  private def deleteElection(id: Long): Future[Result] =  {
+    getElection(id)
+      .flatMap { election =>
+        val configJson = Json.parse(election.configuration)
+        val config = configJson.validate[ElectionConfig].get
+        val url = eoUrl(config.director, "public_api/delete")
+        WS.url(url).post(
+          Json.obj(
+            "election_id" -> id
+          )
+        ).map { resp =>
+          if (resp.status == HTTP.OK) {
+            Ok(response(resp.body))
+          } else {
+            BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
+          }
+        }
+      }.map { _ =>
+        DAL.elections.delete(id)
+        Ok(response("ok"))
+      }.recover {
+        case e: NoSuchElementException =>
+          BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
+        case t: Throwable =>
+          t.printStackTrace()
+          Logger.warn(s"Exception caught when deleting election: $t")
+          BadRequest(error(t.getMessage))
+      }
+  }
+
 
   /** Future: updates an election's config */
   private def updateElection(id: Long, request: Request[JsValue]) = Future {
