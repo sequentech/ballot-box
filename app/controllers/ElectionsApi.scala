@@ -1520,7 +1520,6 @@ object ElectionsApi
           )
         ).map { resp =>
           if (resp.status == HTTP.OK) {
-            setTrusteeKeysState(election, deleteRequest.authority_id, TrusteeKeysStates.DELETED)
             Ok(response(resp.body))
           } else {
             BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
@@ -1535,7 +1534,7 @@ object ElectionsApi
           BadRequest(error(s"Election $id not found", ErrorCodes.NO_ELECTION))
         case t: Throwable =>
           t.printStackTrace()
-          Logger.warn(s"Exception caught when checking share: $t")
+          Logger.warn(s"Exception caught when deleting election: $t")
           BadRequest(error(t.getMessage))
       }
   }(slickExecutionContext)
