@@ -1526,7 +1526,7 @@ object ElectionsApi
           }
         }
       }.flatMap { _ =>
-        DAL.elections.delete(id)
+        Future.successful(DAL.elections.delete(id))
       }.map { _ =>
         Ok(response("ok"))
       }.recover {
