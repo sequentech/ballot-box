@@ -863,7 +863,6 @@ case class Question(
         }
         .map { answer => answer.text.replace("&amp;", "&").replace("&#43;", "+") }
         .toSet
-      print(f"categoryNames {categoryNames} answerCategoryNames {answerCategoryNames}")
       assert(
         categoryNames == answerCategoryNames,
         s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is not 'disabled'"
