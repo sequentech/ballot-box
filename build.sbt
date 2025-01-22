@@ -43,6 +43,7 @@ libraryDependencies ++= Seq(
   jdbc,
   cache,
   ws,
+  "org.apache.commons" % "commons-text" % "1.10.0",
   "com.typesafe.play" %% "play-slick" % "0.8.0",
   "org.postgresql" % "postgresql" % "42.7.2",
   "org.bouncycastle" % "bcprov-jdk15to18" % "1.76",

@@ -28,6 +28,7 @@ import play.api.db.slick.Config.driver.simple._
 import scala.slick.lifted.Tag
 import play.api.libs.json._
 
+import org.apache.commons.text.StringEscapeUtils
 import java.sql.Timestamp
 import java.util.Date
 
@@ -861,7 +862,10 @@ case class Question(
             url => (url.url == "true" && url.title == "isCategoryList")
           }.length > 0
         }
-        .map { answer => answer.text.replace("&amp;", "&").replace("&#43;", "+") }
+        .map { answer => {
+          answer.text = StringEscapeUtils.unescapeHtml4(answer.text)
+          answer
+        } }
         .toSet
       assert(
         categoryNames == answerCategoryNames,
