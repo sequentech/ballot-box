@@ -862,10 +862,11 @@ case class Question(
             url => (url.url == "true" && url.title == "isCategoryList")
           }.length > 0
         }
-        .map { answer => {
-          answer.text = StringEscapeUtils.unescapeHtml4(answer.text)
-          answer
-        } }
+        .map { answer => 
+          answer.copy(
+            text = StringEscapeUtils.unescapeHtml4(answer.text)
+          )
+        }
         .toSet
       assert(
         categoryNames == answerCategoryNames,
