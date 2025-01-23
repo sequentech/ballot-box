@@ -81,8 +81,7 @@ object Global extends WithFilters(LoggingFilter) with Response {
       initialDelay = 10.seconds,
       interval     = 10.seconds
     )(() => {
-      ElectionsApi.allowTally(11)
-      //println("Executing something (Global)...")
+      ElectionsApi.scheduledEvents()
     })(ec)
   }
 

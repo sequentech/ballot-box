@@ -118,6 +118,10 @@ object ElectionsApi
     registerElection(request, id)
   }
 
+  def scheduledEvents() = {
+    processScheduledEvents
+  }
+
   /** deletes an election and its votes */
   def delete(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|delete").async { request =>
     deleteElection(id)
@@ -1302,6 +1306,31 @@ object ElectionsApi
         }
       }
     )
+  }
+
+  def processScheduledEvents = Future {
+    val nowMillis = System.currentTimeMillis()
+    val inTenSecs = new Timestamp(nowMillis + 10 * 1000)
+    
+    DB.withSession
+    {
+      implicit session =>
+        val events = DAL.scheduledEvents.findActiveEvents(inTenSecs)
+        events.map(event => {
+          val election_opt = DAL.elections.findById(event.election_id)
+          election_opt match {
+            case Some(election) => {
+              event.event_name match {
+                case "allow-tally" => DAL.elections.allowTally(event.election_id)
+                //case "tally" => DAL.elections.tally(event.election_id)
+                case _ => ()
+              }
+            }
+            case None => Logger.warn(s"Can't find election ${event.election_id} for scheduled event ${event.id}")
+          } 
+          
+        })
+    }
   }
 
   /*-------------------------------- privates  --------------------------------*/

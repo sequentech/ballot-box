@@ -34,11 +34,6 @@ import java.util.Date
 
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 
-/*
-CREATE TABLE "scheduled_events" ("id" BIGINT NOT NULL PRIMARY KEY, "election_id" BIGING NOT NULL, "event_name" VARCHAR(254) NOT NULL, "scheduled_date" TIMESTAMP NOT NULL, "executed_date" TIMESTAMP, "created" TIMESTAMP NOT NULL );
-
-*/
-
 /** vote object */
 case class ScheduledEvent(id: Option[Long], election_id: Long, event_name: String, scheduled_date: Timestamp, executed_date: Option[Timestamp], created: Timestamp)
 
@@ -63,7 +58,9 @@ object ScheduledEvents {
     (scheduled_events returning scheduled_events.map(_.id)) += event
   }
 
-  def findActiveEvents()(implicit s: Session): List[ScheduledEvent] = scheduled_events.filter(_.executedDate.isEmpty).list
+  def findActiveEvents(before: Timestamp)(implicit s: Session): List[ScheduledEvent] = scheduled_events
+    .filter(row => row.executedDate.isEmpty && row.scheduledDate <= before)
+    .list
 
 }
 

@@ -45,8 +45,8 @@ object DAL {
       ScheduledEvents.insert(event)
     }
 
-    def findActiveEvents()(implicit s: Session): List[ScheduledEvent] = DB.withSession { implicit session =>
-      ScheduledEvents.findActiveEvents()
+    def findActiveEvents(before: Timestamp)(implicit s: Session): List[ScheduledEvent] = DB.withSession { implicit session =>
+      ScheduledEvents.findActiveEvents(before)
     }
   }
 
