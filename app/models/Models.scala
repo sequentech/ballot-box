@@ -35,7 +35,7 @@ import java.util.Date
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 
 /** vote object */
-case class ScheduledEvent(id: Option[Long], election_id: Long, event_name: String, scheduled_date: Timestamp, executed_date: Option[Timestamp], created: Timestamp)
+case class ScheduledEvent(id: Option[Long], election_id: Long, event_name: String, scheduled_date: Timestamp, executed_date: Option[Timestamp], payload: Option[String], created: Timestamp)
 
 /** relational representation of votes */
 class ScheduledEvents(tag: Tag) extends Table[ScheduledEvent](tag, "scheduled_events") {
@@ -44,8 +44,9 @@ class ScheduledEvents(tag: Tag) extends Table[ScheduledEvent](tag, "scheduled_ev
   def eventName = column[String]("event_name", O.NotNull, O.DBType("text"))
   def scheduledDate = column[Timestamp]("scheduled_date", O.NotNull)
   def executedDate = column[Option[Timestamp]]("executed_date")
+  def payload = column[Option[String]]("payload", O.DBType("text"))
   def created = column[Timestamp]("created", O.NotNull)
-  def * = (id.?, electionId, eventName, scheduledDate, executedDate, created) <> (ScheduledEvent.tupled, ScheduledEvent.unapply _)
+  def * = (id.?, electionId, eventName, scheduledDate, executedDate, payload, created) <> (ScheduledEvent.tupled, ScheduledEvent.unapply _)
 }
 
 
