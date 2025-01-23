@@ -79,7 +79,9 @@ object Global extends WithFilters(LoggingFilter) with Response {
     actorSystem.scheduler.schedule(
       initialDelay = 10.seconds,
       interval     = 10.seconds
-    )(() => println("Executing something (Global)..."))(ec)
+    )(() => {
+      println("Executing something (Global)...")
+    })(ec)
   }
 
   /** global error handler */
