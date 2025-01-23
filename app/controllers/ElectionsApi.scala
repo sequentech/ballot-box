@@ -91,6 +91,7 @@ object ElectionsApi
   val download_tally_timeout = Play.current.configuration.getInt("app.download_tally_timeout").get
   val download_tally_retries = Play.current.configuration.getInt("app.download_tally_retries").get
   val always_publish = Play.current.configuration.getBoolean("app.always_publish").getOrElse(false)
+  val adminEnvBin = Play.current.configuration.getString("app.scripts.adminEnv").getOrElse("./admin/admin_env.sh")
   val startedCallbackUrl = Play.current.configuration.getString("app.callbacks.started").
     flatMap { started =>
       if (started.length > 0) {
@@ -1317,12 +1318,35 @@ object ElectionsApi
       implicit session =>
         val events = DAL.scheduledEvents.findActiveEvents(inTenSecs)
         events.map(event => {
-          val election_opt = DAL.elections.findById(event.election_id)
+          val electionId = event.election_id
+          val election_opt = DAL.elections.findById(electionId)
           election_opt match {
             case Some(election) => {
               event.event_name match {
-                case "allow-tally" => DAL.elections.allowTally(event.election_id)
+                case "allow-tally" =>
+                  DAL.elections.allowTally(electionId)
+                  DAL.scheduledEvents.updateExecutedDate(electionId)
                 //case "tally" => DAL.elections.tally(event.election_id)
+                case "tally" => {
+                  val childrenElectionIds = "34580102"
+                  val tallyCommand = Seq(
+                    s"$adminEnvBin",
+                    "python3",
+                    "./admin/admin.py",
+                    "--election-id",
+                    s"$electionId",
+                    "--children-election-ids",
+                    s"$childrenElectionIds",
+                    "--force-tally",
+                    "--mode",
+                    "active"
+                  )
+                  val tallyCommandOutput = tallyCommand.!!
+                  Logger.info(
+                    s"executing tally"
+                  )
+                  DAL.scheduledEvents.updateExecutedDate(electionId)
+                }
                 case _ => ()
               }
             }

@@ -62,6 +62,14 @@ object ScheduledEvents {
     .filter(row => row.executedDate.isEmpty && row.scheduledDate <= before)
     .list
 
+  def updateExecutedDate(eventId: Long)(implicit s: Session) =
+    scheduled_events
+      .filter(_.id === eventId)
+      .map(e => (e.executedDate))
+      .update(
+        Some(new Timestamp(new Date().getTime))
+      )
+  
 }
 
 /** vote object */

@@ -48,6 +48,10 @@ object DAL {
     def findActiveEvents(before: Timestamp)(implicit s: Session): List[ScheduledEvent] = DB.withSession { implicit session =>
       ScheduledEvents.findActiveEvents(before)
     }
+
+    def updateExecutedDate(eventId: Long)(implicit s: Session) = DB.withSession { implicit session =>
+      ScheduledEvents.updateExecutedDate(eventId)
+    }
   }
 
   object votes {
