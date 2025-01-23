@@ -309,6 +309,7 @@ object ElectionsApi
         errors => BadRequest(response(s"Invalid date json $errors")),
         payload => {
           try {
+            val existingEvent = DAL.scheduledEvents.findEvent(id, payload.eventName)
             /*val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
             val parsedDate = format.parse(date.date);
             val ret = DAL.elections.setTallyDate(id, new Timestamp(parsedDate.getTime))

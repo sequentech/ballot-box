@@ -52,6 +52,10 @@ object DAL {
     def updateExecutedDate(eventId: Long)(implicit s: Session) = DB.withSession { implicit session =>
       ScheduledEvents.updateExecutedDate(eventId)
     }
+
+    def findEvent(electionId: Long, eventName: String)  = DB.withSession { implicit session =>
+      ScheduledEvents.findEvent(electionId, eventName)
+    }
   }
 
   object votes {

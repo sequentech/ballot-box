@@ -71,6 +71,12 @@ object ScheduledEvents {
         Some(new Timestamp(new Date().getTime))
       )
   
+  def findEvent(electionId: Long, eventName: String)(implicit s: Session): Option[ScheduledEvent] =
+    scheduled_events
+    .filter(_.electionId === electionId)
+    .filter(_.executedDate.isEmpty)
+    .filter(_.eventName === eventName)
+    .firstOption
 }
 
 /** vote object */
@@ -584,7 +590,7 @@ case class DateDTO(date: String)
   }
 }
 
-case class  ScheduledEventPayload(event: String, scheduledDate: Timestamp, payload: Option[String])
+case class  ScheduledEventPayload(eventName: String, scheduledDate: Timestamp, payload: Option[String])
 
 /** used to return an election with config in structured form */
 case class PublicCandidatesDTO(
