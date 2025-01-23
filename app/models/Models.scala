@@ -62,6 +62,9 @@ object ScheduledEvents {
   def insert(event: ScheduledEvent)(implicit s: Session) = {
     (scheduled_events returning scheduled_events.map(_.id)) += event
   }
+
+  def findActiveEvents()(implicit s: Session): List[ScheduledEvent] = scheduled_events.filter(_.executedDate.isEmpty).list
+
 }
 
 /** vote object */

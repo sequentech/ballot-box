@@ -44,6 +44,10 @@ object DAL {
     def insertWithSession(event: ScheduledEvent)(implicit s: Session) = {
       ScheduledEvents.insert(event)
     }
+
+    def findActiveEvents()(implicit s: Session): List[ScheduledEvent] = DB.withSession { implicit session =>
+      ScheduledEvents.findActiveEvents()
+    }
   }
 
   object votes {
