@@ -299,6 +299,38 @@ object ElectionsApi
     }
   }
 
+  def upsertScheduledEvent(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|tally").async(BodyParsers.parse.json)
+  {
+    request => Future {
+      val payloadValueJs = request.body.as[JsObject]
+      val payloadValue = payloadValueJs.validate[ScheduledEventPayload]
+
+      payloadValue.fold (
+        errors => BadRequest(response(s"Invalid date json $errors")),
+        payload => {
+          try {
+            /*val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            val parsedDate = format.parse(date.date);
+            val ret = DAL.elections.setTallyDate(id, new Timestamp(parsedDate.getTime))
+            Ok(response(ret))*/
+            Ok(response(""))
+          } catch {
+            case e: ParseException => {
+              e.printStackTrace()
+              Logger.error(s"Exception ParseException ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+            case e: Throwable => {
+              e.printStackTrace()
+              Logger.error(s"Exception Throwable ${e.getMessage}")
+              BadRequest(error(e.getMessage))
+            }
+          }
+        }
+      )
+    }
+  }
+
   /** Set results_updated date, receives a json with {"date": "yyyy-MM-dd HH:mm:ss"} */
   def setTallyDate(id: Long) = HActionAdmin("", "AuthEvent", id, "edit|stop").async(BodyParsers.parse.json)
   {

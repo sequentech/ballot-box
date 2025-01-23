@@ -584,6 +584,8 @@ case class DateDTO(date: String)
   }
 }
 
+case class  ScheduledEventPayload(event: String, scheduledDate: Timestamp, payload: Option[String])
+
 /** used to return an election with config in structured form */
 case class PublicCandidatesDTO(
   publicCandidates: Boolean
