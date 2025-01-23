@@ -53,6 +53,10 @@ object DAL {
       ScheduledEvents.updateExecutedDate(eventId)
     }
 
+    def updateEvent(eventId: Long, scheduledDate: Timestamp, payload: Option[String]) = DB.withSession { implicit session =>
+      ScheduledEvents.updateEvent(eventId, scheduledDate, payload)
+    }
+
     def findEvent(electionId: Long, eventName: String)  = DB.withSession { implicit session =>
       ScheduledEvents.findEvent(electionId, eventName)
     }

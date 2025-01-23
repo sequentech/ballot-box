@@ -30,6 +30,7 @@ POST    /api/election/:id/resume                              controllers.Electi
 POST    /api/election/:id/allow-tally                         controllers.ElectionsApi.allowTally(id: Long)
 POST    /api/election/:id/virtual-tally                       controllers.ElectionsApi.virtualTally(id: Long)
 POST    /api/election/:id/set-start-date                      controllers.ElectionsApi.setStartDate(id: Long)
+POST    /api/election/:id/scheduled-event                     controllers.ElectionsApi.upsertScheduledEvent(id: Long)
 POST    /api/election/:id/set-stop-date                       controllers.ElectionsApi.setStopDate(id: Long)
 POST    /api/election/:id/set-tally-date                      controllers.ElectionsApi.setTallyDate(id: Long)
 POST    /api/election/:id/set-public-candidates               controllers.ElectionsApi.setPublicCandidates(id: Long)

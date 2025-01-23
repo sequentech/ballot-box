@@ -310,10 +310,13 @@ object ElectionsApi
         payload => {
           try {
             val existingEvent = DAL.scheduledEvents.findEvent(id, payload.eventName)
-            /*val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-            val parsedDate = format.parse(date.date);
-            val ret = DAL.elections.setTallyDate(id, new Timestamp(parsedDate.getTime))
-            Ok(response(ret))*/
+            existingEvent match {
+              case Some(foundEvent) => DAL.scheduledEvents.updateEvent(id, payload.scheduledDate, payload.payload)
+              case None => {
+                val newEvent = ScheduledEvent(None, id, payload.eventName, payload.scheduledDate, None, payload.payload, new Timestamp(System.currentTimeMillis()))
+                DAL.scheduledEvents.insert(newEvent)
+              }
+            }
             Ok(response(""))
           } catch {
             case e: ParseException => {

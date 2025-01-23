@@ -77,6 +77,15 @@ object ScheduledEvents {
     .filter(_.executedDate.isEmpty)
     .filter(_.eventName === eventName)
     .firstOption
+
+  def updateEvent(eventId: Long, scheduledDate: Timestamp, payload: Option[String])(implicit s: Session) =
+    scheduled_events
+      .filter(_.id === eventId)
+      .map(e => (e.scheduledDate, e.payload))
+      .update(
+        scheduledDate,
+        payload
+      )
 }
 
 /** vote object */
