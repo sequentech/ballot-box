@@ -37,6 +37,15 @@ import utils._
 object DAL {
 
   /** straight mapping to models */
+  object scheduledEvents {
+    def insert(event: ScheduledEvent) = DB.withSession { implicit session =>
+      insertWithSession(event)
+    }
+    def insertWithSession(event: ScheduledEvent)(implicit s: Session) = {
+      ScheduledEvents.insert(event)
+    }
+  }
+
   object votes {
 
     def insert(vote: Vote) = DB.withSession { implicit session =>

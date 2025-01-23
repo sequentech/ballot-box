@@ -33,6 +33,7 @@ import scala.concurrent.duration._
 
 import akka.actor.ActorSystem
 import play.api.libs.concurrent.Akka
+import controllers.ElectionsApi
 
 /** Application global object, serves to control startup and control cross-cutting concerns */
 object Global extends WithFilters(LoggingFilter) with Response {
@@ -80,7 +81,8 @@ object Global extends WithFilters(LoggingFilter) with Response {
       initialDelay = 10.seconds,
       interval     = 10.seconds
     )(() => {
-      println("Executing something (Global)...")
+      ElectionsApi.allowTally(11)
+      //println("Executing something (Global)...")
     })(ec)
   }
 

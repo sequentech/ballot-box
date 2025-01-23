@@ -34,6 +34,36 @@ import java.util.Date
 
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 
+/*
+CREATE TABLE "scheduled_events" ("id" BIGINT NOT NULL PRIMARY KEY, "election_id" BIGING NOT NULL, "event_name" VARCHAR(254) NOT NULL, "scheduled_date" TIMESTAMP NOT NULL, "executed_date" TIMESTAMP, "created" TIMESTAMP NOT NULL );
+
+*/
+
+/** vote object */
+case class ScheduledEvent(id: Option[Long], election_id: Long, event_name: String, scheduled_date: Timestamp, executed_date: Option[Timestamp], created: Timestamp)
+
+/** relational representation of votes */
+class ScheduledEvents(tag: Tag) extends Table[ScheduledEvent](tag, "scheduled_events") {
+  def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def electionId = column[Long]("election_id", O.NotNull)
+  def eventName = column[String]("event_name", O.NotNull, O.DBType("text"))
+  def scheduledDate = column[Timestamp]("scheduled_date", O.NotNull)
+  def executedDate = column[Option[Timestamp]]("executed_date")
+  def created = column[Timestamp]("created", O.NotNull)
+  def * = (id.?, electionId, eventName, scheduledDate, executedDate, created) <> (ScheduledEvent.tupled, ScheduledEvent.unapply _)
+}
+
+
+/** data access object for votes */
+object ScheduledEvents {
+
+  val scheduled_events = TableQuery[ScheduledEvents]
+
+  def insert(event: ScheduledEvent)(implicit s: Session) = {
+    (scheduled_events returning scheduled_events.map(_.id)) += event
+  }
+}
+
 /** vote object */
 case class Vote(id: Option[Long], election_id: Long, voter_id: String, vote: String, hash: String, created: Timestamp)
 
