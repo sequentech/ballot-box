@@ -29,6 +29,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import java.io.File
 import scala.concurrent._
+import scala.concurrent.duration._
+
+import akka.actor.ActorSystem
+import play.api.libs.concurrent.Akka
 
 /** Application global object, serves to control startup and control cross-cutting concerns */
 object Global extends WithFilters(LoggingFilter) with Response {
@@ -68,6 +72,16 @@ object Global extends WithFilters(LoggingFilter) with Response {
       Logger.error(s"$peers not a directory")
       System.exit(1)
     }
+
+    val actorSystem = Akka.system(app)
+    val ec = actorSystem.dispatcher
+
+    actorSystem.scheduler.schedule(
+      initialDelay = 10.seconds,
+      interval     = 10.seconds
+    )(() => {
+      println("Executing something (Global)...")
+    })(ec)
   }
 
   /** global error handler */
