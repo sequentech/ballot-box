@@ -24,6 +24,34 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.{Crypto => PlayCrypto}
 
+case class ActionHelper(authorizationHeader: String) {
+  def getTokenTime(): Option[Long] = {
+    val start = "khmac:///sha-256;";
+    val slashPos = start.length + 64;
+
+    if(
+      !authorizationHeader.startsWith(start) ||
+      authorizationHeader.length < slashPos ||
+      authorizationHeader.charAt(slashPos) != '/'
+    ) {
+      Logger.warn(s"Malformed authorization header")
+      return None
+    }
+
+    val hash = authorizationHeader.substring(start.length, slashPos)
+    val message = authorizationHeader.substring(slashPos + 1)
+
+    val split = message.split(':')
+    if (split.length < 7) {
+      Logger.warn(s"Malformed authorization header")
+      return None
+    }
+
+    val rcvTime = split(split.length - 1).toLong
+    return Some(rcvTime)
+  }
+}
+
 case class HMACActionHelper(
   userId: String,
   objType: String,
@@ -223,3 +251,4 @@ object LoggingFilter extends Filter {
     }
   }
 }
+
