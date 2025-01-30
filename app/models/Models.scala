@@ -853,7 +853,7 @@ case class Question(
             url => (url.url == "true" && url.title == "isCategoryList")
           }.length == 0
         }
-        .map { answer => answer.category }
+        .map { answer => StringEscapeUtils.unescapeHtml4(answer.category) }
         .toSet
       // getting category answers
       val categoryNames = answers
@@ -868,6 +868,7 @@ case class Question(
           )
         }
         .toSet
+      Logger.warn(s"FF answerCategoryNames $answerCategoryNames categoryNames $categoryNames")
       assert(
         categoryNames == answerCategoryNames,
         s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is not 'disabled'"
