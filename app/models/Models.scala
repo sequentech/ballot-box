@@ -855,7 +855,7 @@ case class Question(
             url => (url.url == "true" && url.title == "isCategoryList")
           }.length == 0
         }
-        .map { answer => StringEscapeUtils.unescapeHtml4(answer.category) }
+        .map { answer => answer.category }//StringEscapeUtils.unescapeHtml4(answer.category) }
         .toSet
       // getting category answers
       val categoryNames = answers
