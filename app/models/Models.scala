@@ -868,7 +868,7 @@ case class Question(
           StringEscapeUtils.unescapeHtml4(answer.text)
         }
         .toSet
-      Logger.warn(s"FF answerCategoryNames $answerCategoryNames categoryNames $categoryNames")
+      Logger.warn(s"answerCategoryNames $answerCategoryNames categoryNames $categoryNames")
       assert(
         categoryNames == answerCategoryNames,
         s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is not 'disabled'"
