@@ -16,6 +16,8 @@
 **/
 package models
 
+import utils._
+import play.api._
 import utils.Crypto
 import utils.JsonFormatters._
 import utils.Validator._
@@ -863,11 +865,10 @@ case class Question(
           }.length > 0
         }
         .map { answer => 
-          answer.copy(
-            text = StringEscapeUtils.unescapeHtml4(answer.text)
-          )
+          StringEscapeUtils.unescapeHtml4(answer.text)
         }
         .toSet
+      Logger.warn(s"answerCategoryNames $answerCategoryNames categoryNames $categoryNames")
       assert(
         categoryNames == answerCategoryNames,
         s"there needs to be one isCategoryList answer for each category when enable_checkable_lists is not 'disabled'"
