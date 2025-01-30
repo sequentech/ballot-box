@@ -865,9 +865,7 @@ case class Question(
           }.length > 0
         }
         .map { answer => 
-          answer.copy(
-            text = StringEscapeUtils.unescapeHtml4(answer.text)
-          )
+          StringEscapeUtils.unescapeHtml4(answer.text)
         }
         .toSet
       Logger.warn(s"FF answerCategoryNames $answerCategoryNames categoryNames $categoryNames")
