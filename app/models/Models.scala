@@ -16,6 +16,8 @@
 **/
 package models
 
+import utils._
+import play.api._
 import utils.Crypto
 import utils.JsonFormatters._
 import utils.Validator._
