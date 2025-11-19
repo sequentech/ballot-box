@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with ballot_box.  If not, see <http://www.gnu.org/licenses/>.
 
-resolvers += "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
+// The Typesafe repository is deprecated, using Maven Central instead
+resolvers += "Maven Central" at "https://repo1.maven.org/maven2/"
 
 // The Play plugin
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.6")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.9")
