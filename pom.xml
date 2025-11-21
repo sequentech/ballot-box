@@ -93,21 +93,21 @@
     </dependencies>
     <repositories>
         <repository>
-            <id>TypesafeReleasesRepository</id>
-            <name>Typesafe Releases Repository</name>
-            <url>http://repo.typesafe.com/typesafe/releases/</url>
-            <layout>default</layout>
-        </repository>
-        <repository>
             <id>SpyRepository</id>
             <name>Spy Repository</name>
             <url>https://files.couchbase.com/maven2/</url>
             <layout>default</layout>
         </repository>
         <repository>
-            <id>Typesaferepository</id>
+            <id>mvn</id>
+            <name>Maven repository</name>
+            <url>https://repo1.maven.org/maven2/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>TypesafeRepository</id>
             <name>Typesafe repository</name>
-            <url>https://repo.typesafe.com/typesafe/releases/</url>
+            <url>https://repo.typesafe.com/typesafe/ivy-releases/</url>
             <layout>default</layout>
         </repository>
     </repositories>

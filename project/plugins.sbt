@@ -16,5 +16,15 @@
 // The Typesafe repository is deprecated, using Maven Central instead
 resolvers += "Maven Central" at "https://repo1.maven.org/maven2/"
 
+// Add Typesafe Ivy releases resolver
+resolvers += Resolver.url("Typesafe Ivy Releases", url("https://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns)
+
+// Override transitive dependencies to use available versions from Maven Central
+libraryDependencies ++= Seq(
+  "com.typesafe" % "jse_2.10" % "1.2.4",
+  "com.typesafe" % "npm_2.10" % "1.2.2",
+  "com.typesafe" % "webdriver_2.10" % "1.1.1"
+)
+
 // The Play plugin
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.9")
