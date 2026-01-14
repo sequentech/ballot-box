@@ -191,6 +191,24 @@ object Datastore {
     }
   }
 
+  /** deletes all datastore directories for an election (both private and public) */
+  def deleteDatastore(electionId: Long) = {
+    import org.apache.commons.io.FileUtils
+
+    val privatePath = getDirPath(electionId, public = false).toFile
+    val publicPath = getDirPath(electionId, public = true).toFile
+
+    if (privatePath.exists()) {
+      Logger.info(s"Deleting private datastore directory for election $electionId: ${privatePath.getAbsolutePath}")
+      FileUtils.deleteDirectory(privatePath)
+    }
+
+    if (publicPath.exists()) {
+      Logger.info(s"Deleting public datastore directory for election $electionId: ${publicPath.getAbsolutePath}")
+      FileUtils.deleteDirectory(publicPath)
+    }
+  }
+
 
   // UNUSED remove
 
