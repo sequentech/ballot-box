@@ -1513,6 +1513,10 @@ object ElectionsApi
       .flatMap { election =>
         val configJson = Json.parse(election.configuration)
         val config = configJson.validate[ElectionConfig].get
+
+        // If this is a virtual election, also delete datastores for subelections
+        val virtualSubelections = config.virtualSubelections.getOrElse(Array[Long]())
+
         val url = eoUrl(config.director, "public_api/delete")
         WS.url(url).post(
           Json.obj(
@@ -1524,9 +1528,20 @@ object ElectionsApi
           } else {
             BadRequest(error(s"EO returned status ${resp.status} with body ${resp.body}", ErrorCodes.EO_ERROR))
           }
+        }.map { _ =>
+          // Delete the parent election from database
+          DAL.elections.delete(id)
+
+          // Delete datastore for parent election
+          Datastore.deleteDatastore(id)
+
+          // Delete datastores for all virtual subelections
+          virtualSubelections.foreach { subElectionId =>
+            Logger.info(s"Deleting datastore for virtual subelection $subElectionId of parent election $id")
+            Datastore.deleteDatastore(subElectionId)
+          }
         }
       }.map { _ =>
-        DAL.elections.delete(id)
         Ok(response("ok"))
       }.recover {
         case e: NoSuchElementException =>

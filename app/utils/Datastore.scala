@@ -191,6 +191,39 @@ object Datastore {
     }
   }
 
+  /** Recursively deletes a directory and all its contents */
+  private def deleteDirectoryRecursively(directory: File): Unit = {
+    if (directory.isDirectory) {
+      val files = directory.listFiles()
+      if (files != null) {
+        files.foreach { file =>
+          if (file.isDirectory) {
+            deleteDirectoryRecursively(file)
+          } else {
+            file.delete()
+          }
+        }
+      }
+    }
+    directory.delete()
+  }
+
+  /** deletes all datastore directories for an election (both private and public) */
+  def deleteDatastore(electionId: Long) = {
+    val privatePath = getDirPath(electionId, public = false).toFile
+    val publicPath = getDirPath(electionId, public = true).toFile
+
+    if (privatePath.exists()) {
+      Logger.info(s"Deleting private datastore directory for election $electionId: ${privatePath.getAbsolutePath}")
+      deleteDirectoryRecursively(privatePath)
+    }
+
+    if (publicPath.exists()) {
+      Logger.info(s"Deleting public datastore directory for election $electionId: ${publicPath.getAbsolutePath}")
+      deleteDirectoryRecursively(publicPath)
+    }
+  }
+
 
   // UNUSED remove
 
