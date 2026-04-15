@@ -913,7 +913,8 @@ case class QuestionExtra(
   review_screen__show_question_description: Option[Boolean], // default = false
   write_in_config: Option[WriteInConfig],
   show_filter_field: Option[Boolean], // default = false
-  footer_html: Option[String]
+  footer_html: Option[String],
+  categories_collapsed_by_default: Option[Boolean] // default = false
  )
 {
 
